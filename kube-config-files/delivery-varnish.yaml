@@ -38,11 +38,13 @@ spec:
         image: coco/delivery-varnish
         env:
         - name: VARNISH_BACKEND_HOST
-          value: "api-policy-component"
+          value: api-policy-component
         - name: VARNISH_BACKEND_PORT
           value: "8080"
-        - name: NOTIFICATIONS_PUSH_PORT
+        - name: CONTENT_NOTIFICATIONS_PUSH_PORT
           value: "8548"
+        - name: LIST_NOTIFICATIONS_PUSH_PORT
+          value: "8549"
         - name: HOST_HEADER
           value: api-policy-component
         - name: ETCD_HOST
