@@ -42,7 +42,7 @@ spec:
         - name: GRAPHITE_HOST
           value: "graphite.ft.com"
         - name: READ_ENDPOINT
-          value: "path-routing-varnish:8080:8182"
+          value: "path-routing-varnish:80"
         - name: GRAPHITE_PORT
           value: "2003"
         - name: JERSEY_TIMEOUT_DURATION
