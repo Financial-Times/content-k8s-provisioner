@@ -17,24 +17,24 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: mongodb
+  name: mongodb3
   labels:
-    app: mongodb
+    app: mongodb3
     visualize: "true"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mongodb
+      app: mongodb3
   template:
     metadata:
       labels:
-        app: mongodb
+        app: mongodb3
         version: "latest"
         visualize: "true"
     spec:
       containers:
-      - name: mongodb
+      - name: mongodb3
         image: coco/mongodb
         resources:
           limits:
@@ -42,26 +42,31 @@ spec:
 #            cpu: 1.1
         ports:
         - containerPort: 27017
+        - containerPort: 28017
         volumeMounts:
-         - name: mongo-persistent-storage-a
+         - name: mongo-persistent-storage-c
            mountPath: /data/db
       volumes:
-       - name: mongo-persistent-storage-a
+       - name: mongo-persistent-storage-c
          awsElasticBlockStore:
-           volumeID: vol-0bb86d36163a5d389
+           volumeID: vol-013535a4b8f4263e2
            fsType: ext4
 ---
 
 kind: Service
 apiVersion: v1
 metadata:
-  name: mongodb
+  name: mongodb3
   labels:
-    app: mongodb
+    app: mongodb3
     visualize: "true"
 spec:
   ports:
-    - port: 27017
+    - name: work
+      port: 27017
       targetPort: 27017
+    - name: admin
+      port: 28017
+      targetPort: 28017
   selector:
-    app: mongodb
+    app: mongodb3
