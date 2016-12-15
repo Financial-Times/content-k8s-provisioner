@@ -22,7 +22,7 @@ metadata:
     app: nativerw
     visualize: "true"
 spec:
-  replicas: 5
+  replicas: 1
   selector:
     matchLabels:
       app: nativerw

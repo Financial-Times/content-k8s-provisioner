@@ -22,7 +22,7 @@ metadata:
     app: notifications-rw
     visualize: "true"
 spec:
-  replicas: 10
+  replicas: 2
   selector:
     matchLabels:
       app: notifications-rw
