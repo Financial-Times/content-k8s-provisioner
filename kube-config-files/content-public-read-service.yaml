@@ -17,38 +17,38 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: api-policy-component
+  name: content-public-read
   labels:
-    app: api-policy-component
+    app: content-public-read
     visualize: "true"
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: api-policy-component
+      app: content-public-read
   template:
     metadata:
       labels:
-        app: api-policy-component
+        app: content-public-read
         version: "latest"
         visualize: "true"
     spec:
       containers:
-      - name: api-policy-component
-        image: coco/api-policy-component:v63.0.0
+      - name: content-public-read
+        image: up-registry.ft.com/coco/content-public-read
         env:
         - name: JAVA_OPTS
-          value: "-Xms384m -Xmx384m -XX:+UseG1GC -server"
-        - name: GRAPHITE_HOST
-          value: "graphite.ft.com"
-        - name: READ_ENDPOINT
-          value: "path-routing-varnish:8080:8182"
-        - name: GRAPHITE_PORT
-          value: "2003"
-        - name: JERSEY_TIMEOUT_DURATION
-          value: "10000ms"
-        - name: GRAPHITE_PREFIX
-          value: "coco.services.test-kube.api-policy-component.%i"
+          value: "-Xms128m -Xmx128m -XX:+UseG1GC -server"
+        - name: VULCAN_HOST
+          value: document-store-api:8080:8081
+        - name: "CONTENT_PATH"
+          value: content/
+        - name: "HOST_HEADER"
+          value: document-store-api
+        - name: "CONTENT_HEALTHCHECK_PATH"
+          value: /__health
+        - name: "API_HOST"
+          value: test.api.ft.com
         ports:
         - containerPort: 8080
         - containerPort: 8081
@@ -58,9 +58,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: api-policy-component
+  name: content-public-read
   labels:
-    app: api-policy-component
+    app: content-public-read
     visualize: "true"
 spec:
   ports:
@@ -71,4 +71,4 @@ spec:
       name: "8081"
       targetPort: 8081
   selector:
-    app: api-policy-component
+    app: content-public-read

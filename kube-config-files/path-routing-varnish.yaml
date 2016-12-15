@@ -17,58 +17,40 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: api-policy-component
+  name: path-routing-varnish
   labels:
-    app: api-policy-component
+    app: path-routing-varnish
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: api-policy-component
+      app: path-routing-varnish
   template:
     metadata:
       labels:
-        app: api-policy-component
+        app: path-routing-varnish
         version: "latest"
         visualize: "true"
     spec:
       containers:
-      - name: api-policy-component
-        image: coco/api-policy-component:v63.0.0
-        env:
-        - name: JAVA_OPTS
-          value: "-Xms384m -Xmx384m -XX:+UseG1GC -server"
-        - name: GRAPHITE_HOST
-          value: "graphite.ft.com"
-        - name: READ_ENDPOINT
-          value: "path-routing-varnish:8080:8182"
-        - name: GRAPHITE_PORT
-          value: "2003"
-        - name: JERSEY_TIMEOUT_DURATION
-          value: "10000ms"
-        - name: GRAPHITE_PREFIX
-          value: "coco.services.test-kube.api-policy-component.%i"
+      - name: path-routing-varnish
+        image: coco/delivery-varnish:routing-test
         ports:
-        - containerPort: 8080
-        - containerPort: 8081
+        - containerPort: 80
 
 ---
 
 kind: Service
 apiVersion: v1
 metadata:
-  name: api-policy-component
+  name: path-routing-varnish
   labels:
-    app: api-policy-component
+    app: path-routing-varnish
     visualize: "true"
 spec:
   ports:
-    - port: 8080
-      name: "8080"
-      targetPort: 8080
-    - port: 8081
-      name: "8081"
-      targetPort: 8081
+    - port: 80
+      targetPort: 80
   selector:
-    app: api-policy-component
+    app: path-routing-varnish
