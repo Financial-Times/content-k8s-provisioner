@@ -35,7 +35,8 @@ spec:
     spec:
       containers:
       - name: delivery-varnish
-        image: coco/delivery-varnish
+        image: coco/delivery-varnish:kube-auth-from-secret
+        imagePullPolicy: Always
         env:
         - name: VARNISH_BACKEND_HOST
           value: api-policy-component
@@ -53,6 +54,13 @@ spec:
           value: test
         ports:
         - containerPort: 80
+        volumeMounts:
+        - name: varnish-htpasswd
+          mountPath: /etc/varnish/auth
+      volumes:
+      - name: varnish-htpasswd
+        secret:
+          secretName: varnish-auth
 
 ---
 
