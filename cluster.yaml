@@ -1,13 +1,13 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: sorin-kube-aws-test2
+clusterName: sorin-kube-aws-test
 
 # DNS name routable to the Kubernetes controller nodes
 # from worker nodes and external clients. Configure the options
 # below if you'd like kube-aws to create a Route53 record sets/hosted zones
 # for you.  Otherwise the deployer is responsible for making this name routable
-externalDNSName: sorin-kube-aws-test2.ft.com
+externalDNSName: sorin-kube-aws-test.ft.com
 
 # CoreOS release channel to use. Currently supported options: alpha, beta, stable
 # See coreos.com/releases for more information
@@ -31,7 +31,7 @@ externalDNSName: sorin-kube-aws-test2.ft.com
 
 # Name of the SSH keypair already loaded into the AWS
 # account being used to deploy this cluster.
-keyName: sorin.buliarca.test.key
+keyName: sorin.buliarca.key
 
 # Region to provision Kubernetes cluster
 region: eu-west-1
@@ -125,3 +125,4 @@ workerInstanceType: m4.large
 stackTags:
   Name: "Kubernetes"
   Environment: "Development"
+  Dev: "sorin"
