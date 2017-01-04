@@ -55,7 +55,7 @@ controllerInstanceType: m3.medium
 #controllerRootVolumeIOPS: 0
 
 # Number of worker nodes to create
-workerCount: 5
+workerCount: 3
 
 # Instance type for worker nodes
 workerInstanceType: m4.large
