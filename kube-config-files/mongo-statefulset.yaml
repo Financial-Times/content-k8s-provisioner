@@ -1,0 +1,63 @@
+# A headless service to create DNS records
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  labels:
+    app: mongodb
+    visualize: "true"
+spec:
+  ports:
+  - name: work
+    port: 27017
+    targetPort: 27017
+  - name: admin
+    port: 28017
+    targetPort: 28017
+  clusterIP: None
+  selector:
+    app: mongodb
+
+# The mongo petset definition
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: mongodb
+spec:
+  serviceName: "mongodb"
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: mongodb
+      annotations:
+        pod.alpha.kubernetes.io/initialized: "true"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: mongodb
+        image: coco/mongodb
+        resources:
+          limits:
+            memory: 2000Mi
+        ports:
+        - containerPort: 27017
+        - containerPort: 28017
+        livenessProbe:
+          tcpSocket:
+            port: 27017
+          initialDelaySeconds: 5
+        volumeMounts:
+        - name: mongo-persistent
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: mongo-persistent
+      annotations:
+        volume.alpha.kubernetes.io/storage-class: standard
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
