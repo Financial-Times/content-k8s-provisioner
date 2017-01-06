@@ -28,4 +28,4 @@ spec:
     image: coco/coco-mongodb-configurator
     env:
     - name: ARGS
-      value: "mongodb1:27017:28017 mongodb2:27017:28017 mongodb3:27017:28017"
+      value: "mongodb-0.mongodb:27017:28017 mongodb-1.mongodb:27017:28017 mongodb-2.mongodb:27017:28017"

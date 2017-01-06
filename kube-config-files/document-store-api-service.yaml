@@ -38,7 +38,7 @@ spec:
         image: up-registry.ft.com/coco/document-store-api
         env:
         - name: MONGO_ADDRESSES
-          value: mongodb1.default.svc.cluster.local:27017,mongodb2.default.svc.cluster.local:27017,mongodb3.default.svc.cluster.local:27017
+          value: mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017
         - name: JAVA_OPTS
           value: "-Xms128m -Xmx128m -XX:+UseG1GC -server"
         ports:
