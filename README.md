@@ -17,6 +17,7 @@ kubectl version
 
 ## Accessing the cluster
 We'll share the same Kubernetes cluster that was provisioned on aws. Please do the following setup:
+
 1. Clone this repository
 1. Go to lastpass and search for the secure note "Kubernetes AWS test CA key". 
 1. Download the attachment from this secure note and unzip it in the credentials folder. You should have now the ca-key.pem and ca.pam files into this folder.
