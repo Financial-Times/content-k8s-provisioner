@@ -54,6 +54,10 @@ spec:
           value: test
         ports:
         - containerPort: 80
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 4
         volumeMounts:
         - name: varnish-htpasswd
           mountPath: /etc/varnish/auth
