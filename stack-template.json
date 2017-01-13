@@ -628,34 +628,22 @@
             "ToPort": -1
           },
           {
-            "CidrIp": "194.117.242.0/23",
-            "FromPort": 22,
-            "IpProtocol": "tcp",
-            "ToPort": 22
+          "CidrIp": "82.136.1.214/32",
+          "FromPort": 22,
+          "IpProtocol": "tcp",
+          "ToPort": 22
           },
           {
-            "CidrIp": "54.194.189.228/32",
-            "FromPort": 22,
-            "IpProtocol": "tcp",
-            "ToPort": 22
+          "CidrIp": "62.25.64.1/32",
+          "FromPort": 22,
+          "IpProtocol": "tcp",
+          "ToPort": 22
           },
           {
-            "CidrIp": "62.25.64.1/32",
-            "FromPort": 22,
-            "IpProtocol": "tcp",
-            "ToPort": 22
-          },
-          {
-            "CidrIp": "81.187.140.32/32",
-            "FromPort": 22,
-            "IpProtocol": "tcp",
-            "ToPort": 22
-          },
-          {
-            "CidrIp": "82.136.1.214/32",
-            "FromPort": 22,
-            "IpProtocol": "tcp",
-            "ToPort": 22
+          "CidrIp": "194.117.242.0/23",
+          "FromPort": 22,
+          "IpProtocol": "tcp",
+          "ToPort": 22
           },
           {
             "SourceSecurityGroupId" : { "Ref" : "SecurityGroupElbAPIServer" },
@@ -731,7 +719,7 @@
             "ToPort": -1
           },
           {
-          "CidrIp": "54.194.189.228/32",
+          "CidrIp": "82.136.1.214/32",
           "FromPort": 22,
           "IpProtocol": "tcp",
           "ToPort": 22
@@ -743,13 +731,7 @@
           "ToPort": 22
           },
           {
-          "CidrIp": "81.187.140.32/32",
-          "FromPort": 22,
-          "IpProtocol": "tcp",
-          "ToPort": 22
-          },
-          {
-          "CidrIp": "82.136.1.214/32",
+          "CidrIp": "194.117.242.0/23",
           "FromPort": 22,
           "IpProtocol": "tcp",
           "ToPort": 22
@@ -922,7 +904,7 @@
             "ToPort": -1
           },
           {
-          "CidrIp": "54.194.189.228/32",
+          "CidrIp": "82.136.1.214/32",
           "FromPort": 22,
           "IpProtocol": "tcp",
           "ToPort": 22
@@ -934,13 +916,7 @@
           "ToPort": 22
           },
           {
-          "CidrIp": "81.187.140.32/32",
-          "FromPort": 22,
-          "IpProtocol": "tcp",
-          "ToPort": 22
-          },
-          {
-          "CidrIp": "82.136.1.214/32",
+          "CidrIp": "194.117.242.0/23",
           "FromPort": 22,
           "IpProtocol": "tcp",
           "ToPort": 22

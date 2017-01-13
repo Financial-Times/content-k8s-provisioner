@@ -9,6 +9,30 @@ coreos:
     etcd_certfile: /etc/kubernetes/ssl/etcd-client.pem
     etcd_keyfile: /etc/kubernetes/ssl/etcd-client-key.pem
   units:
+    - name: authorized_keys.service
+      command: start
+      content: |
+          [Unit]
+          Description=Update authorized_keys
+
+          [Service]
+          Type=oneshot
+          ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
+          ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys.sha512 https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys.sha512"
+          ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys"
+          ExecStart=/bin/sh -c "cd /tmp/ && sha512sum -c authorized_keys.sha512 && cp authorized_keys /home/core/.ssh/authorized_keys && chmod 700 /home/core/.ssh && chmod 600 /home/core/.ssh/authorized_keys && chown -R core:core /home/core/.ssh"
+    - name: authorized_keys.timer
+      command: start
+      content: |
+          [Unit]
+          Description=Authorized keys timer
+
+          [Timer]
+          OnBootSec=1min
+          OnUnitActiveSec=1min
+
+          [Install]
+          WantedBy=timers.target
     - name: docker.service
       drop-ins:
         - name: 40-flannel.conf
