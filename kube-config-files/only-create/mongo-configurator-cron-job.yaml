@@ -22,12 +22,13 @@ metadata:
     app: mongo-configurator
     visualize: "true"
 spec:
-  schedule: "*/15 * * * *"
+  schedule: "*/30 * * * *"
+  concurrencyPolicy: "Replace"
   jobTemplate:
     spec:
       template:
         spec:
-          restartPolicy: "OnFailure"
+          restartPolicy: "Never"
           containers:
           - name: mongo-configurator
             image: coco/coco-mongodb-configurator
