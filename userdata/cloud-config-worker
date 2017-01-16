@@ -42,6 +42,10 @@ coreos:
             [Service]
             EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
             ExecStartPre=/usr/bin/systemctl is-active flanneld.service
+        - name: 11-docker-opts.conf
+          content: |
+            [Service]
+            Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375"
 
     - name: flanneld.service
       drop-ins:
