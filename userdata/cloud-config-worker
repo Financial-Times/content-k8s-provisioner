@@ -45,7 +45,7 @@ coreos:
         - name: 11-docker-opts.conf
           content: |
             [Service]
-            Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375"
+            Environment="DOCKER_OPTS=--host 0.0.0.0:2375"
 
     - name: flanneld.service
       drop-ins:
