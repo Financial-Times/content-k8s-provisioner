@@ -50,6 +50,10 @@ spec:
               value: "10"
           ports:
             - containerPort: 8080
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
 
 ---
 
