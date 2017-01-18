@@ -29,22 +29,22 @@ spec:
   template:
     metadata:
       labels:
-         app: list-notifications-rw
-          version: "latest"
-          visualize: "true"
+        app: list-notifications-rw
+        version: "latest"
+        visualize: "true"
     spec:
       containers:
         - name: list-notifications-rw
           image: coco/list-notifications-rw:v0.1.1
           env:
-          - name: MONGO_ADDRESSES
-            value: mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017
-          - name: DUMP_REQUESTS
-            value: false
-          - name: API_HOST
-            value: test.api.ft.com
-          - name: CACHE_TTL
-            value: 10
+            - name: MONGO_ADDRESSES
+              value: mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017
+            - name: DUMP_REQUESTS
+              value: false
+            - name: API_HOST
+              value: test.api.ft.com
+            - name: CACHE_TTL
+              value: 10
           ports:
             - containerPort: 8080
 
