@@ -40,7 +40,7 @@ spec:
             - name: MONGO_ADDRESSES
               value: mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017
             - name: DUMP_REQUESTS
-              value: false
+              value: "false"
             - name: API_HOST
               value: test.api.ft.com
             - name: CACHE_TTL
