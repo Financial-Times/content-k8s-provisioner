@@ -41,13 +41,13 @@ spec:
               memory: 128Mi
           env:
             - name: MONGO_ADDRESSES
-              value: mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017
+              value: "mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017"
             - name: DUMP_REQUESTS
               value: "false"
             - name: API_HOST
-              value: test.api.ft.com
+              value: "test.api.ft.com"
             - name: CACHE_TTL
-              value: 10
+              value: "10"
           ports:
             - containerPort: 8080
 
