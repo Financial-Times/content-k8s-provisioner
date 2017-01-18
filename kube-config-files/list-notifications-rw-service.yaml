@@ -36,6 +36,9 @@ spec:
       containers:
         - name: list-notifications-rw
           image: coco/list-notifications-rw:v0.1.1
+          resources:
+            limits:
+              memory: 128Mi
           env:
             - name: MONGO_ADDRESSES
               value: mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017
