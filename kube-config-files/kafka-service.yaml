@@ -55,6 +55,10 @@ spec:
           value: "9092"
         ports:
         - containerPort: 9092
+        volumeMounts:
+         - name: kafka-persistent-storage
+           mountPath: /kafka
+           subPath: kafka-data
       - name: zookeeper
         image:  wurstmeister/zookeeper
         env:
@@ -62,6 +66,10 @@ spec:
           value: "localhost:2375"
         ports:
         - containerPort: 2181
+        volumeMounts:
+        - name: kafka-persistent-storage
+          mountPath: /opt/zookeeper-3.4.6/data
+          subPath: zk-data
       - name: kafka-proxy
         image: coco/kafka-proxy:v1.0.0
         env:
@@ -75,6 +83,11 @@ spec:
           value: "17825792"
         ports:
         - containerPort: 8082
+      volumes:
+       - name: kafka-persistent-storage
+         awsElasticBlockStore:
+           volumeID: vol-0a7ee795314cde11c
+           fsType: ext4
 
 ---
 
