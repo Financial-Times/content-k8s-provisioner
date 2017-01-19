@@ -22,7 +22,7 @@ metadata:
     app: list-notifications-rw
     visualize: "true"
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: list-notifications-rw
@@ -30,7 +30,6 @@ spec:
     metadata:
       labels:
         app: list-notifications-rw
-        version: "latest"
         visualize: "true"
     spec:
       containers:
