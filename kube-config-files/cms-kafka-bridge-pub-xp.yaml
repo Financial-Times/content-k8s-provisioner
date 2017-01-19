@@ -51,7 +51,7 @@ spec:
           value: "cms-notifier"
         - name: PRODUCER_TYPE
           value: "plainHTTP"
-        - name: SECRET_USERNAME
+        - name: AUTHORIZATION_KEY
           valueFrom:
             secretKeyRef:
               name: pub-auth
