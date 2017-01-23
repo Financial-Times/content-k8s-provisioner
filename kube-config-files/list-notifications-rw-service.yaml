@@ -35,24 +35,29 @@ spec:
       containers:
         - name: list-notifications-rw
           image: coco/list-notifications-rw:v0.1.1
+          imagePullPolicy: Always
           resources:
             limits:
               memory: 128Mi
           env:
             - name: MONGO_ADDRESSES
-              value: "mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017"
+              valueFrom:
+                configMapKeyRef:
+                  name: global-config
+                  key: mongodb.address
             - name: DUMP_REQUESTS
               value: "false"
             - name: API_HOST
-              value: "test.api.ft.com"
-            - name: CACHE_TTL
-              value: "10"
+              valueFrom:
+                configMapKeyRef:
+                  name: global-config
+                  key: api.host
           ports:
             - containerPort: 8080
           livenessProbe:
+            initialDelaySeconds: 15
             tcpSocket:
               port: 8080
-            initialDelaySeconds: 15
 
 ---
 
