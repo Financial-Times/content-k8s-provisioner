@@ -22,7 +22,7 @@ metadata:
     app: api-policy-component
     visualize: "true"
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: api-policy-component

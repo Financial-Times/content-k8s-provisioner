@@ -22,7 +22,7 @@ metadata:
     app: delivery-varnish
     visualize: "true"
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: delivery-varnish
