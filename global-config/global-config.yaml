@@ -14,23 +14,11 @@
 # limitations under the License.
 ###############################################################################
 
-apiVersion: batch/v2alpha1
-kind: CronJob
+kind: ConfigMap
+apiVersion: v1
 metadata:
-  name: mongo-configurator
-  labels:
-    app: mongo-configurator
-    visualize: "true"
-spec:
-  schedule: "*/15 * * * *"
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          restartPolicy: "OnFailure"
-          containers:
-          - name: mongo-configurator
-            image: coco/coco-mongodb-configurator
-            env:
-            - name: ARGS
-              value: "mongodb-0.mongodb:27017:28017 mongodb-1.mongodb:27017:28017 mongodb-2.mongodb:27017:28017"
+  name: global-config
+  namespace: default
+data:
+  mongodb.address: mongodb:27017
+  api.host: test.api.ft.com
