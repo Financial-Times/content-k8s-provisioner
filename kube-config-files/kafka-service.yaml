@@ -30,12 +30,11 @@ spec:
     metadata:
       labels:
         app: kafka
-        version: "latest"
         visualize: "true"
     spec:
       containers:
       - name: kafka
-        image:  wurstmeister/kafka:0.8.2.0
+        image: wurstmeister/kafka:0.8.2.0
         env:
         - name: KAFKA_MESSAGE_MAX_BYTES
           value: "16777216"
@@ -60,10 +59,7 @@ spec:
            mountPath: /kafka
            subPath: kafka-data
       - name: zookeeper
-        image:  wurstmeister/zookeeper
-        env:
-        - name: DOCKER_HOST
-          value: "localhost:2375"
+        image: wurstmeister/zookeeper
         ports:
         - containerPort: 2181
         volumeMounts:
@@ -72,6 +68,7 @@ spec:
           subPath: zk-data
       - name: kafka-proxy
         image: coco/kafka-proxy:v1.0.0
+        imagePullPolicy: Always
         env:
         - name: RP_FETCH_MESSAGE_MAX_BYTES
           value: "16777216"
@@ -101,7 +98,13 @@ metadata:
 spec:
   ports:
     - port: 8082
-      name: "kafka-proxy-8082"
+      name: "kafka-proxy"
       targetPort: 8082
+    - port: 9092
+      name: "kafka"
+      targetPort: 9092
+    - port: 2181
+      name: "zookeeper"
+      targetPort: 2181
   selector:
     app: kafka

@@ -17,69 +17,54 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: cms-kafka-bridge-pub-xp
+  name: binary-writer
   labels:
-    app: cms-kafka-bridge-pub-xp
+    app: binary-writer
     visualize: "true"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: cms-kafka-bridge-pub-xp
+      app: binary-writer
   template:
     metadata:
       labels:
-        app: cms-kafka-bridge-pub-xp
-        version: "latest"
+        app: binary-writer
         visualize: "true"
     spec:
       containers:
-      - name: cms-kafka-bridge-pub-xp
-        image:  coco/coco-kafka-bridge:v14.0.1
-        volumeMounts:
-        - mountPath: /etc/ssl/certs
-          name: certificates-storage
+      - name: binary-writer
+        image: up-registry.ft.com/coco/binary-writer:v48
         env:
-        - name: QUEUE_PROXY_ADDRS
-          value: "https://pub-xp-up.ft.com/__kafka-rest-proxy"
-        - name: GROUP_ID
-          value: "k8s-kafka-bridge-pub-xp"
-        - name: CONSUMER_AUTOCOMMIT_ENABLE
+        - name: JAVA_OPTS
+          value: "-Xms296m -Xmx296m -XX:+UseG1GC -server"
+        - name: KAFKA_HOST
+          value: "kafka"
+        - name: KAFKA_PORT
+          value: "9092"
+         - name: BUCKET_PATH
+          value: "com.ft.coco-imagepublish.pre-prod"
+        - name: S3_ACCESSKEY
+          value:
+        - name: S3_SECRETKEY
+          value:
+        - name: FAKE_SERVICE
           value: "false"
-        - name: TOPIC
-          value: "NativeCmsPublicationEvents"
-        - name: PRODUCER_HOST
-          value: "http://kafka:8082"
-        - name: PRODUCER_HOST_HEADER
-          value: "kafka-proxy"
-        - name: PRODUCER_TYPE
-          value: "proxy"
-        - name: AUTHORIZATION_KEY
-          valueFrom:
-            secretKeyRef:
-              name: pub-auth
-              key: pub-xp-auth
         ports:
         - containerPort: 8080
-      volumes:
-      - name: certificates-storage
-        hostPath:
-          path: /usr/share/ca-certificates
 
 ---
 
 kind: Service
 apiVersion: v1
 metadata:
-  name: cms-kafka-bridge-pub-xp
+  name: binary-writer
   labels:
-    app: cms-kafka-bridge-pub-xp
+    app: binary-writer
     visualize: "true"
 spec:
   ports:
     - port: 8080
-      name: "cms-kafka-bridge-pub-xp"
       targetPort: 8080
   selector:
-    app: cms-kafka-bridge-pub-xp
-
+    app: binary-writer
