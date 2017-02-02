@@ -42,12 +42,18 @@ spec:
           value: "kafka"
         - name: KAFKA_PORT
           value: "9092"
-         - name: BUCKET_PATH
+        - name: BUCKET_PATH
           value: "com.ft.coco-imagepublish.pre-prod"
         - name: S3_ACCESSKEY
-          value:
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: s3.access.key
         - name: S3_SECRETKEY
-          value:
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: s3.secret.key
         - name: FAKE_SERVICE
           value: "false"
         ports:
