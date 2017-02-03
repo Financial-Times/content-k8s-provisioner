@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: binary-writer
-type: Opaque
-data:
-  s3.access.key: {{s3.access.key}}
-  s3.secret.key: {{s3.secret.key}}
-
