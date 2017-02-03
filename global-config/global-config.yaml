@@ -21,6 +21,4 @@ metadata:
   namespace: default
 data:
   mongodb.address: mongodb:27017
-  api.host: test.api.ft.com
-  s3.secret.key: {{s3-access-key}}
-  s3.access.key: {{s3-secret-key}} 
+  api.host: test.api.ft.com 
