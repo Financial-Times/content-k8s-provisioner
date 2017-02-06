@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: elb-registrator-job
+spec:
+  template:
+    metadata:
+      name: elb-registrator
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: elb-registrator
+        image: coco/coco-elb-dns-registrator:k8s_v0.0.3
+        volumeMounts:
+        - mountPath: /etc/ssl/certs
+          name: certificates-storage
+        env:
+        - name: DOMAINS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: dns.register_subdomain
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.region
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-secrets
+              key: aws.access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-secrets
+              key: aws.secret_access_key
+        - name: KONSTRUCTOR_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: kon.dns_api.key
+        - name: K8S_LB_SERVICE
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: k8s.entry_point_service
+        - name: K8S_LB_SERVICE_NAMESPACE
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: k8s.app_namespace
+      volumes:
+      - name: certificates-storage
+        hostPath:
+          path: /usr/share/ca-certificates
