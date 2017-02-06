@@ -61,6 +61,10 @@ spec:
               key: pub-xp-auth
         ports:
         - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 10
+          tcpSocket:
+            port: 8080
       volumes:
       - name: certificates-storage
         hostPath:

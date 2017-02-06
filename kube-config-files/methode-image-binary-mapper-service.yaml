@@ -42,6 +42,10 @@ spec:
           value: "kafka:8082"
         ports:
         - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 20
+          tcpSocket:
+            port: 8080
 
 ---
 

@@ -58,6 +58,10 @@ spec:
           value: "false"
         ports:
         - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 10
+          tcpSocket:
+            port: 8080     
 
 ---
 

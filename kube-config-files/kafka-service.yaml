@@ -54,6 +54,10 @@ spec:
           value: "9092"
         ports:
         - containerPort: 9092
+        livenessProbe:
+          initialDelaySeconds: 120
+          tcpSocket:
+            port: 9092
         volumeMounts:
          - name: kafka-persistent-storage
            mountPath: /kafka
@@ -62,6 +66,10 @@ spec:
         image: wurstmeister/zookeeper
         ports:
         - containerPort: 2181
+        livenessProbe:
+          initialDelaySeconds: 120
+          tcpSocket:
+            port: 2181
         volumeMounts:
         - name: kafka-persistent-storage
           mountPath: /opt/zookeeper-3.4.6/data
@@ -80,6 +88,10 @@ spec:
           value: "17825792"
         ports:
         - containerPort: 8082
+        livenessProbe:
+          initialDelaySeconds: 120
+          tcpSocket:
+            port: 8082
       volumes:
        - name: kafka-persistent-storage
          awsElasticBlockStore:
