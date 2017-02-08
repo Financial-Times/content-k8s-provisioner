@@ -1,0 +1,67 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name:  methode-article-mapper
+  labels:
+    name:  methode-article-mapper
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: methode-article-mapper
+  template:
+    metadata:
+      labels:
+        app:  methode-article-mapper
+        visualize: "true"
+    spec:
+      containers:
+      - name:  methode-article-mapper
+        image:  coco/methode-article-mapper:rework-config
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 256Mi
+        livenessProbe:
+          initialDelaySeconds: 15
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        env:
+        - name: DOCUMENT_STORE_API_URL
+          value: "document-store-api:8080" 
+        - name: CONCORDANCE_API_URL
+          value: "public-concordances-api:8080"
+        - name: KAFKA_PROXY_URL
+          value: "kafka:8082"
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: methode-article-mapper
+  labels:
+    app: methode-article-mapper
+    visualize: "true"
+    hasHealthcheck: "true"
+    healthcheckSeverity: "critical"
+spec:
+  ports:
+    - port: 8080
+      name: "8080"
+      targetPort: 8080
+    - port: 8081
+      name: "8081"
+      targetPort: 8081
+  selector:
+    app: methode-article-mapper
