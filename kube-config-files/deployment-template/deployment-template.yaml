@@ -64,7 +64,9 @@ metadata:
   name: # The name of the service. Examples: "app: kafka", "app: binary-ingester"
   labels:
     {{label}} # A label that will be applied to the service
-    visualize: "true"
+    visualize: "true" # This label is for an optional visualizer tool that we may install in the future
+    hasHealthcheck: "true" # This label should be set if the /__health endpoint is present
+    healthCheckSeverity: {{severity}} # This label should be set if the /__health endpoint is present. The valid severity values for this label are "warning" and "critical"
 spec:
   ports: # The list of ports that are exposed by this service
     - port: # The port that will be exposed by this service
