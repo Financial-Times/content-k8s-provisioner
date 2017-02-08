@@ -22,3 +22,4 @@ metadata:
 data:
   mongodb.address: mongodb:27017
   api.host: test.api.ft.com
+

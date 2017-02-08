@@ -1,0 +1,76 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: # This will be the name of the deployment and part of every pod's name
+  labels:
+    {{label}} # A label that will be applied to the deployment. Examples: "app: kafka", "app: binary-ingester"
+    visualize: "true" # This label is for an optional visualizer tool that we may install in the future
+spec:
+  replicas: # Actual number of observed instances of the scaled object.
+  selector: # Label query over pods that should match the replicas count.
+    matchLabels:
+      {{label}} # This should match the labels applied to the pods
+  template:
+    metadata:
+      labels:
+        {{label}} # A label that will be applied to every pod. Examples: "app: kafka", "app: binary-ingester"
+        visualize: "true" # This label is for an optional visualizer tool that we may install in the future
+    spec:
+      containers: # List of containers belonging to the pod
+      - name: # The name of the container that will run inside the pod
+        image: # Docker image name
+        env: # List of environment variables to set in the container
+        - name: # Name of the environment variable
+          value: # Value of the environment variable
+        - name: # Name of the environment variable
+          valueFrom: # Source for the environment variable’s value
+            configMapKeyRef: # Selects a key of a ConfigMap
+              name: # Name of the referent
+              key: # The key to select
+        - name: # Name of the environment variable
+          valueFrom: # Source for the environment variable’s value
+            secretKeyRef: # Selects a key of a secret in the pod’s namespace
+              name: # Name of the referent
+              key: # The key to select
+        ports: # List of ports to expose from the container
+        - containerPort: # This is the port that will be exposed outside of the container
+        volumeMounts: # Pod volumes to mount into the container’s filesystem
+        - name: # This must match the Name of a Volume.
+          mountPath: # Path within the container at which the volume should be mounted. Must not contain
+          subPath: # Path within the volume from which the container’s volume should be mounted. Defaults to "" (volume’s root)
+        livenessProbe: # The purpose of liveness probes are to indicate that your application is running, the goal is to catch situations when an app has crashed or deadlocked without terminating
+          initialDelaySeconds: # Number of seconds after the container has started before liveness probes are initiated
+          tcpSocket: # TCPSocket specifies an action involving a TCP port
+            port: # Number or name of the port to access on the container
+        readinessProbe: # Readiness probe is meant to check if your application is ready to serve traffic
+          httpGet: # The probe makes a HTTP GET request
+            path: # Path to access on the HTTP server. Examples: "/__gtg"
+            port: # Name or number of the port to access on the container.
+          initialDelaySeconds: # How many seconds it should wait before performing the first probe
+          periodSeconds: # The interval at which a new request will be made
+      volumes: # List of volumes that can be mounted by containers belonging to the pod
+      - name: # Volume’s name. Must be unique within the pod
+        awsElasticBlockStore: # AWSElasticBlockStore represents an AWS Disk resource that is attached to a kubelet’s host machine and then exposed to the pod
+          fsType: # Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs"
+      - name: # Volume’s name. Must be unique within the pod
+        hostPath: # HostPath represents a pre-existing file or directory on the host machine that is directly exposed to the container
+          path: # Path of the directory on the host
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: # The name of the service. Examples: "app: kafka", "app: binary-ingester"
+  labels:
+    {{label}} # A label that will be applied to the service
+    visualize: "true" # This label is for an optional visualizer tool that we may install in the future
+    hasHealthcheck: "true" # This label should be set if the /__health endpoint is present
+    healthcheckSeverity: {{severity}} # This label should be set if the /__health endpoint is present. The valid severity values for this label are "warning" and "critical"
+spec:
+  ports: # The list of ports that are exposed by this service
+    - port: # The port that will be exposed by this service
+      name: # The name of this port within the service. Optional if only one port is defined on this service
+      targetPort: # Number or name of the port to access on the pods targeted by the service
+  selector:  # Route service traffic to pods with label keys and values matching this selector.
+    {{label}} # This should match the labels applied to the pods

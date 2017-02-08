@@ -1,0 +1,94 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: binary-ingester
+  labels:
+    app: binary-ingester
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: binary-ingester
+  template:
+    metadata:
+      labels:
+        app: binary-ingester
+        visualize: "true"
+    spec:
+      containers:
+      - name: binary-ingester
+        image: up-registry.ft.com/coco/ingester:v65
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms256m -Xmx256m -XX:+UseG1GC -server"
+        - name: APP_PORT
+          value: "8080"
+        - name: ADMIN_PORT
+          value: "8080"
+        - name: KAFKA_HOST
+          value: "kafka"
+        - name: KAFKA_PORT
+          value: "9092"
+        - name: KAFKA_GROUPNAME
+          value: "BinaryIngester"
+        - name: KAFKA_SYSTEM_ID
+          value: "BinaryIngester"
+        - name: KAFKA_TOPIC_NAME
+          value: "CmsPublicationEvents"
+        - name: TRANSFORMER_PROXY
+          value: "localhost:8080"
+        - name: WHITELIST
+          value: "^http://methode-image-binary-mapper(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/image/binary/[\\w-]+.*$" 
+        - name: WRITER_HEADER
+          value: "binary-writer"
+        - name: WRITER_NAME
+          value: "BinaryWriter"
+        - name: USE_GZIP_FOR_REQUESTS
+          value: "false"
+        - name: WRITER_HEALTHCHECK_NAME
+          value: "Can connect to the Binary Writer"
+        - name: WRITER_HEALTHCHECK_TECH_SUMMARY
+          value: "Tests that the build-info endpoint for the Binary Writer returns a 200 response"
+        - name: MESSAGE_FORWARDING_ENABLED
+          value: "false"
+        - name: FORWARD_TO_TOPIC_NAME
+          value: "PostPublicationEvents"
+        - name: KAFKA_PROXY
+          value: "kafka:8082"
+        - name: VULCAN_HOST
+          value: "binary-writer:8080"
+        - name: ZOOKEEPER_HOST
+          value: "kafka"
+        - name: ZOOKEEPER_PORT
+          value: "2181"
+        - name: UPP_GATEWAY_PATH
+          value: ""
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 15
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: binary-ingester
+  labels:
+    app: binary-ingester
+    visualize: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: binary-ingester
