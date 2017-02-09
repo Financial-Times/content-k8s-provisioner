@@ -39,12 +39,12 @@ spec:
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
-              name: aws-secrets
+              name: global-secrets
               key: aws.access_key_id
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: aws-secrets
+              name: global-secrets
               key: aws.secret_access_key
         - name: KONSTRUCTOR_API_KEY
           valueFrom:
