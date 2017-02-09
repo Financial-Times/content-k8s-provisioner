@@ -1,3 +1,13 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: elb-registrator-config
+  namespace: default
+data:
+  dns.register_subdomain: k8s-test-up
+  k8s.entry_point_service: delivery-varnish
+
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -7,6 +17,7 @@ spec:
     metadata:
       name: elb-registrator
     spec:
+      # Keep trying to register in DNS until we manage to do it
       restartPolicy: OnFailure
       containers:
       - name: elb-registrator
@@ -18,7 +29,7 @@ spec:
         - name: DOMAINS
           valueFrom:
             configMapKeyRef:
-              name: global-config
+              name: elb-registrator-config
               key: dns.register_subdomain
         - name: AWS_REGION
           valueFrom:
@@ -43,7 +54,7 @@ spec:
         - name: K8S_LB_SERVICE
           valueFrom:
             configMapKeyRef:
-              name: global-config
+              name: elb-registrator-config
               key: k8s.entry_point_service
         - name: K8S_LB_SERVICE_NAMESPACE
           valueFrom:

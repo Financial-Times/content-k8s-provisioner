@@ -24,3 +24,4 @@ data:
   api.host: test.api.ft.com
   aws.region: eu-west
   k8s.app_namespace: default
+
