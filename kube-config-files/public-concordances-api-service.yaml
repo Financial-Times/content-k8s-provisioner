@@ -23,16 +23,6 @@ spec:
         resources:
           limits:
             memory: 256Mi
-        livenessProbe:
-          initialDelaySeconds: 15
-          tcpSocket:
-            port: 8080
-        readinessProbe:
-          httpGet:
-            path: /__health
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 30
         env:
         - name: APP_PORT
           value: "8080" 
