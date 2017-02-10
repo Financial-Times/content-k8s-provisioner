@@ -1,0 +1,63 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name:  video-mapper
+  labels:
+    name:  video-mapper
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: video-mapper
+  template:
+    metadata:
+      labels:
+        app:  video-mapper
+        visualize: "true"
+    spec:
+      containers:
+      - name:  video-mapper
+        image:  coco/video-mapper:v1.2.9
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 256Mi
+        livenessProbe:
+          initialDelaySeconds: 15
+          tcpSocket:
+            port: 8080
+         readinessProbe:
+           httpGet:
+             path: /__gtg
+             port: 8080
+           initialDelaySeconds: 30
+           periodSeconds: 30
+        env:
+        - name: DOCUMENT_STORE_API_URL
+          value: "document-store-api:8080" 
+        - name: CONCORDANCE_API_URL
+          value: "public-concordances-api:8080"
+        - name: KAFKA_PROXY_URL
+          value: "kafka:8082"
+        ports:
+        - containerPort: 8080
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: video-mapper
+  labels:
+    app: video-mapper
+    visualize: "true"
+    hasHealthcheck: "true"
+    healthcheckSeverity: "critical"
+spec:
+  ports:
+    - port: 8080
+      name: "8080"
+      targetPort: 8080
+  selector:
+    app: video-mapper
