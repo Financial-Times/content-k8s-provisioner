@@ -1,29 +1,31 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: methode-image-binary-mapper
+  name: methode-image-model-mapper
   labels:
-    app: methode-image-binary-mapper
+    app: methode-image-model-mapper
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: methode-image-binary-mapper
+      app: methode-image-model-mapper
   template:
     metadata:
       labels:
-        app: methode-image-binary-mapper
+        app: methode-image-model-mapper
         visualize: "true"
     spec:
       containers:
-      - name: methode-image-binary-mapper
-        image: coco/methode-image-binary-mapper:v1.0.1
+      - name: methode-image-model-mapper
+        image: coco/methode-image-model-mapper:v16.0.2-rc.1
         env:
         - name: JAVA_OPTS
           value: "-Xms256m -Xmx256m -XX:+UseG1GC -server"
         - name: KAFKA_PROXY
           value: "kafka:8082"
+        - name: S3_URL
+          value: "http://com.ft.coco-imagepublish.pre-prod.s3.amazonaws.com/"
         ports:
         - containerPort: 8080
         livenessProbe:
@@ -42,9 +44,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: methode-image-binary-mapper
+  name: methode-image-model-mapper
   labels:
-    app: methode-image-binary-mapper
+    app: methode-image-model-mapper
     visualize: "true"
     hasHealthcheck: "true"
     healthcheckSeverity: warning
@@ -53,4 +55,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: methode-image-binary-mapper
+    app: methode-image-model-mapper

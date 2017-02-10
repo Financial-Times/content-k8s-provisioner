@@ -1,0 +1,93 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: content-ingester
+  labels:
+    app: content-ingester
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: content-ingester
+  template:
+    metadata:
+      labels:
+        app: content-ingester
+        visualize: "true"
+    spec:
+      containers:
+      - name: content-ingester
+        image: up-registry.ft.com/coco/ingester-k8s:v1
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms256m -Xmx256m -XX:+UseG1GC -server"
+        - name: APP_PORT
+          value: "8080"
+        - name: ADMIN_PORT
+          value: "8080"
+        - name: KAFKA_HOST
+          value: "kafka"
+        - name: KAFKA_PORT
+          value: "9092"
+        - name: KAFKA_GROUPNAME
+          value: "content"
+        - name: KAFKA_SYSTEM_ID
+          value: "ContentIngester"
+        - name: KAFKA_TOPIC_NAME
+          value: "CmsPublicationEvents"
+        - name: WHITELIST
+          value: "^http://(methode|wordpress|brightcove)(-article|-image-model|-list|-image|-video-model|-content-placeholder)?(-internal-components)?(-transformer|-mapper)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content|image/model|image-set/model|lists|video/model|internalcomponents)/[\\w-]+.*$" 
+        - name: WRITER_HEADER
+          value: "document-store-api"
+        - name: WRITER_NAME
+          value: "DocumentStore"
+        - name: WRITER_HEALTHCHECK_NAME
+          value: "Can connect to the Document Store"
+        - name: WRITER_HEALTHCHECK_TECH_SUMMARY
+          value: "Tests that the build-info endpoint for the Document Store returns a 200 response"
+        - name: MESSAGE_FORWARDING_ENABLED
+          value: "true"
+        - name: FORWARD_TO_TOPIC_NAME
+          value: "PostPublicationEvents"
+        - name: KAFKA_PROXY_URL
+          value: "kafka:8082"
+        - name: WRITER_URL
+          value: "document-store-api:8080"
+        - name: ZOOKEEPER_HOST
+          value: "kafka"
+        - name: ZOOKEEPER_PORT
+          value: "2181"
+        - name: UPP_GATEWAY_PATH
+          value: ""
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 15
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: content-ingester
+  labels:
+    app: content-ingester
+    visualize: "true"
+    hasHealthcheck: "true"
+    healthcheckSeverity: warning
+
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: content-ingester
