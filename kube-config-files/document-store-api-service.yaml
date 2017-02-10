@@ -6,7 +6,7 @@ metadata:
     app: document-store-api
     visualize: "true"
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: document-store-api
@@ -31,8 +31,13 @@ spec:
         livenessProbe:
           tcpSocket:
             port: 8080
-          initialDelaySeconds: 4
-
+          initialDelaySeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 30
 ---
 
 kind: Service
@@ -42,6 +47,8 @@ metadata:
   labels:
     app: document-store-api
     visualize: "true"
+    hasHealthcheck: "true"
+    healthcheckSeverity: warning
 spec:
   ports:
     - port: 8080
