@@ -40,7 +40,7 @@ spec:
       volumes:
        - name: neo4j-red-persistent-storage
          awsElasticBlockStore:
-           volumeID: vol-08d4132f23b45de31
+           volumeID: vol-09f84ecc1aa0a36ac
            fsType: ext4
 ---
 
