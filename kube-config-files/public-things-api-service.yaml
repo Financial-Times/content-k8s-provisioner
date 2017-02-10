@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name:  public-things-api
   labels:
-    name:  public-things-api
+    app:  public-things-api
     visualize: "true"
 spec:
   replicas: 2

@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name:  methode-list-mapper
   labels:
-    name:  methode-list-mapper
+    app:  methode-list-mapper
     visualize: "true"
 spec:
   replicas: 2

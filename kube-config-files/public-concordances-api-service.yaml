@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name:  public-concordances-api
   labels:
-    name:  public-concordances-api
+    app:  public-concordances-api
     visualize: "true"
 spec:
   replicas: 2
