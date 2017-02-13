@@ -18,14 +18,14 @@ spec:
     spec:
       containers:
       - name: content-ingester
-        image: up-registry.ft.com/coco/ingester-k8s:v1
+        image: up-registry.ft.com/coco/ingester-k8s:v5
         env:
         - name: JAVA_OPTS
           value: "-Xms256m -Xmx256m -XX:+UseG1GC -server"
         - name: APP_PORT
           value: "8080"
         - name: ADMIN_PORT
-          value: "8080"
+          value: "8081"
         - name: KAFKA_HOST
           value: "kafka"
         - name: KAFKA_PORT
@@ -38,8 +38,6 @@ spec:
           value: "CmsPublicationEvents"
         - name: WHITELIST
           value: "^http://(methode|wordpress|brightcove)(-article|-image-model|-list|-image|-video-model|-content-placeholder)?(-internal-components)?(-transformer|-mapper)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content|image/model|image-set/model|lists|video/model|internalcomponents)/[\\w-]+.*$" 
-        - name: WRITER_HEADER
-          value: "document-store-api"
         - name: WRITER_NAME
           value: "DocumentStore"
         - name: WRITER_HEALTHCHECK_NAME
@@ -58,19 +56,18 @@ spec:
           value: "kafka"
         - name: ZOOKEEPER_PORT
           value: "2181"
-        - name: UPP_GATEWAY_PATH
-          value: ""
         ports:
         - containerPort: 8080
+        - containerPort: 8081
         livenessProbe:
-          initialDelaySeconds: 15
+          initialDelaySeconds: 5
           tcpSocket:
             port: 8080
         readinessProbe:
           httpGet:
             path: /__gtg
             port: 8080
-          initialDelaySeconds: 20
+          initialDelaySeconds: 10
           periodSeconds: 30
 
 ---
@@ -88,6 +85,10 @@ metadata:
 spec:
   ports:
     - port: 8080
+      name: "8080"
       targetPort: 8080
+    - port: 8081
+      name: "8081"
+      targetPort: 8081
   selector:
     app: content-ingester
