@@ -27,7 +27,10 @@ spec:
         - name: KAFKA_PORT
           value: "9092"
         - name: BUCKET_PATH
-          value: "com.ft.coco-imagepublish.pre-prod"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.s3.bucket
         - name: S3_ACCESSKEY
           valueFrom:
             secretKeyRef:

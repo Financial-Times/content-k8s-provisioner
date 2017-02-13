@@ -24,10 +24,16 @@ spec:
           value: "-Xms256m -Xmx256m -XX:+UseG1GC -server"
         - name: KAFKA_PROXY
           value: "kafka:8082"
+        - name: S3_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.s3.bucket
         - name: S3_URL
-          value: "http://com.ft.coco-imagepublish.pre-prod.s3.amazonaws.com/"
+          value: "http://$S3_BUCKET.s3.amazonaws.com/"
         ports:
         - containerPort: 8080
+        - containerPort: 8081
         livenessProbe:
           initialDelaySeconds: 5
           tcpSocket:
@@ -53,6 +59,10 @@ metadata:
 spec:
   ports:
     - port: 8080
+      name: "8080"
       targetPort: 8080
+    - port: 8081
+      name: "8081"
+      targetPort: 8081
   selector:
     app: methode-image-model-mapper
