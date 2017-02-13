@@ -1,59 +1,42 @@
-apiVersion: extensions/v1beta1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: neo4j-red-restore
-  labels:
-    app: neo4j-red-restore
-    visualize: "true"
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: neo4j-red-restore
   template:
     metadata:
-      labels:
-        app: neo4j-red-restore
-        version: "latest"
-        visualize: "true"
+      name: neo4j-red-restore
     spec:
       containers:
       - name: neo4j-red-restore
         image: coco/neo4j-hot-backup
+        command: 
+          - ./neo4j-hot-backup
+          - restore 
+          - 2017-02-09T14-00-33
         imagePullPolicy: Always
         env:
-          - name: AWS_BUCKET_NAME
-            value: com.ft.coco-neo4j-backup
+          - name: S3_BUCKET
+            value: com.ft.k8s-neo4j-backup
           - name: S3_DIR
             value: prod-uk
           - name: AWS_ACCESS_KEY_ID
             valueFrom:
               secretKeyRef:
-                name: aws-secrets
+                name: global-secrets
                 key: aws.access_key_id
           - name: AWS_SECRET_ACCESS_KEY
             valueFrom:
               secretKeyRef:
-                name: aws-secrets
+                name: global-secrets
                 key: aws.secret_access_key
         volumeMounts:
          - name: neo4j-red-persistent-storage
            mountPath: /backup
-           subPath: /graph.db
+           subPath: graph.db
       volumes:
        - name: neo4j-red-persistent-storage
          awsElasticBlockStore:
            volumeID: vol-09f84ecc1aa0a36ac
            fsType: ext4
----
-
-kind: Service
-apiVersion: v1
-metadata:
-  name: neo4j-red-restore
-  labels:
-    app: neo4j-red-restore
-    visualize: "true"
-spec:
-  selector:
-    app: neo4j-red
+      restartPolicy: Never
