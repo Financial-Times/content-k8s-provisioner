@@ -1,24 +1,24 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name:  methode-article-mapper
+  name:  methode-list-mapper
   labels:
-    app:  methode-article-mapper
+    app:  methode-list-mapper
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: methode-article-mapper
+      app: methode-list-mapper
   template:
     metadata:
       labels:
-        app:  methode-article-mapper
+        app:  methode-list-mapper
         visualize: "true"
     spec:
       containers:
-      - name:  methode-article-mapper
-        image:  coco/methode-article-mapper:rework-config
+      - name:  methode-list-mapper
+        image:  up-registry.ft.com/coco/methode-list-mapper:v9
         imagePullPolicy: Always
         resources:
           limits:
@@ -27,7 +27,7 @@ spec:
           initialDelaySeconds: 15
           tcpSocket:
             port: 8080
-# enable when MAM has a __gtg endpoint
+# enable when MLM has a __gtg endpoint
 #        readinessProbe:
 #          httpGet:
 #            path: /__gtg
@@ -39,6 +39,8 @@ spec:
           value: "document-store-api:8080" 
         - name: CONCORDANCE_API_URL
           value: "public-concordances-api:8080"
+        - name: THINGS_API_URL
+          value: "public-things-api:8080"
         - name: KAFKA_PROXY_URL
           value: "kafka:8082"
         ports:
@@ -50,9 +52,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: methode-article-mapper
+  name: methode-list-mapper
   labels:
-    app: methode-article-mapper
+    app: methode-list-mapper
     visualize: "true"
     hasHealthcheck: "true"
     healthcheckSeverity: "critical"
@@ -65,4 +67,4 @@ spec:
       name: "8081"
       targetPort: 8081
   selector:
-    app: methode-article-mapper
+    app: methode-list-mapper
