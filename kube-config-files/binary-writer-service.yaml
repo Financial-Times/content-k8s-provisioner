@@ -34,12 +34,12 @@ spec:
         - name: S3_ACCESSKEY
           valueFrom:
             secretKeyRef:
-              name: aws-secrets
+              name: global-secrets
               key: aws.access_key_id
         - name: S3_SECRETKEY
           valueFrom:
             secretKeyRef:
-              name: aws-secrets
+              name: global-secrets
               key: aws.secret_access_key
         - name: FAKE_SERVICE
           value: "false"
@@ -53,7 +53,7 @@ spec:
           httpGet:
             path: /__gtg
             port: 8080
-          initialDelaySeconds: 30
+          initialDelaySeconds: 10
           periodSeconds: 30
 
 ---

@@ -22,5 +22,5 @@ metadata:
 data:
   mongodb.address: mongodb:27017
   api.host: test.api.ft.com
-  aws.s3.bucket: com.ft.coco-imagepublish.pre-prod
+  aws.s3.bucket: com.ft.k8s-imagepublish
 
