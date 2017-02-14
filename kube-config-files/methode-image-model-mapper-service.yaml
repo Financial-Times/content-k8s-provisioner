@@ -28,7 +28,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: aws.s3.bucket
+              key: aws.s3.image.binaries.bucket
         - name: S3_URL
           value: "http://$S3_BUCKET.s3.amazonaws.com/"
         ports:

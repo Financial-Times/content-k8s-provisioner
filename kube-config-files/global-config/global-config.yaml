@@ -8,5 +8,5 @@ data:
   api.host: test.api.ft.com
   aws.region: eu-west
   k8s.app_namespace: default
-  aws.s3.bucket: com.ft.k8s-imagepublish
+  aws.s3.image.binaries.bucket: com.ft.k8s-imagepublish
 

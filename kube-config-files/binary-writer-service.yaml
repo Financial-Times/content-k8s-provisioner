@@ -30,7 +30,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: aws.s3.bucket
+              key: aws.s3.image.binaries.bucket
         - name: S3_ACCESSKEY
           valueFrom:
             secretKeyRef:
