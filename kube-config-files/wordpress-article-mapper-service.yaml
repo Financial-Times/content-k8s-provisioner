@@ -1,0 +1,58 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: wordpress-article-mapper
+  labels:
+    app: wordpress-article-mapper
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wordpress-article-mapper
+  template:
+    metadata:
+      labels:
+        app: wordpress-article-mapper
+        visualize: "true"
+    spec:
+      containers:
+      - name: wordpress-article-mapper
+        image: coco/wordpress-article-mapper:rework-config
+        imagePullPolicy: Always
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms384m -Xmx384m -XX:+UseG1GC -server"
+        - name: KAFKA_PROXY
+          value: "kafka:8082"
+        - name: READ_ENDPOINT
+          value: "document-store-api:8080"
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        livenessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: wordpress-article-mapper
+  labels:
+    app: wordpress-article-mapper
+    visualize: "true"
+    hasHealthcheck: "true"
+    healthcheckSeverity: warning
+spec:
+  ports:
+    - port: 8080
+      name: "8080"
+      targetPort: 8080
+    - port: 8081
+      name: "8081"
+      targetPort: 8081
+  selector:
+    app: wordpress-article-mapper
