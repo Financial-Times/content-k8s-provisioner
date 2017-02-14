@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name:  video-mapper
-        image:  coco/video-mapper:v1.2.9
+        image:  coco/video-mapper:remove-host-routing
         imagePullPolicy: Always
         resources:
           limits:
@@ -27,19 +27,21 @@ spec:
           initialDelaySeconds: 15
           tcpSocket:
             port: 8080
-         readinessProbe:
-           httpGet:
-             path: /__gtg
-             port: 8080
-           initialDelaySeconds: 30
-           periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
         env:
-        - name: DOCUMENT_STORE_API_URL
-          value: "document-store-api:8080" 
-        - name: CONCORDANCE_API_URL
-          value: "public-concordances-api:8080"
-        - name: KAFKA_PROXY_URL
-          value: "kafka:8082"
+        - name: Q_ADDR
+          value: "http://kafka:8082" 
+        - name: Q_GROUP
+          value: "videoMapper"
+        - name: Q_READ_TOPIC
+          value: "NativeCmsPublicationEvents"
+        - name: Q_WRITE_TOPIC
+          value: "CmsPublicationEvents"
         ports:
         - containerPort: 8080
 
