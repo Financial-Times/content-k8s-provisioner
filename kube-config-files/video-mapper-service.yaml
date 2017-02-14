@@ -1,9 +1,9 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name:  video-mapper
+  name: video-mapper
   labels:
-    name:  video-mapper
+    app: video-mapper
     visualize: "true"
 spec:
   replicas: 2
@@ -13,12 +13,12 @@ spec:
   template:
     metadata:
       labels:
-        app:  video-mapper
+        app: video-mapper
         visualize: "true"
     spec:
       containers:
-      - name:  video-mapper
-        image:  coco/video-mapper:remove-host-routing
+      - name: video-mapper
+        image: coco/video-mapper:remove-host-routing
         imagePullPolicy: Always
         resources:
           limits:
