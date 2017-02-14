@@ -1,0 +1,67 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: methode-content-placeholder-mapper
+  labels:
+    app: methode-content-placeholder-mapper
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: methode-content-placeholder-mapper
+  template:
+    metadata:
+      labels:
+        app: methode-content-placeholder-mapper
+        visualize: "true"
+    spec:
+      containers:
+      - name: methode-content-placeholder-mapper
+        image: coco/methode-content-placeholder-mapper:remove-host-routing
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 256Mi
+        livenessProbe:
+          initialDelaySeconds: 15
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        env:
+        - name: Q_READ_ADDR
+          value: "http://kafka:8082" 
+        - name: Q_WRITE_ADDR
+          value: "http://kafka:8082" 
+        - name: Q_GROUP
+          value: "mcpm"
+        - name: Q_READ_TOPIC
+          value: "NativeCmsPublicationEvents"
+        - name: Q_WRITE_TOPIC
+          value: "CmsPublicationEvents"
+        ports:
+        - containerPort: 8080
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: methode-content-placeholder-mapper
+  labels:
+    app: methode-content-placeholder-mapper
+    visualize: "true"
+    hasHealthcheck: "true"
+    healthcheckSeverity: "critical"
+spec:
+  ports:
+    - port: 8080
+      name: "8080"
+      targetPort: 8080
+  selector:
+    app: methode-content-placeholder-mapper
