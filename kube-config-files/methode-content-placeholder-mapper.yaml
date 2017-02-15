@@ -24,14 +24,14 @@ spec:
           limits:
             memory: 256Mi
         livenessProbe:
-          initialDelaySeconds: 15
+          initialDelaySeconds: 5
           tcpSocket:
             port: 8080
         readinessProbe:
           httpGet:
             path: /__gtg
             port: 8080
-          initialDelaySeconds: 30
+          initialDelaySeconds: 10
           periodSeconds: 30
         env:
         - name: Q_READ_ADDR
