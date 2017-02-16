@@ -20,6 +20,7 @@ spec:
       containers:
       - name: content-public-read
         image: up-registry.ft.com/coco/content-public-read:k8s_v0.0.1
+        imagePullPolicy: Always
         env:
         - name: JAVA_OPTS
           value: "-Xms128m -Xmx128m -XX:+UseG1GC -server"
