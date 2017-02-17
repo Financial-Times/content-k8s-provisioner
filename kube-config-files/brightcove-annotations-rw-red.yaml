@@ -6,7 +6,7 @@ metadata:
     app: brightcove-annotations-rw-red
     visualize: "true"
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: brightcove-annotations-rw-red

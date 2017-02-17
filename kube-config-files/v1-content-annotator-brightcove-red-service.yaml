@@ -6,7 +6,7 @@ metadata:
     app: v1-content-annotator-brightcove-red-service
     visualize: "true"
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: v1-content-annotator-brightcove-red-service
