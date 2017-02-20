@@ -9,4 +9,5 @@ data:
   aws.region: eu-west
   k8s.app_namespace: default
   aws.s3.image.binaries.bucket: com.ft.k8s-imagepublish
+  aws.s3.image.binaries.url: "http://com.ft.k8s-imagepublish.s3.amazonaws.com/"
 
