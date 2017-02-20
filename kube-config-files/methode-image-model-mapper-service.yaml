@@ -18,19 +18,18 @@ spec:
     spec:
       containers:
       - name: methode-image-model-mapper
-        image: coco/methode-image-model-mapper:v16.0.2-rc.1
+        image: coco/methode-image-model-mapper:remove-transformer-configuration
+        imagePullPolicy: Always
         env:
         - name: JAVA_OPTS
           value: "-Xms256m -Xmx256m -XX:+UseG1GC -server"
         - name: KAFKA_PROXY
           value: "kafka:8082"
-        - name: S3_BUCKET
+        - name: S3_URL
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: aws.s3.image.binaries.bucket
-        - name: S3_URL
-          value: "http://$S3_BUCKET.s3.amazonaws.com/"
+              key: aws.s3.image.binaries.url
         ports:
         - containerPort: 8080
         - containerPort: 8081
