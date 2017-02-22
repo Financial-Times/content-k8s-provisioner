@@ -6,6 +6,7 @@ metadata:
     app: synthetic-image-publication-monitor
     visualize: "true"
 spec:
+  #we need a single replica for synthetic-image-publication-monitor, because its purpose is to publish a test image each minute and test if it has reached s3, therefore pod redundancy will not bring any added value.
   replicas: 1
   selector:
     matchLabels:
