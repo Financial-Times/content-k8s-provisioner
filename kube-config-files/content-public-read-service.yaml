@@ -6,7 +6,7 @@ metadata:
     app: content-public-read
     visualize: "true"
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: content-public-read
@@ -14,7 +14,6 @@ spec:
     metadata:
       labels:
         app: content-public-read
-        version: "latest"
         visualize: "true"
     spec:
       containers:
@@ -30,11 +29,10 @@ spec:
           value: content/
         - name: "CONTENT_HEALTHCHECK_PATH"
           value: /__health
-        - name: CACHE_TTL
-          valueFrom:
-            configMapKeyRef:
-              name: global-config
-              key: cache-max-age
+# I had to hardcode this value here (10s), and not use the one from global config, since Kubernetes
+# doesn't support yet composing the value from another env var.
+        - name: CACHE_CONTROL_POLICY
+          value: max-age=10s
         - name: API_HOST
           valueFrom:
             configMapKeyRef:
@@ -62,7 +60,7 @@ metadata:
 spec:
   ports:
     - port: 8080
-      name: "serve"
+      name: "app"
       targetPort: 8080
     - port: 8081
       name: "admin"

@@ -1,43 +1,39 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name:  public-things-api
+  name: sections-rw-neo4j-red
   labels:
-    app:  public-things-api
+    app: sections-rw-neo4j-red
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: public-things-api
+      app: sections-rw-neo4j-red
   template:
     metadata:
       labels:
-        app:  public-things-api
+        app: sections-rw-neo4j-red
         visualize: "true"
     spec:
       containers:
-      - name:  public-things-api
-        image:  coco/public-things-api:0.0.17
+      - name: sections-rw-neo4j-red
+        image: coco/sections-rw-neo4j:v1.1.3
         imagePullPolicy: Always
         resources:
           limits:
             memory: 256Mi
         env:
-        - name: APP_PORT
-          value: "8080" 
-        - name: GRAPHITE_ADDRESS
+        - name: GRAPHITE_TCP_ADDRESS
           value: "graphite.ft.com:2003"
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.public-things-api"
-        - name: LOG_METRICS
-          value: "false" 
-        - name: CACHE_DURATION
-          value: "30s" 
+          value: "coco.services.k8s.sections-rw-neo4j-red"
+        - name: BATCH_SIZE
+          value: "50"
         - name: NEO_URL
           value: "http://neo4j-red:7474/db/data/" 
         ports:
-        - containerPort:  8080
+        - containerPort: 8080
         livenessProbe:
           tcpSocket:
             port: 8080
@@ -54,16 +50,15 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: public-things-api
+  name: sections-rw-neo4j-red
   labels:
-    app: public-things-api
+    app: sections-rw-neo4j-red
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: "critical"
 spec:
   ports:
     - port: 8080
-      name: "8080"
+      name: "app"
       targetPort: 8080
   selector:
-    app: public-things-api
+    app: sections-rw-neo4j-red

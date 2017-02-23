@@ -1,49 +1,50 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: content-rw-neo4j-red
+  name: people-rw-neo4j-red
   labels:
-    app: content-rw-neo4j-red
+    app: people-rw-neo4j-red
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: content-rw-neo4j-red
+      app: people-rw-neo4j-red
   template:
     metadata:
       labels:
-        app: content-rw-neo4j-red
+        app: people-rw-neo4j-red
         visualize: "true"
     spec:
       containers:
-      - name: content-rw-neo4j-red
-        image: coco/content-rw-neo4j:v0.0.36
+      - name: people-rw-neo4j-red
+        image: coco/people-rw-neo4j:v0.1.7
+        imagePullPolicy: Always
         resources:
-            limits:
-              memory: 256Mi
+          limits:
+            memory: 256Mi
         env:
         - name: APP_PORT
           value: "8080"
-        - name: NEO_URL
-          value: "http://neo4j-red:7474/db/data"
-        - name: BATCH_SIZE
-          value: "50"
         - name: GRAPHITE_ADDRESS
           value: "graphite.ft.com:2003"
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.content-rw-neo4j-red"
+          value: "coco.services.k8s.people-rw-neo4j-red"
+        - name: BATCH_SIZE
+          value: "50"
+        - name: NEO_URL
+          value: "http://neo4j-red:7474/db/data/" 
         ports:
         - containerPort: 8080
         livenessProbe:
-          initialDelaySeconds: 5
           tcpSocket:
             port: 8080
+          initialDelaySeconds: 10
         readinessProbe:
           httpGet:
-            path: /__gtg
+            path: "/__gtg"
             port: 8080
-          initialDelaySeconds: 10
+          initialDelaySeconds: 15
           periodSeconds: 30
 
 ---
@@ -51,17 +52,15 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: content-rw-neo4j-red
+  name: people-rw-neo4j-red
   labels:
-    app: content-rw-neo4j-red
+    app: people-rw-neo4j-red
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: warning
-
 spec:
   ports:
     - port: 8080
-      name: "8080"
+      name: "app"
       targetPort: 8080
   selector:
-    app: content-rw-neo4j-red
+    app: people-rw-neo4j-red

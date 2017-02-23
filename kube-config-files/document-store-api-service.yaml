@@ -14,7 +14,6 @@ spec:
     metadata:
       labels:
         app: document-store-api
-        version: "latest"
         visualize: "true"
     spec:
       containers:
@@ -30,6 +29,11 @@ spec:
             configMapKeyRef:
               name: global-config
               key: cache-max-age
+        - name: API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: api.host
         ports:
         - containerPort: 8080
         - containerPort: 8081

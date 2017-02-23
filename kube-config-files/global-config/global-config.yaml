@@ -9,6 +9,7 @@ data:
   aws.region: eu-west
   k8s.app_namespace: default
   aws.s3.image.binaries.bucket: com.ft.k8s-imagepublish
+  aws.s3.image.binaries.url: "http://com.ft.k8s-imagepublish.s3.amazonaws.com/"
   aws.elasticsearch.endpoint: search-k8s-ltxvcgndw2flt6ygxwgq3qtdmm.eu-west-1.es.amazonaws.com
   aws.region: eu-west-1
   cache-max-age: "10"

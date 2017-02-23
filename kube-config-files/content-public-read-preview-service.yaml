@@ -1,35 +1,41 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: methode-image-model-mapper
+  name: content-public-read-preview
   labels:
-    app: methode-image-model-mapper
+    app: content-public-read-preview
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: methode-image-model-mapper
+      app: content-public-read-preview
   template:
     metadata:
       labels:
-        app: methode-image-model-mapper
+        app: content-public-read-preview
         visualize: "true"
     spec:
       containers:
-      - name: methode-image-model-mapper
-        image: coco/methode-image-model-mapper:remove-transformer-configuration
+      - name: content-public-read-preview
+        image: up-registry.ft.com/coco/content-public-read:k8s_v0.0.1
         imagePullPolicy: Always
         env:
         - name: JAVA_OPTS
-          value: "-Xms256m -Xmx256m -XX:+UseG1GC -server"
-        - name: KAFKA_PROXY
-          value: "kafka:8082"
-        - name: S3_URL
+          value: "-Xms128m -Xmx128m -XX:+UseG1GC -server"
+        - name: DOCUMENT_STORE_HOST
+          value: content-preview:8080:8081
+        - name: "CONTENT_PATH"
+          value: content-preview/
+        - name: "CONTENT_HEALTHCHECK_PATH"
+          value: /__ping
+        - name: CACHE_CONTROL_POLICY
+          value: no-store
+        - name: API_HOST
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: aws.s3.image.binaries.url
+              key: api.host
         ports:
         - containerPort: 8080
         - containerPort: 8081
@@ -37,31 +43,25 @@ spec:
           initialDelaySeconds: 5
           tcpSocket:
             port: 8080
-        readinessProbe:
-          httpGet:
-            path: /__gtg
-            port: 8080
-          initialDelaySeconds: 10
-          periodSeconds: 30
 
 ---
 
 kind: Service
 apiVersion: v1
 metadata:
-  name: methode-image-model-mapper
+  name: content-public-read-preview
   labels:
-    app: methode-image-model-mapper
+    app: content-public-read-preview
     visualize: "true"
     hasHealthcheck: "true"
     healthcheckSeverity: warning
 spec:
   ports:
     - port: 8080
-      name: "8080"
+      name: "app"
       targetPort: 8080
     - port: 8081
-      name: "8081"
+      name: "admin"
       targetPort: 8081
   selector:
-    app: methode-image-model-mapper
+    app: content-public-read-preview
