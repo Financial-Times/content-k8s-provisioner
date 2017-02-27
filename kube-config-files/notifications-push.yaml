@@ -1,0 +1,75 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: notifications-push
+  labels:
+    app: notifications-push
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notifications-push
+  template:
+    metadata:
+      labels:
+        app: notifications-push
+        visualize: "true"
+    spec:
+      containers:
+      - name: notifications-push
+        image: coco/notifications-push:kubernetes-version-rc1
+        imagePullPolicy: Always
+        env:
+        - name: QUEUE_PROXY_ADDRS
+          value: "http://kafka:8082"
+        - name: GROUP_ID
+          value: "k8s-list-notifications-push"
+        - name: TOPIC
+          value: "PostPublicationEvents"
+        - name: NOTIFICATIONS_DELAY
+          value: "10"
+        - name: API_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: api.host
+        - name: CONSUMER_BACKOFF
+          value: "2"
+        - name: NOTIFICATIONS_RESOURCE
+          value: "content"
+        - name: WHITELIST
+          value: "^http://(methode|wordpress)-(article)-(transformer|mapper)(-pr|-iw)?(-uk-.*)?\\.svc\\.ft\\.com(:\\d{2,5})?/(content)/[\\w-]+.*$"
+        resources:
+          limits:
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 30
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: notifications-push
+  labels:
+    app: notifications-push
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - name: "app"
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: notifications-push
+
