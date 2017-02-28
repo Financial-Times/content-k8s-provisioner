@@ -45,7 +45,6 @@ metadata:
     app: topics-rw-neo4j-red
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: warning
 spec:
   ports:
     - name: work

@@ -55,7 +55,6 @@ metadata:
     app: methode-article-mapper
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: "critical"
 spec:
   ports:
     - port: 8080

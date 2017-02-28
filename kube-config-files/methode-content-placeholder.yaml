@@ -57,7 +57,6 @@ metadata:
     app: methode-content-placeholder-mapper
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: "critical"
 spec:
   ports:
     - port: 8080

@@ -64,7 +64,6 @@ metadata:
     app: list-notifications-rw
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: warning
 spec:
   ports:
     - port: 8080

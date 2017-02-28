@@ -59,8 +59,6 @@ metadata:
     app: rec-reads-content-annotator
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: warning
-
 spec:
   ports:
     - port: 8080
