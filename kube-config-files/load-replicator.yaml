@@ -1,0 +1,69 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: load-replicator
+  labels:
+    app: load-replicator
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-replicator
+  template:
+    metadata:
+      labels:
+        app: load-replicator
+        visualize: "true"
+    spec:
+      containers:
+      - name: load-replicator
+        image: coco/load-replicator:data-for-k8s
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 256Mi
+        env:
+        - name: ENDPOINT_RATE_PAIRS
+          value: "content:4;lists:2;enrichedcontent:2;notifications:1;brands:1;organisations:1;people:1;things:1;concordances:1"
+        - name: AUTHORIZATION
+          valueFrom:
+            secretKeyRef:
+              name: load-replicator
+              key: auth
+        - name: NOTIFICATIONS_DATE
+          value: "2017-02-14T00:00:00.000Z"
+        - name: ENVIRONMENT
+          value: "k8s-test"
+        - name: DURATION
+          value: "0" 
+        ports:
+        - containerPort:  8080
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            path: "/__gtg"
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: load-replicator
+  labels:
+    app: load-replicator
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - port: 8080
+      name: "app"
+      targetPort: 8080
+  selector:
+    app: load-replicator
