@@ -61,7 +61,6 @@ metadata:
     app: v1-annotations-rw-red
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: "critical"
 spec:
   ports:
     - port: 8080

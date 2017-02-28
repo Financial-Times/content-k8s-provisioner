@@ -62,7 +62,6 @@ metadata:
     app: concepts-kafka-bridge-pub-pre-prod
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: warning
 spec:
   ports:
     - port: 8080

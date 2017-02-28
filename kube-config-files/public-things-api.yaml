@@ -59,7 +59,6 @@ metadata:
     app: public-things-api
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: "critical"
 spec:
   ports:
     - port: 8080

@@ -48,7 +48,6 @@ metadata:
     app: methode-image-set-mapper
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: warning
 spec:
   ports:
     - port: 8080

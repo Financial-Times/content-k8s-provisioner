@@ -67,7 +67,6 @@ metadata:
     app: v1-content-annotator-binding-service-red
     visualize: "true"
     hasHealthcheck: "true"
-    healthcheckSeverity: "critical"
 spec:
   ports:
     - port: 8080
