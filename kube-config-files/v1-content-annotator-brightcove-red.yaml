@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: v1-content-annotator-brightcove-red-service
-        image: up-registry.ft.com/coco/content-annotator-k8s:v2
+        image: up-registry.ft.com/coco/content-annotator-k8s:v8
         imagePullPolicy: Always
         livenessProbe:
           initialDelaySeconds: 5

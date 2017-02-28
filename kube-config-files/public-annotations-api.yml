@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: public-annotations-api
-        image: coco/public-annotations-api:latest
+        image: coco/public-annotations-api:v1.0.0
         resources:
           limits:
             memory: 256Mi

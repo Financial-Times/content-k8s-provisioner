@@ -15,7 +15,7 @@ spec:
           restartPolicy: "Never"
           containers:
           - name: mongo-configurator
-            image: coco/coco-mongodb-configurator
+            image: coco/coco-mongodb-configurator:v0.1.0
             env:
             - name: ARGS
               value: "mongodb-0.mongodb:27017:28017 mongodb-1.mongodb:27017:28017 mongodb-2.mongodb:27017:28017"

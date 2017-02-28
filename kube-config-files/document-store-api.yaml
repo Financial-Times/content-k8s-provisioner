@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: document-store-api
-        image: up-registry.ft.com/coco/document-store-api
+        image: up-registry.ft.com/coco/document-store-api:v94
         env:
         - name: MONGO_ADDRESSES
           value: mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017
