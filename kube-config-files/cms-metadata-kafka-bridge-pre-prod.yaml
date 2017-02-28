@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: cms-metadata-kafka-bridge-pre-prod
-        image:  coco/coco-kafka-bridge:v14.0.1
+        image:  coco/coco-kafka-bridge:remove-host-based-routing
         volumeMounts:
         - mountPath: /etc/ssl/certs
           name: certificates-storage
