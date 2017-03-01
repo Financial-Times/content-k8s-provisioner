@@ -25,16 +25,25 @@ spec:
             memory: 256Mi
         env:
         - name: ENDPOINT_RATE_PAIRS
-          value: "content:4;lists:2;enrichedcontent:2;notifications:1;brands:1;organisations:1;people:1;things:1;concordances:1"
+          valueFrom:
+            configMapKeyRef:
+              name: load-replicator-config
+              key: rates
         - name: AUTHORIZATION
           valueFrom:
             secretKeyRef:
               name: load-replicator
               key: auth
         - name: NOTIFICATIONS_DATE
-          value: "2017-02-14T00:00:00.000Z"
+          valueFrom:
+            configMapKeyRef:
+              name: load-replicator-config
+              key: notfications-date
         - name: ENVIRONMENT
-          value: "k8s-test"
+          valueFrom:
+            configMapKeyRef:
+              name: load-replicator-config
+              key: environment
         - name: DURATION
           value: "0" 
         ports:
