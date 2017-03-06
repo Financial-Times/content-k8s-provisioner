@@ -21,7 +21,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: elb-registrator
-        image: coco/coco-elb-dns-registrator:k8s_v0.0.3
+        image: coco/coco-elb-dns-registrator:k8s_v0.0.4
         volumeMounts:
         #We need the certificates for being able to make the DynDNS http call
         - mountPath: /etc/ssl/certs
