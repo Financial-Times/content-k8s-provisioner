@@ -19,3 +19,4 @@ data:
   graphite.address: "graphite.ft.com:2003"
   graphite.host: graphite.ft.com
   graphite.port: "2003"
+  neo4j.statements.batch.size: "50"

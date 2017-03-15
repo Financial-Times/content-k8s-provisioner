@@ -32,7 +32,10 @@ spec:
         - name: GRAPHITE_PREFIX
           value: "coco.services.k8s.special-reports-rw-neo4j-red"
         - name: BATCH_SIZE
-          value: "50"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.statements.batch.size	
         - name: NEO_URL
           value: "http://neo4j-red:7474/db/data/" 
         ports:
