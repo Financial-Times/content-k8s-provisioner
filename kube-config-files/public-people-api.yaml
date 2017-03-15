@@ -22,7 +22,10 @@ spec:
         imagePullPolicy: Always
         env:
         - name: NEO_URL
-          value: "http://neo4j-red:7474/db/data/"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.url  
         - name: CACHE_DURATION
           value: 10m
         - name: GRAPHITE_ADDRESS

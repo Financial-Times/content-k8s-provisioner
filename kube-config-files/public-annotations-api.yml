@@ -37,7 +37,10 @@ spec:
         - name: CACHE_DURATION
           value: "30s"
         - name: NEO_URL
-          value: "http://neo4j-red:7474/db/data/"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.url  
         ports:
         - containerPort: 8080
         livenessProbe:

@@ -22,7 +22,10 @@ spec:
         imagePullPolicy: Always
         env:
         - name: NEO_URL
-          value: "http://neo4j-red:7474/db/data/"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.url  
         - name: APP_PORT
           value: "8080"
         - name: CACHE_DURATION

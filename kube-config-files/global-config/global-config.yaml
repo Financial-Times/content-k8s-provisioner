@@ -20,3 +20,4 @@ data:
   graphite.host: graphite.ft.com
   graphite.port: "2003"
   neo4j.statements.batch.size: "50"
+  neo4j.url: http://neo4j-red:7474/db/data/
