@@ -26,7 +26,10 @@ spec:
         - name: CACHE_DURATION
           value: 10m
         - name: GRAPHITE_ADDRESS
-          value: graphite.ft.com:2003
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
         - name: GRAPHITE_PREFIX
           value: coco.services.k8s.public-people-api
         resources:

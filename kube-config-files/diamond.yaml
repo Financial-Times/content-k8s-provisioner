@@ -26,9 +26,15 @@ spec:
           mountPath: /host_proc
         env:
         - name: GRAPHITE_HOST
-          value: graphite.ft.com
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.host
         - name: GRAPHITE_PORT
-          value: "2003"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.port
         - name: INTERVAL
           value: "60"
         - name: PREFIX

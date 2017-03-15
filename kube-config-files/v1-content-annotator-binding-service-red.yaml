@@ -48,9 +48,15 @@ spec:
         - name: FILTER_NOVELTIES
           value: "true"
         - name: GRAPHITE_HOST
-          value: "graphite.ft.com"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.host
         - name: GRAPHITE_PORT
-          value: "2003"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.port
         - name: GRAPHITE_PREFIX
           value: "coco.services.k8s-test.v1-content-annotator-binding-service-red"
         ports:

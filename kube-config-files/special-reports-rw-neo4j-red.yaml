@@ -24,8 +24,11 @@ spec:
           limits:
             memory: 256Mi
         env:
-        - name: GRAPHITE_TCP_ADDRESS
-          value: "graphite.ft.com:2003"
+        - name: GRAPHITE_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
         - name: GRAPHITE_PREFIX
           value: "coco.services.k8s.special-reports-rw-neo4j-red"
         - name: BATCH_SIZE

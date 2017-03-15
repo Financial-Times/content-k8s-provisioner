@@ -33,13 +33,19 @@ spec:
         - name: ANNOTATING_SYSTEM
           value: "concept-suggestor"
         - name: GRAPHITE_HOST
-          value: "graphite.ft.com"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.host
+        - name: GRAPHITE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.port
         - name: JAVA_OPTS
           value: "-Xms128m -Xmx128m -XX:+UseG1GC -server"
         - name: FILTER_NOVELTIES
           value: "true"
-        - name: GRAPHITE_PORT
-          value: "2003"
         - name: GRAPHITE_PREFIX
           value: "coco.services.k8s.v2-content-annotator-red"
         - name: LOG_METRICS

@@ -27,7 +27,10 @@ spec:
         - name: APP_PORT
           value: "8080"
         - name: GRAPHITE_ADDRESS
-          value: "graphite.ft.com:2003"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
         - name: GRAPHITE_PREFIX
           value: "coco.services.k8s.people-rw-neo4j-red"
         - name: BATCH_SIZE
