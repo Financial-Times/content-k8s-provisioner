@@ -58,7 +58,10 @@ spec:
         - name: MESSAGE_FORWARDING_ENABLED
           value: "false"
         - name: KAFKA_PROXY_URL
-          value: "kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         - name: WRITER_URL
           value: "list-notifications-rw:8080"
         - name: ZOOKEEPER_HOST

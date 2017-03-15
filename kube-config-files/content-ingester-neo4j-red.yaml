@@ -58,7 +58,10 @@ spec:
         - name: FORWARD_TO_TOPIC_NAME
           value: "PostPublicationEvents"
         - name: KAFKA_PROXY_URL
-          value: "kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         - name: WRITER_URL
           value: "content-rw-neo4j-red:8080"
         - name: ZOOKEEPER_HOST

@@ -34,7 +34,10 @@ spec:
         - name: CES_PING
           value: "/worker/admin/ping"
         - name: KAFKA_ADDRESS
-          value: "kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         - name: GRAPHITE_HOST
           valueFrom:
             configMapKeyRef:
