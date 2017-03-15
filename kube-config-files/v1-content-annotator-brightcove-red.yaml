@@ -58,7 +58,7 @@ spec:
               name: global-config
               key: graphite.port
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s-test.v1-content-annotator-brightcove-red-service"
+          value: "coco.services.k8s.v1-content-annotator-brightcove-red-service"
         ports:
         - containerPort: 8080
 

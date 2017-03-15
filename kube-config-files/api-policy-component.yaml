@@ -37,7 +37,7 @@ spec:
         - name: JERSEY_TIMEOUT_DURATION
           value: "10000ms"
         - name: GRAPHITE_PREFIX
-          value: "coco.services.test-kube.api-policy-component.%i"
+          value: "coco.services.k8s.api-policy-component"
         ports:
         - containerPort: 8080
         - containerPort: 8081
