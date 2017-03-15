@@ -67,9 +67,15 @@ spec:
         - name: WRITER_URL
           value: "binary-writer:8080"
         - name: ZOOKEEPER_HOST
-          value: "kafka"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: zookeeper.host
         - name: ZOOKEEPER_PORT
-          value: "2181"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: zookeeper.port
         ports:
         - containerPort: 8080
         - containerPort: 8081

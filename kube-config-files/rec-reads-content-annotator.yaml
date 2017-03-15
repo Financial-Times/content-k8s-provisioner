@@ -25,7 +25,10 @@ spec:
         - name: GROUP_ID
           value: "k8s-rec-reads-content-annotator"
         - name: ZOOKEEPER_ENDPOINTS
-          value: "kafka:2181"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: zookeeper.url	
         - name: KAFKA_ENDPOINTS
           valueFrom:
             configMapKeyRef:
