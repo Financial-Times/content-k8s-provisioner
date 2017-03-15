@@ -38,7 +38,10 @@ spec:
         - name: ZOOKEEPER_ENDPOINTS
           value: "kafka:2181"
         - name: KAFKA_ENDPOINTS
-          value: "kafka:9092"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.url  
         - name: WRITER_ENDPOINT
           value: "v1-annotations-rw-red:8080:8080"
         - name: ANNOTATING_SYSTEM

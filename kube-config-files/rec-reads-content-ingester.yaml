@@ -32,9 +32,15 @@ spec:
         - name: ADMIN_PORT
           value: "8081"
         - name: KAFKA_HOST
-          value: "kafka"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.host
         - name: KAFKA_PORT
-          value: "9092"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.port
         - name: KAFKA_GROUPNAME
           value: "rec-reads-content-ingester"
         - name: KAFKA_SYSTEM_ID

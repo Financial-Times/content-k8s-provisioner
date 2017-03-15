@@ -21,3 +21,12 @@ data:
   graphite.port: "2003"
   neo4j.statements.batch.size: "50"
   neo4j.url: http://neo4j-red:7474/db/data/
+  kafka.url : kafka:9092
+  kafka.host : kafka
+  kafka.port : "9092"
+  kafka.proxy.url : kafka:8082
+  kafka.proxy.host : kafka
+  kafka.proxy.port : "8082"
+  zookeeper.url : kafka:2181
+  zookeeper.host : kafka
+  zookeeper.port : "2181"
