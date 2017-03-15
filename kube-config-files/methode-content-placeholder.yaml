@@ -35,9 +35,15 @@ spec:
           periodSeconds: 30
         env:
         - name: Q_READ_ADDR
-          value: "http://kafka:8082" 
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url.with.protocol
         - name: Q_WRITE_ADDR
-          value: "http://kafka:8082" 
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url.with.protocol
         - name: Q_GROUP
           value: "mcpm"
         - name: Q_READ_TOPIC

@@ -22,7 +22,10 @@ spec:
         imagePullPolicy: Always
         env:
         - name: QUEUE_PROXY_ADDRS
-          value: "http://kafka:8082" 
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url.with.protocol
         - name: GROUP_ID
           value: "K8S-list-notifications-push"
         - name: TOPIC

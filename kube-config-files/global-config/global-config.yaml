@@ -27,6 +27,7 @@ data:
   kafka.proxy.url : kafka:8082
   kafka.proxy.host : kafka
   kafka.proxy.port : "8082"
+  kafka.proxy.url.with.protocol: http://kafka:8082
   zookeeper.url : kafka:2181
   zookeeper.host : kafka
   zookeeper.port : "2181"

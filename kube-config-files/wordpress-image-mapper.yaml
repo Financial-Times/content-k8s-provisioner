@@ -23,7 +23,10 @@ spec:
         - name: JAVA_OPTS
           value: "-Xms256m -Xmx256m -XX:+UseG1GC -server"
         - name: KAFKA_PROXY
-          value: "kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         ports:
         - containerPort: 8080
         - containerPort: 8081

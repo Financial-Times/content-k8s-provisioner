@@ -27,7 +27,10 @@ spec:
         - name: PORT
           value: "8080"
         - name: KAFKA_PROXY_ADDRESS
-          value: "http://kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url.with.protocol
         - name: GROUP_ID
           value: "RedConcepts"
         - name: TOPIC
