@@ -24,7 +24,10 @@ spec:
         - name: JAVA_OPTS
           value: "-Xms384m -Xmx384m -XX:+UseG1GC -server"
         - name: KAFKA_PROXY
-          value: "kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         - name: READ_ENDPOINT
           value: "document-store-api:8080"
         ports:

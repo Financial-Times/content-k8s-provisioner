@@ -37,13 +37,22 @@ spec:
         - name: PLATFORM_VERSION
           value: "v1"
         - name: NEO_URL
-          value: "http://neo4j-red:7474/db/data/"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.url  
         - name: BATCH_SIZE
-          value: "50"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.statements.batch.size	
         - name: GRAPHITE_ADDRESS
-          value: "graphite.ft.com:2003"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s-test.v1-annotations-rw-neo4j-red"
+          value: "coco.services.k8s.v1-annotations-rw-neo4j-red"
         - name: LOG_METRICS
           value: "false"
         - name: APP_PORT

@@ -32,9 +32,15 @@ spec:
         - name: ADMIN_PORT
           value: "8081"
         - name: KAFKA_HOST
-          value: "kafka"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.host
         - name: KAFKA_PORT
-          value: "9092"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.port
         - name: KAFKA_GROUPNAME
           value: "list-notifications"
         - name: KAFKA_SYSTEM_ID
@@ -52,13 +58,22 @@ spec:
         - name: MESSAGE_FORWARDING_ENABLED
           value: "false"
         - name: KAFKA_PROXY_URL
-          value: "kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         - name: WRITER_URL
           value: "list-notifications-rw:8080"
         - name: ZOOKEEPER_HOST
-          value: "kafka"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: zookeeper.host
         - name: ZOOKEEPER_PORT
-          value: "2181"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: zookeeper.port
         ports:
         - containerPort: 8080
         - containerPort: 8081

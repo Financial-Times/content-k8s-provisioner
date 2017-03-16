@@ -6,7 +6,7 @@ metadata:
     app: api-policy-component
     visualize: "true"
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: api-policy-component
@@ -23,15 +23,21 @@ spec:
         - name: JAVA_OPTS
           value: "-Xms384m -Xmx384m -XX:+UseG1GC -server"
         - name: GRAPHITE_HOST
-          value: "graphite.ft.com"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.host
+        - name: GRAPHITE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.port
         - name: READ_ENDPOINT
           value: "path-routing-varnish:80"
-        - name: GRAPHITE_PORT
-          value: "2003"
         - name: JERSEY_TIMEOUT_DURATION
           value: "10000ms"
         - name: GRAPHITE_PREFIX
-          value: "coco.services.test-kube.api-policy-component.%i"
+          value: "coco.services.k8s.api-policy-component"
         ports:
         - containerPort: 8080
         - containerPort: 8081

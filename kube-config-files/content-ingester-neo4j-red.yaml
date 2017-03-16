@@ -30,9 +30,15 @@ spec:
         - name: ADMIN_PORT
           value: "8081"
         - name: KAFKA_HOST
-          value: "kafka"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.host
         - name: KAFKA_PORT
-          value: "9092"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.port
         - name: KAFKA_GROUPNAME
           value: "content-neo4j-red"
         - name: KAFKA_SYSTEM_ID
@@ -52,13 +58,22 @@ spec:
         - name: FORWARD_TO_TOPIC_NAME
           value: "PostPublicationEvents"
         - name: KAFKA_PROXY_URL
-          value: "kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         - name: WRITER_URL
           value: "content-rw-neo4j-red:8080"
         - name: ZOOKEEPER_HOST
-          value: "kafka"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: zookeeper.host
         - name: ZOOKEEPER_PORT
-          value: "2181"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: zookeeper.port
         ports:
         - containerPort: 8080
         - containerPort: 8081

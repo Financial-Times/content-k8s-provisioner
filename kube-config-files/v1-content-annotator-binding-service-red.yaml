@@ -36,9 +36,15 @@ spec:
         - name: GROUP_ID
           value: "v1-content-annotator-binding-service-red-k8s"
         - name: ZOOKEEPER_ENDPOINTS
-          value: "kafka:2181"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: zookeeper.url	
         - name: KAFKA_ENDPOINTS
-          value: "kafka:9092"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.url  
         - name: WRITER_ENDPOINT
           value: "v1-annotations-rw-red:8080:8080"
         - name: ANNOTATING_SYSTEM
@@ -48,11 +54,17 @@ spec:
         - name: FILTER_NOVELTIES
           value: "true"
         - name: GRAPHITE_HOST
-          value: "graphite.ft.com"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.host
         - name: GRAPHITE_PORT
-          value: "2003"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.port
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s-test.v1-content-annotator-binding-service-red"
+          value: "coco.services.k8s.v1-content-annotator-binding-service-red"
         ports:
         - containerPort: 8080
 

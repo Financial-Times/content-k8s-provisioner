@@ -24,9 +24,15 @@ spec:
         - name: JAVA_OPTS
           value: "-Xms544m -Xmx544m -XX:+UseG1GC -server"
         - name: KAFKA_HOST
-          value: "kafka"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.host
         - name: KAFKA_PORT
-          value: "9092"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.port
         - name: KAFKA_TOPIC
           value: "NativeCmsPublicationEvents"
         - name: RESPECT_EXISTING_TIMESTAMP

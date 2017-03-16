@@ -34,7 +34,10 @@ spec:
         - name: TRANSFORM_APP_PANIC_GUIDE
           value: https://dewey.ft.com/up-mlm.html
         - name: GRAPHITE_TCP_ADDRESS
-          value: graphite.ft.com:2003
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
         - name: GRAPHITE_PREFIX
           value: coco.services.k8s.content-preview
         - name: SOURCE_APP_NAME

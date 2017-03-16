@@ -22,11 +22,17 @@ spec:
         imagePullPolicy: Always
         env:
         - name: NEO_URL
-          value: "http://neo4j-red:7474/db/data/"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.url  
         - name: CACHE_DURATION
           value: 24h
         - name: GRAPHITE_ADDRESS
-          value: graphite.ft.com:2003
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
         - name: GRAPHITE_PREFIX
           value: coco.services.k8s.public-six-degrees-api
         resources:

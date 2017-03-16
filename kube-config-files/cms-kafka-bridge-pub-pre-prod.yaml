@@ -32,7 +32,10 @@ spec:
         - name: TOPIC
           value: "NativeCmsPublicationEvents"
         - name: PRODUCER_HOST
-          value: "http://kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         - name: PRODUCER_HOST_HEADER
           value: "kafka-proxy"
         - name: PRODUCER_TYPE
