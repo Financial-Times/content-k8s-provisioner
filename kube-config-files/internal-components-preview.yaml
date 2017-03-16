@@ -1,23 +1,23 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: content-preview
+  name: internal-components-preview
   labels:
-    app: content-preview
+    app: internal-components-preview
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: content-preview
+      app: internal-components-preview
   template:
     metadata:
       labels:
-        app: content-preview
+        app: internal-components-preview
         visualize: "true"
     spec:
       containers:
-      - name: content-preview
+      - name: internal-components-preview
         image: coco/content-preview:k8s_v0.0.3
         resources:
           limits:
@@ -26,24 +26,24 @@ spec:
         - name: APP_PORT
           value: "8080"
         - name: APP_NAME
-          value: content-preview
+          value: internal-components-preview
         - name: BUSINESS_IMPACT
-          value: "Editorial users won't be able to preview articles"
+          value: "Editorial users won't be able to preview internal components on articles"
         - name: TRANSFORM_APP_URI
-          value: http://methode-article-mapper:8080/map
+          value: http://methode-article-internal-components-mapper:8080/map
         - name: TRANSFORM_APP_HEALTH_URI
-          value: http://methode-article-mapper:8080/__health
+          value: http://methode-article-internal-components-mapper:8080/__health
         - name: TRANSFORM_APP_NAME
-          value: methode-article-mapper
+          value: methode-article-internal-components-mapper
         - name: TRANSFORM_APP_PANIC_GUIDE
-          value: https://dewey.ft.com/up-mam.html
+          value: https://dewey.ft.com/up-maicm.html
         - name: GRAPHITE_ADDRESS
           valueFrom:
             configMapKeyRef:
               name: global-config
               key: graphite.address
         - name: GRAPHITE_PREFIX
-          value: coco.services.k8s.content-preview
+          value: coco.services.k8s.internal-components-preview
         - name: SOURCE_APP_NAME
           value: methode-api
         - name: SOURCE_APP_URI
@@ -63,6 +63,7 @@ spec:
               key: methode.authorization_key
         - name: SOURCE_APP_PANIC_GUIDE
           value: https://dewey.ft.com/up-mapi.html
+
         ports:
         - containerPort: 8080
         - containerPort: 8081
@@ -81,9 +82,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: content-preview
+  name: internal-components-preview
   labels:
-    app: content-preview
+    app: internal-components-preview
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -95,4 +96,4 @@ spec:
       name: "admin"
       targetPort: 8081
   selector:
-    app: content-preview
+    app: internal-components-preview
