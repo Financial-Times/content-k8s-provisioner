@@ -52,7 +52,6 @@ metadata:
     visualize: "true"
 spec:
   ports:
-    - name: work
       port: 7474
       targetPort: 7474
   selector:
