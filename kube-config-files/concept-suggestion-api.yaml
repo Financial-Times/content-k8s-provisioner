@@ -78,7 +78,6 @@ metadata:
 spec:
   ports:
     - port: 8080
-      name: "8080"
       targetPort: 8080
   selector:
     app: concept-suggestion-api

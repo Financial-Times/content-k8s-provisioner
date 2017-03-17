@@ -106,7 +106,7 @@ metadata:
 spec:
   ports:
     - port: 8080
-      name: "8080"
+      name: "app"
       targetPort: 8080
     - port: 8081
       name: "admin"

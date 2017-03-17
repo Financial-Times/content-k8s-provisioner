@@ -67,7 +67,6 @@ metadata:
 spec:
   ports:
     - port: 8080
-      name: "app"
       targetPort: 8080
   selector:
     app: subjects-rw-neo4j-red

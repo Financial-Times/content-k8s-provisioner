@@ -89,7 +89,6 @@ metadata:
 spec:
   ports:
     - port: 8080
-      name: "app"
       targetPort: 8080
   selector:
     app: internal-content-api

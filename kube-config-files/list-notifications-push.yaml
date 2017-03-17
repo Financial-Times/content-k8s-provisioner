@@ -71,7 +71,6 @@ metadata:
     hasHealthcheck: "true"
 spec:
   ports:
-    - name: "app"
       port: 8080
       targetPort: 8080
   selector:

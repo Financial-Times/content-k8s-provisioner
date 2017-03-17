@@ -64,8 +64,7 @@ metadata:
     hasHealthcheck: "true"
 spec:
   ports:
-    - name: "app"
-      port: 8080
+    - port: 8080
       targetPort: 8080
   selector:
     app: public-content-by-concept-api
