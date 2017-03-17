@@ -1,0 +1,97 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: generic-rw-s3
+  labels:
+    app: generic-rw-s3
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: generic-rw-s3
+  template:
+    metadata:
+      labels:
+        app: generic-rw-s3
+        visualize: "true"
+    spec:
+      containers:
+      - name: generic-rw-s3
+        image: coco/generic-rw-s3:remove-host-routing
+        resources:
+            limits:
+              memory: 512Mi
+        env:
+        - name: APP_PORT
+          value: "8080"
+        - name: GRAPHITE_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
+        - name: GRAPHITE_PREFIX
+          value: "coco.services.k8s.generic-rw-s3"
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.region
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.secret_access_key
+        - name: BUCKET_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: generic-rw-s3-config
+              key: bucket.name
+        - name: LOG_METRICS
+          value: "false"
+        - name: SRC_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url.with.protocol
+        - name: SRC_GROUP
+          value: generic-rw-s3-ConceptSuggestions
+        - name: SRC_TOPIC
+          value: ConceptSuggestions
+        - name: SRC_CONCURRENT_PROCESSING
+          value: "true"
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: generic-rw-s3
+  labels:
+    app: generic-rw-s3
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - port: 8080
+      name: "app"
+      targetPort: 8080
+  selector:
+    app: generic-rw-s3
