@@ -23,9 +23,15 @@ spec:
         - name: JAVA_OPTS
           value: "-Xms296m -Xmx296m -XX:+UseG1GC -server"
         - name: KAFKA_HOST
-          value: "kafka"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.host
         - name: KAFKA_PORT
-          value: "9092"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.port
         - name: BUCKET_PATH
           valueFrom:
             configMapKeyRef:

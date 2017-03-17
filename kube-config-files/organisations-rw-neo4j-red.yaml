@@ -27,13 +27,22 @@ spec:
         - name: APP_PORT
           value: "8080"
         - name: GRAPHITE_ADDRESS
-          value: "graphite.ft.com:2003"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
         - name: GRAPHITE_PREFIX
           value: "coco.services.k8s.organisations-rw-neo4j-red"
         - name: BATCH_SIZE
-          value: "50"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.statements.batch.size	
         - name: NEO_URL
-          value: "http://neo4j-red:7474/db/data/" 
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.url  
         ports:
         - containerPort: 8080
         livenessProbe:

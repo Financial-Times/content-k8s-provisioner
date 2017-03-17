@@ -41,7 +41,10 @@ spec:
         - name: THINGS_API_URL
           value: "public-things-api:8080"
         - name: KAFKA_PROXY_URL
-          value: "kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         ports:
         - containerPort: 8080
         - containerPort: 8081

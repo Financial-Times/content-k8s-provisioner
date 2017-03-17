@@ -34,11 +34,20 @@ spec:
         - name: CES_PING
           value: "/worker/admin/ping"
         - name: KAFKA_ADDRESS
-          value: "kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         - name: GRAPHITE_HOST
-          value: "graphite.ft.com"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.host
         - name: GRAPHITE_PORT
-          value: "2003"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.port
         - name: GRAPHITE_PREFIX
           value: "coco.services.k8s.concept-suggestion-api"
         - name: WHITELIST

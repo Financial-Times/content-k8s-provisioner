@@ -35,7 +35,10 @@ spec:
           periodSeconds: 30
         env:
         - name: SRC_ADDR
-          value: "http://kafka:8082" 
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url.with.protocol
         - name: SRC_GROUP
           value: "v1Suggestor" 
         - name: SRC_TOPIC
@@ -43,7 +46,10 @@ spec:
         - name: SRC_CONCURRENT_PROCESSING
           value: "false" 
         - name: DEST_ADDRESS
-          value: "http://kafka:8082" 
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url.with.protocol
         - name: DEST_TOPIC
           value: "ConceptSuggestions" 
         ports:

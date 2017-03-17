@@ -18,26 +18,28 @@ spec:
     spec:
       containers:
       - name: methode-article-internal-components-mapper
-        image: coco/methode-article-internal-components-mapper:remove-host-routing
+        image: coco/methode-article-internal-components-mapper:remove-host-routing-1
         imagePullPolicy: Always
         livenessProbe:
           initialDelaySeconds: 5
           tcpSocket:
             port: 8080
-# TODO enable when app has __gtg
-#        readinessProbe:
-#          httpGet:
-#            path: /__gtg
-#            port: 8080
-#          initialDelaySeconds: 10
-#          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
         env:
         - name: JAVA_OPTS
           value: "-Xms128m -Xmx128m -XX:+UseG1GC -server" 
         - name: METHODE_ARTICLE_MAPPER_URL
           value: "methode-article-mapper:8080" 
         - name: KAFKA_PROXY_URL
-          value: "kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url
         ports:
         - containerPort: 8080
         - containerPort: 8081
