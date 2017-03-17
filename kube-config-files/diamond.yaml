@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: diamond
-        image: coco/coco-diamond-auto:k8s_v0.0.2
+        image: coco/coco-diamond-auto:v1.1.0
         imagePullPolicy: Always
         volumeMounts:
         - name: host-docker-sock
