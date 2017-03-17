@@ -1,0 +1,96 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: internal-content-preview-api
+  labels:
+    app: internal-content-preview-api
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: internal-content-preview-api
+  template:
+    metadata:
+      labels:
+        app: internal-content-preview-api
+        visualize: "true"
+    spec:
+      containers:
+      - name: internal-content-preview-api
+        image: coco/internal-content-api:gtg-fix
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 256Mi
+        env:
+        - name: APP_PORT
+          value: "8080"
+        - name: APP_NAME
+          value: internal-content-preview-api
+        - name: HANDLER_PATH
+          value: internalcontent-preview
+        - name: CONTENT_SOURCE_URI
+          value: http://content-public-read-preview:8080/content-preview/
+        - name: INTERNAL_COMPONENTS_SOURCE_URI
+          value: http://internal-components-preview:8080/internalcomponents/content-preview/
+        - name: CONTENT_SOURCE_APP_HEALTH_URI
+          value: http://content-public-read-preview:8080/__health
+        - name: INTERNAL_COMPONENTS_SOURCE_APP_HEALTH_URI
+          value: http://internal-components-preview:8080/__health
+        - name: CONTENT_SOURCE_APP_NAME
+          value: content-public-read-preview
+        - name: INTERNAL_COMPONENTS_SOURCE_APP_NAME
+          value: internal-components-preview
+        - name: CONTENT_SOURCE_APP_PANIC_GUIDE
+          value: https://dewey.ft.com/contentreadapi.html
+        - name: INTERNAL_COMPONENTS_SOURCE_APP_PANIC_GUIDE
+          value: https://dewey.ft.com/internal-components-preview.html
+        - name: CONTENT_SOURCE_APP_BUSINESS_IMPACT
+          value: "No internal content articles would be available to be previewed"
+        - name: INTERNAL_COMPONENTS_SOURCE_APP_BUSINESS_IMPACT
+          value: "Articles won't have the internal components to be previewed"
+        - name: ENV_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: api.host
+        - name: CACHE_CONTROL_POLICY
+          value: no-store
+        - name: GRAPHITE_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
+        - name: GRAPHITE_PREFIX
+          value: "coco.services.k8s.internal-content-preview-api"
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            path: "/__gtg"
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: internal-content-preview-api
+  labels:
+    app: internal-content-preview-api
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - port: 8080
+      name: "app"
+      targetPort: 8080
+  selector:
+    app: internal-content-preview-api
