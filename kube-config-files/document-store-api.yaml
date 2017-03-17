@@ -63,7 +63,7 @@ spec:
       name: "app"
       targetPort: 8080
     - port: 8081
-      name: "app"
+      name: "admin"
       targetPort: 8081
   selector:
     app: document-store-api
