@@ -67,7 +67,7 @@ spec:
       name: "app"
       targetPort: 8080
     - port: 8081
-      name: "8081"
+      name: "admin"
       targetPort: 8081
   selector:
     app: cms-notifier

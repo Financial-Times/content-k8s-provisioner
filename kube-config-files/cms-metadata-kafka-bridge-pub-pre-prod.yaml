@@ -75,7 +75,6 @@ metadata:
 spec:
   ports:
     - port: 8080
-      name: "cms-metadata-kafka-bridge-pub-pre-prod"
       targetPort: 8080
   selector:
     app: cms-metadata-kafka-bridge-pub-pre-prod
