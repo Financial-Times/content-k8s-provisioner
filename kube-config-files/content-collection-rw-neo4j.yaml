@@ -1,0 +1,74 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: content-collection-rw-neo4j
+  labels:
+    app: content-collection-rw-neo4j
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: content-collection-rw-neo4j
+  template:
+    metadata:
+      labels:
+        app: content-collection-rw-neo4j
+        visualize: "true"
+    spec:
+      containers:
+      - name: content-collection-rw-neo4j
+        image: coco/content-collection-rw-neo4j:1.0.0
+        resources:
+            limits:
+              memory: 256Mi
+        env:
+        - name: APP_PORT
+          value: "8080"
+        - name: NEO_URL
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.url  
+        - name: BATCH_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.statements.batch.size	
+        - name: GRAPHITE_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
+        - name: GRAPHITE_PREFIX
+          value: "coco.services.k8s.content-collection-rw-neo4j"
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: content-collection-rw-neo4j
+  labels:
+    app: content-collection-rw-neo4j
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - port: 8080
+      name: "app"
+      targetPort: 8080
+  selector:
+    app: content-collection-rw-neo4j
