@@ -1,7 +1,7 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: upp-kube-aws-test
+clusterName: upp-kube-aws-test2
 
 # DNS name routable to the Kubernetes controller nodes
 # from worker nodes and external clients. Configure the options
@@ -306,7 +306,7 @@ etcdInstanceType: m3.medium
 
 # Use ephemeral instance storage for etcd data volume instead of EBS?
 # (Recommended set to true for high-throughput control planes)
-# etcdDataVolumeEphemeral: false
+etcdDataVolumeEphemeral: true
 
 # Data volume size (GiB) for etcd node
 # if etcdDataVolumeEphemeral=true, this value is ignored. The size of ephemeral volumes is not configurable.
