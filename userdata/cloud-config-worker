@@ -4,10 +4,10 @@ coreos:
     reboot-strategy: "off"
   flannel:
     interface: $private_ipv4
-    etcd_endpoints: {{ .EtcdEndpoints }}
     etcd_cafile: /etc/kubernetes/ssl/ca.pem
     etcd_certfile: /etc/kubernetes/ssl/etcd-client.pem
     etcd_keyfile: /etc/kubernetes/ssl/etcd-client-key.pem
+
   units:
     - name: authorized_keys.service
       command: start
@@ -33,8 +33,32 @@ coreos:
 
           [Install]
           WantedBy=timers.target
+
+    - name: cfn-etcd-environment.service
+      enable: true
+      command: start
+      runtime: true
+      content: |
+        [Unit]
+        Description=Fetches etcd static IP addresses list from CF
+        After=network-online.target
+
+        [Service]
+        EnvironmentFile={{.StackNameEnvFileName}}
+        Restart=on-failure
+        RemainAfterExit=true
+        ExecStartPre=/opt/bin/cfn-etcd-environment
+        ExecStart=/usr/bin/mv -f /var/run/coreos/etcd-environment /etc/etcd-environment
+
     - name: docker.service
       drop-ins:
+{{if .Experimental.EphemeralImageStorage.Enabled}}
+        - name: 10-docker-mount.conf
+          content: |
+            [Unit]
+            After=var-lib-docker.mount
+            Wants=var-lib-docker.mount
+{{end}}
         - name: 40-flannel.conf
           content: |
             [Unit]
@@ -53,7 +77,15 @@ coreos:
       drop-ins:
         - name: 10-etcd.conf
           content: |
+            [Unit]
+            Wants=cfn-etcd-environment.service
+            After=cfn-etcd-environment.service
+
             [Service]
+            EnvironmentFile=-/etc/etcd-environment
+            EnvironmentFile=-/run/flannel/etcd-endpoints.opts
+            ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
+            ExecStartPre=/bin/sh -ec "echo FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS} >/run/flannel/etcd-endpoints.opts"
             ExecStartPre=/opt/bin/decrypt-tls-assets
             Environment="ETCD_SSL_DIR=/etc/kubernetes/ssl"
             TimeoutStartSec=120
@@ -82,7 +114,7 @@ coreos:
         ExecStartPre=/bin/bash -c 'docker history coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION >/dev/null 2>&1 \
           || docker pull coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION'
         ExecStart=/bin/sh -c '\
-          alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints={{ .EtcdEndpoints }}"; \
+          alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
           export FORWARD_URL=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_url); \
           export TOKEN=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_token); \
           BATCHSIZE=$(etcdctl_cmd get /ft/config/splunk-forwarder/batchsize  2>/dev/null) || BATCHSIZE=10; \
@@ -106,8 +138,10 @@ coreos:
       runtime: true
       content: |
         [Unit]
-        Wants=flanneld.service
+        Wants=flanneld.service cfn-etcd-environment.service
+        After=cfn-etcd-environment.service
         [Service]
+        EnvironmentFile=-/etc/etcd-environment
         Environment=KUBELET_VERSION={{.K8sVer}}
         Environment=KUBELET_ACI={{.HyperkubeImageRepo}}
         Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
@@ -124,10 +158,21 @@ coreos:
         --volume stage,kind=host,source=/tmp \
         --mount volume=stage,target=/tmp \
         --volume var-log,kind=host,source=/var/log \
-        --mount volume=var-log,target=/var/log"
+        --mount volume=var-log,target=/var/log{{ if .UseCalico }} \
+        --volume cni-bin,kind=host,source=/opt/cni/bin \
+        --mount volume=cni-bin,target=/opt/cni/bin{{ end }}"
         ExecStartPre=/usr/bin/systemctl is-active flanneld.service
+        ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
         ExecStartPre=/usr/bin/mkdir -p /var/lib/cni
         ExecStartPre=/usr/bin/mkdir -p /var/log/containers
+        ExecStartPre=/usr/bin/mkdir -p /opt/cni/bin
+        ExecStartPre=/bin/sh -ec "find /etc/kubernetes/manifests /etc/kubernetes/cni/net.d/  -maxdepth 1 -type f | xargs --no-run-if-empty sed -i 's|#ETCD_ENDPOINTS#|${ETCD_ENDPOINTS}|'"
+        ExecStartPre=/usr/bin/etcdctl \
+                       --ca-file /etc/kubernetes/ssl/ca.pem \
+                       --key-file /etc/kubernetes/ssl/etcd-client-key.pem \
+                       --cert-file /etc/kubernetes/ssl/etcd-client.pem \
+                       --endpoints "${ETCD_ENDPOINTS}" \
+                       cluster-health
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
         --api-servers={{.APIServerEndpoint}} \
         --network-plugin-dir=/etc/kubernetes/cni/net.d \
@@ -135,8 +180,10 @@ coreos:
         --container-runtime={{.ContainerRuntime}} \
         --rkt-path=/usr/bin/rkt \
         --rkt-stage1-image=coreos.com/rkt/stage1-coreos \
-        --register-node=true \
-        --allow-privileged=true \
+        {{if .Experimental.NodeLabels.Enabled}}--node-labels {{.Experimental.NodeLabels.String}} \
+        {{end}}--register-node=true \
+        {{if .Experimental.Taints}}--register-schedulable=false \
+        {{end}}--allow-privileged=true \
         --pod-manifest-path=/etc/kubernetes/manifests \
         --cluster_dns={{.DNSServiceIP}} \
         --cluster_domain=cluster.local \
@@ -148,7 +195,6 @@ coreos:
         RestartSec=10
         [Install]
         WantedBy=multi-user.target
-
 
 {{ if eq .ContainerRuntime "rkt" }}
     - name: rkt-api.service
@@ -180,46 +226,7 @@ coreos:
         RequiredBy=rkt-api.service
 {{ end }}
 
-{{ if .UseCalico }}
-    - name: calico-node.service
-      command: start
-      runtime: true
-      content: |
-        [Unit]
-        Description=Calico per-host agent
-        Requires=network-online.target
-        After=network-online.target
-
-        [Service]
-        Slice=machine.slice
-        Environment=CALICO_DISABLE_FILE_LOGGING=true
-        Environment=HOSTNAME=$private_ipv4
-        Environment=IP=$private_ipv4
-        Environment=FELIX_FELIXHOSTNAME=$private_ipv4
-        Environment=CALICO_NETWORKING=false
-        Environment=NO_DEFAULT_POOLS=true
-        Environment=ETCD_SCHEME=https
-        Environment=ETCD_CA_CERT_FILE=/etc/etcd2/ssl/ca.pem
-        Environment=ETCD_CERT_FILE=/etc/etcd2/ssl/etcd-client.pem
-        Environment=ETCD_KEY_FILE=/etc/etcd2/ssl/etcd-client-key.pem
-        Environment=ETCD_ENDPOINTS={{ .EtcdEndpoints }}
-        ExecStart=/usr/bin/rkt run --inherit-env --stage1-from-dir=stage1-fly.aci \
-        --volume=modules,kind=host,source=/lib/modules,readOnly=false \
-        --mount=volume=modules,target=/lib/modules \
-        --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
-        --mount=volume=dns,target=/etc/resolv.conf \
-        --volume=ssl,kind=host,source=/etc/kubernetes/ssl,readOnly=true \
-        --mount=volume=ssl,target=/etc/etcd2/ssl \
-        --trust-keys-from-https quay.io/calico/node:v0.22.0
-        KillMode=mixed
-        Restart=always
-        TimeoutStartSec=0
-
-        [Install]
-        WantedBy=multi-user.target
-{{ end }}
-
-{{ if .Experimental.NodeDrainer.Enabled }}
+{{ if .NodeDrainer.Enabled }}
     - name: kube-node-drainer.service
       enable: true
       command: start
@@ -250,7 +257,7 @@ coreos:
         WantedBy=multi-user.target
 {{ end }}
 
-{{if .Experimental.AwsEnvironment.Enabled}}
+{{if .AwsEnvironment.Enabled}}
     - name: set-aws-environment.service
       enable: true
       command: start
@@ -262,18 +269,42 @@ coreos:
 
         [Service]
         Type=oneshot
+        EnvironmentFile={{.StackNameEnvFileName}}
         RemainAfterExit=true
         ExecStartPre=/bin/touch /etc/aws-environment
-        ExecStart=/usr/bin/rkt run \
-          --uuid-file-save=/var/run/coreos/cfn-init.uuid \
-          --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true --mount volume=dns,target=/etc/resolv.conf \
-          --volume=awsenv,kind=host,source=/etc/aws-environment,readOnly=false --mount volume=awsenv,target=/etc/aws-environment \
-          --net=host \
-          --trust-keys-from-https \
-          {{.AWSCliImageRepo}}:{{.AWSCliTag}} -- cfn-init -v \
-              --region {{.Region}} \
-              --resource LaunchConfigurationWorker \
-              --stack {{.ClusterName}}
+        ExecStart=/opt/bin/set-aws-environment
+{{end}}
+
+{{if .SpotFleet.Enabled}}
+    - name: tag-spot-instance.service
+      enable: true
+      command: start
+      runtime: true
+      content: |
+        [Unit]
+        Description=Tag this spot instance with cluster name
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=true
+        ExecStart=/opt/bin/tag-spot-instance
+
+{{if .LoadBalancer.Enabled}}
+    - name: add-to-load-balancers.service
+      enable: true
+      command: start
+      runtime: true
+      content: |
+        [Unit]
+        Description=Add this spot instance to load balancers
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=true
+        ExecStart=/opt/bin/add-to-load-balancers
+{{end}}
 {{end}}
 
 {{ if $.ElasticFileSystemID }}
@@ -295,7 +326,28 @@ coreos:
         WantedBy=kubelet.service
 {{ end }}
 
-{{ if .Experimental.WaitSignal.Enabled }}
+{{if .Experimental.Taints }}
+    - name: kube-node-taint-and-uncordon.service
+      command: start
+      runtime: true
+      content: |
+        [Unit]
+        Description=Taint this kubernetes node with user-provided taints and then uncordon it
+        Wants=kubelet.service
+        After=kubelet.service
+        Before=cfn-signal.service
+
+        [Service]
+        Type=simple
+        StartLimitInterval=0
+        RestartSec=10
+        Restart=on-failure
+        ExecStartPre=/usr/bin/systemctl is-active kubelet.service
+        ExecStartPre=/usr/bin/bash -c "while sleep 1; do if /usr/bin/curl  --insecure -s -m 20 -f  https://127.0.0.1:10250/healthz > /dev/null ; then break ; fi;  done"
+        ExecStart=/opt/bin/taint-and-uncordon
+{{end}}
+
+{{ if .WaitSignal.Enabled }}
     - name: cfn-signal.service
       command: start
       content: |
@@ -305,19 +357,98 @@ coreos:
 
         [Service]
         Type=oneshot
+        EnvironmentFile={{.StackNameEnvFileName}}
         ExecStartPre=/usr/bin/bash -c "while sleep 1; do if /usr/bin/curl  --insecure -s -m 20 -f  https://127.0.0.1:10250/healthz > /dev/null ; then break ; fi;  done"
         {{ if .UseCalico }}
-        ExecStartPre=/usr/bin/systemctl is-active calico-node
+        ExecStartPre=/usr/bin/bash -c "until /usr/bin/docker run --net=host --pid=host --rm calico/ctl:v1.0.0 node status > /dev/null; do sleep 3; done && echo Calico running"        
         {{ end }}
-        ExecStart=/usr/bin/rkt run \
-          --uuid-file-save=/var/run/coreos/cfn-signal.uuid \
-          --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true --mount volume=dns,target=/etc/resolv.conf \
-          --net=host \
-          --trust-keys-from-https \
-          quay.io/coreos/awscli:edge -- cfn-signal -e 0 \
-              --region {{.Region}} \
-              --resource AutoScaleWorker \
-              --stack {{.ClusterName}}
+        ExecStart=/opt/bin/cfn-signal
+{{end}}
+
+{{if .Experimental.AwsNodeLabels.Enabled }}
+    - name: kube-node-label.service
+      enable: true
+      command: start
+      runtime: true
+      content: |
+        [Unit]
+        Description=Label this kubernetes node with additional AWS parameters
+        After=kubelet.service
+        Before=cfn-signal.service
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=true
+        ExecStop=/bin/true
+        ExecStartPre=/bin/sh -c "/usr/bin/systemctl set-environment INSTANCE_ID=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-id)"
+        ExecStartPre=/bin/sh -c "/usr/bin/systemctl set-environment SECURITY_GROUPS=\"$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/security-groups | tr '\n' ',')\""
+        ExecStartPre=/bin/sh -c "/usr/bin/systemctl set-environment AUTOSCALINGGROUP=\"$(/usr/bin/docker run --rm --net=host \
+          {{.AWSCliImageRepo}}:{{.AWSCliTag}} aws \
+          autoscaling describe-auto-scaling-instances \
+          --instance-ids ${INSTANCE_ID} --region {{.Region}} \
+          --query 'AutoScalingInstances[].AutoScalingGroupName' --output text)\""
+        ExecStartPre=/bin/sh -c "/usr/bin/systemctl set-environment \
+          LAUNCHCONFIGURATION=\"$(/usr/bin/docker run --rm --net=host \
+          {{.AWSCliImageRepo}}:{{.AWSCliTag}} \
+          aws autoscaling describe-auto-scaling-groups \
+          --auto-scaling-group-name $AUTOSCALINGGROUP --region {{.Region}} \
+          --query 'AutoScalingGroups[].LaunchConfigurationName' --output text)\""
+        ExecStart=/bin/sh -c "/usr/bin/curl \
+          --cert   /etc/kubernetes/ssl/worker.pem \
+          --key    /etc/kubernetes/ssl/worker-key.pem \
+          --cacert /etc/kubernetes/ssl/ca.pem  \
+          --request PATCH \
+          -H 'Content-Type: application/strategic-merge-patch+json' \
+          -d'{ \
+          \"metadata\": { \
+            \"labels\": { \
+              \"kube-aws.coreos.com/autoscalinggroup\": \"${AUTOSCALINGGROUP}\", \
+              \"kube-aws.coreos.com/launchconfiguration\": \"${LAUNCHCONFIGURATION}\" \
+            }, \
+            \"annotations\": { \
+              \"kube-aws.coreos.com/securitygroups\": \"${SECURITY_GROUPS}\" \
+            } \
+          } \
+          }\"' \
+          https://{{.ExternalDNSName}}:443/api/v1/nodes/$(hostname)"
+{{end}}
+
+{{if .Experimental.EphemeralImageStorage.Enabled}}
+    - name: format-ephemeral.service
+      command: start
+      content: |
+        [Unit]
+        Description=Formats the ephemeral drive
+        ConditionFirstBoot=yes
+        After=dev-{{.Experimental.EphemeralImageStorage.Disk}}.device
+        Requires=dev-{{.Experimental.EphemeralImageStorage.Disk}}.device
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/sbin/wipefs -f /dev/{{.Experimental.EphemeralImageStorage.Disk}}
+        ExecStart=/usr/sbin/mkfs.{{.Experimental.EphemeralImageStorage.Filesystem}} -f /dev/{{.Experimental.EphemeralImageStorage.Disk}}
+    - name: var-lib-docker.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount ephemeral to /var/lib/docker
+        Requires=format-ephemeral.service
+        After=format-ephemeral.service
+        [Mount]
+        What=/dev/{{.Experimental.EphemeralImageStorage.Disk}}
+{{if eq .ContainerRuntime "docker"}}
+        Where=/var/lib/docker
+{{else if eq .ContainerRuntime "rkt"}}
+        Where=/var/lib/rkt
+{{end}}
+        Type={{.Experimental.EphemeralImageStorage.Filesystem}}
+{{end}}
+
+{{if .SSHAuthorizedKeys}}
+ssh_authorized_keys:
+  {{range $sshkey := .SSHAuthorizedKeys}}
+  - {{$sshkey}}
+  {{end}}
 {{end}}
 
 write_files:
@@ -328,6 +459,74 @@ write_files:
       Compress=false
       RateLimitInterval=0
       RateLimitBurst=0
+
+
+{{if .AwsEnvironment.Enabled}}
+  - path: /opt/bin/set-aws-environment
+    owner: root:root
+    permissions: 0700
+    content: |
+      #!/bin/bash -e
+
+      rkt run \
+        --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
+        --mount volume=dns,target=/etc/resolv.conf \
+        --volume=awsenv,kind=host,source=/etc/aws-environment,readOnly=false \
+        --mount volume=awsenv,target=/etc/aws-environment \
+        --uuid-file-save=/var/run/coreos/set-aws-environment.uuid \
+        --net=host \
+        --trust-keys-from-https \
+        {{.AWSCliImageRepo}}:{{.AWSCliTag}} --exec=/bin/bash -- \
+          -ec \
+          '
+            cfn-init -v -c "aws-environment" --region {{.Region}} --resource {{.LogicalName}} --stack '${{.StackNameEnvVarName}}'
+          '
+{{end}}
+
+  - path: /opt/bin/cfn-signal
+    owner: root:root
+    permissions: 0700
+    content: |
+      #!/bin/bash -e
+
+      rkt run \
+        --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
+        --mount volume=dns,target=/etc/resolv.conf \
+        --volume=awsenv,kind=host,source=/var/run/coreos,readOnly=false \
+        --mount volume=awsenv,target=/var/run/coreos \
+        --uuid-file-save=/var/run/coreos/cfn-signal.uuid \
+        --net=host \
+        --trust-keys-from-https \
+        {{.AWSCliImageRepo}}:{{.AWSCliTag}} --exec=/bin/bash -- \
+          -ec \
+          '
+            cfn-signal -e 0 --region {{.Region}} --resource {{.LogicalName}} --stack '${{.StackNameEnvVarName}}'
+          '
+
+      rkt rm --uuid-file=/var/run/coreos/cfn-signal.uuid || :
+
+  - path: /opt/bin/cfn-etcd-environment
+    owner: root:root
+    permissions: 0700
+    content: |
+      #!/bin/bash -e
+
+      rkt run \
+        --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
+        --mount volume=dns,target=/etc/resolv.conf \
+        --volume=awsenv,kind=host,source=/var/run/coreos,readOnly=false \
+        --mount volume=awsenv,target=/var/run/coreos \
+        --uuid-file-save=/var/run/coreos/cfn-etcd-environment.uuid \
+        --net=host \
+        --trust-keys-from-https \
+        {{.AWSCliImageRepo}}:{{.AWSCliTag}} --exec=/bin/bash -- \
+          -ec \
+          '
+            cfn-init -v -c "etcd-client" --region {{.Region}} --resource {{.LogicalName}} --stack '${{.StackNameEnvVarName}}'
+          '
+
+      rkt rm --uuid-file=/var/run/coreos/cfn-etcd-environment.uuid || :
+
   - path: /etc/kubernetes/cni/docker_opts_cni.env
     content: |
       DOCKER_OPT_BIP=""
@@ -347,6 +546,8 @@ write_files:
       # through the api-server. Related issue:
       # https://github.com/coreos/rkt/issues/2878
       exec nsenter -m -u -i -n -p -t 1 -- /usr/bin/rkt "$@"
+
+{{ if .ManageCertificates }}
 
   - path: /etc/kubernetes/ssl/etcd-client.pem.enc
     encoding: gzip+base64
@@ -368,13 +569,15 @@ write_files:
     encoding: gzip+base64
     content: {{.TLSConfig.CACert}}
 
+{{ end }}
+
   - path: /opt/bin/decrypt-tls-assets
     owner: root:root
     permissions: 0700
     content: |
       #!/bin/bash -e
 
-      sudo rkt run \
+      rkt run \
         --volume=ssl,kind=host,source=/etc/kubernetes/ssl,readOnly=false \
         --mount=volume=ssl,target=/etc/kubernetes/ssl \
         --uuid-file-save=/var/run/coreos/decrypt-tls-assets.uuid \
@@ -382,26 +585,110 @@ write_files:
         --net=host \
         --trust-keys-from-https \
         {{.AWSCliImageRepo}}:{{.AWSCliTag}} --exec=/bin/bash -- \
-          -c \
-          'echo decrypting tls assets; \
-           for encKey in $(find /etc/kubernetes/ssl/*.pem.enc); do \
-             echo decrypting $encKey to $encKey.b64; \
+          -ec \
+          'echo decrypting tls assets
+           shopt -s nullglob
+           for encKey in /etc/kubernetes/ssl/*.pem.enc; do
+             echo decrypting $encKey
+             f=$(mktemp $encKey.XXXXXXXX)
              /usr/bin/aws \
                --region {{.Region}} kms decrypt \
                --ciphertext-blob fileb://$encKey \
                --output text \
                --query Plaintext \
-               > $encKey.b64; \
-           done; \
+             | base64 -d > $f
+             mv -f $f ${encKey%.enc}
+           done;
            echo done.'
 
-      sudo rkt rm --uuid-file=/var/run/coreos/decrypt-tls-assets.uuid
+      rkt rm --uuid-file=/var/run/coreos/decrypt-tls-assets.uuid || :
 
-      echo base64 decoding decrypted tls assets
-      for encKey in $(find /etc/kubernetes/ssl/*.pem.enc);do
-        base64 --decode < $encKey.b64 > ${encKey%.enc}
-      done
-      echo done.
+{{if .SpotFleet.Enabled}}
+  - path: /opt/bin/tag-spot-instance
+    owner: root:root
+    permissions: 0700
+    content: |
+      #!/bin/bash -e
+
+      instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+
+      sudo rkt run \
+        --volume=ssl,kind=host,source=/etc/kubernetes/ssl,readOnly=false \
+        --mount=volume=ssl,target=/etc/kubernetes/ssl \
+        --uuid-file-save=/var/run/coreos/tag-spot-instance.uuid \
+        --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true --mount volume=dns,target=/etc/resolv.conf \
+        --net=host \
+        --trust-keys-from-https \
+        --insecure-options=ondisk \
+        {{.AWSCliImageRepo}}:{{.AWSCliTag}} --exec=/bin/bash -- \
+          -vxec \
+          'echo tagging this spot instance
+           instance_id="'$instance_id'"
+           /usr/bin/aws \
+             --region {{.Region}} ec2 create-tags \
+             --resource $instance_id \
+             --tags '"'"'Key=KubernetesCluster,Value="{{.ClusterName}}"'"'"' '"'"'Key=Name,Value="{{.ClusterName}}-{{.StackName}}-kube-aws-worker"'"'"' '"'"'Key="kube-aws:node-pool:name",Value="{{.NodePoolName}}"'"'"'
+           echo done.'
+
+      sudo rkt rm --uuid-file=/var/run/coreos/tag-spot-instance.uuid
+{{if .Experimental.LoadBalancer.Enabled}}
+  - path: /opt/bin/add-to-load-balancers
+    owner: root:root
+    permissions: 0700
+    content: |
+      #!/bin/bash -e
+
+      instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+
+      sudo rkt run \
+        --volume=ssl,kind=host,source=/etc/kubernetes/ssl,readOnly=false \
+        --mount=volume=ssl,target=/etc/kubernetes/ssl \
+        --uuid-file-save=/var/run/coreos/add-to-load-balancers.uuid \
+        --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true --mount volume=dns,target=/etc/resolv.conf \
+        --net=host \
+        --trust-keys-from-https \
+        --insecure-options=ondisk \
+        {{.AWSCliImageRepo}}:{{.AWSCliTag}} --exec=/bin/bash -- \
+          -vxec \
+          'echo adding this spot instance to load balancers
+           instance_id="'$instance_id'"
+           lbs=({{range $i, $lb := .Experimental.LoadBalancer.Names}}"{{$lb}}" {{end}})
+           add_to_lb="/usr/bin/aws --region {{.Region}} elb register-instances-with-load-balancer --instances $instance_id --load-balancer-name"
+           for lb in ${lbs[@]}; do
+             echo "$lb"
+             $add_to_lb "$lb"
+           done
+           echo done.'
+
+      sudo rkt rm --uuid-file=/var/run/coreos/add-to-load-balancers.uuid
+{{end}}
+{{end}}
+
+  - path: /opt/bin/taint-and-uncordon
+    owner: root:root
+    permissions: 0700
+    content: |
+      #!/bin/bash -e
+
+      hostname=$(hostname)
+
+      docker run --rm --net=host \
+        -v /etc/kubernetes:/etc/kubernetes \
+        -v /etc/resolv.conf:/etc/resolv.conf \
+        {{.HyperkubeImageRepo}}:{{.K8sVer}} /bin/bash \
+          -vxec \
+          'echo "tainting this node."
+           hostname="'${hostname}'"
+           taints=({{range $i, $taint := .Experimental.Taints}}"{{$taint.String}}" {{end}})
+           kubectl="/kubectl --server=https://{{.ExternalDNSName}}:443 --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml"
+           taint="$kubectl taint node --overwrite"
+           for t in ${taints[@]}; do
+             $taint "$hostname" "$t"
+           done
+           echo "done."
+           echo "uncordoning this node."
+           $kubectl uncordon $hostname
+           echo "done."'
 
   - path: /etc/kubernetes/manifests/kube-proxy.yaml
     content: |
@@ -470,27 +757,7 @@ write_files:
           name: kubelet-context
         current-context: kubelet-context
 
-{{ if .UseCalico }}
-  - path: /etc/kubernetes/cni/net.d/10-calico.conf
-    content: |
-        {
-            "name": "calico",
-            "type": "flannel",
-            "delegate": {
-                "type": "calico",
-                "etcd_endpoints": "{{ .EtcdEndpoints }}",
-                "log_level": "none",
-                "log_level_stderr": "info",
-                "hostname": "$private_ipv4",
-                "policy": {
-                    "type": "k8s",
-                    "k8s_api_root": "{{.APIServerEndpoint}}/api/v1/",
-                    "k8s_client_key": "/etc/kubernetes/ssl/worker-key.pem",
-                    "k8s_client_certificate": "/etc/kubernetes/ssl/worker.pem"
-                }
-            }
-        }
-{{ else }}
+{{ if not .UseCalico }}
   - path: /etc/kubernetes/cni/net.d/10-flannel.conf
     content: |
         {
