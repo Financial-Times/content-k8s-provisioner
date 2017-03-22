@@ -53,7 +53,7 @@ controllerCount: 2
 #controlerCreateTimeout: PT15M
 
 # Instance type for controller node
-controllerInstanceType: m3.medium
+controllerInstanceType: c3.large
 
 # Disk size (GiB) for controller node
 #controllerRootVolumeSize: 30
