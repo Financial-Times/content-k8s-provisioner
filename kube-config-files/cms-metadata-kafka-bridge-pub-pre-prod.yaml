@@ -35,7 +35,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: kafka.proxy.url
+              key: kafka.proxy.url.with.protocol
         - name: PRODUCER_HOST_HEADER
           value: "kafka-proxy"
         - name: PRODUCER_TYPE
