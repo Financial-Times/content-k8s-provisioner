@@ -95,16 +95,17 @@ coreos:
       content: |
         [Unit]
         Description=Splunk forwarder
-        Wants=kubelet.service docker.service
+        Wants=kubelet.service docker.service cfn-etcd-environment.service
         After=kubelet.service
         [Service]
-
+        EnvironmentFile=/etc/etcd-environment
         Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
         Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.6"
         TimeoutStartSec=1200
         # Change killmode from "control-group" to "none" to let Docker remove
         # work correctly.
         KillMode=none
+        ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
         ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
         ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
         ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
