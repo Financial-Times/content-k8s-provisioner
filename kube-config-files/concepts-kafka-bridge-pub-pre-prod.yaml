@@ -36,7 +36,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: kafka.proxy.url
+              key: kafka.proxy.url.with.protocol
         - name: PRODUCER_TYPE
           value: "proxy"
         - name: AUTHORIZATION_KEY
