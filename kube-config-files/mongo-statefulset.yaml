@@ -1,3 +1,86 @@
+#The volumes used by the stateful set
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    kubernetes.io/createdby: aws-ebs-dynamic-provisioner
+    pv.kubernetes.io/bound-by-controller: "yes"
+    pv.kubernetes.io/provisioned-by: kubernetes.io/aws-ebs
+  labels:
+    failure-domain.beta.kubernetes.io/region: eu-west-1
+    failure-domain.beta.kubernetes.io/zone: eu-west-1a
+  name: mongodb-0-vol
+  namespace: "default"
+spec:
+  accessModes:
+  - ReadWriteOnce
+  awsElasticBlockStore:
+    fsType: ext4
+    volumeID: aws://eu-west-1a/vol-0e908cef9b28f47cd
+  capacity:
+    storage: 10Gi
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: mongo-persistent-mongodb-0
+    namespace: default
+  persistentVolumeReclaimPolicy: Delete
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    kubernetes.kuio/createdby: aws-ebs-dynamic-provisioner
+    pv.kubernetes.io/bound-by-controller: "yes"
+    pv.kubernetes.io/provisioned-by: kubernetes.io/aws-ebs
+  labels:
+    failure-domain.beta.kubernetes.io/region: eu-west-1
+    failure-domain.beta.kubernetes.io/zone: eu-west-1a
+  name: mongodb-1-vol
+  namespace: ""
+spec:
+  accessModes:
+  - ReadWriteOnce
+  awsElasticBlockStore:
+    fsType: ext4
+    volumeID: aws://eu-west-1a/vol-02ac9d6fcca597822
+  capacity:
+    storage: 10Gi
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: mongo-persistent-mongodb-1
+    namespace: default
+  persistentVolumeReclaimPolicy: Delete
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    kubernetes.io/createdby: aws-ebs-dynamic-provisioner
+    pv.kubernetes.io/bound-by-controller: "yes"
+    pv.kubernetes.io/provisioned-by: kubernetes.io/aws-ebs
+  labels:
+    failure-domain.beta.kubernetes.io/region: eu-west-1
+    failure-domain.beta.kubernetes.io/zone: eu-west-1a
+  name: mongodb-2-vol
+  namespace: ""
+spec:
+  accessModes:
+  - ReadWriteOnce
+  awsElasticBlockStore:
+    fsType: ext4
+    volumeID: aws://eu-west-1a/vol-00a09352c430259af
+  capacity:
+    storage: 10Gi
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: mongo-persistent-mongodb-2
+    namespace: default
+  persistentVolumeReclaimPolicy: Delete
+---
 # A headless service to create DNS records
 apiVersion: v1
 kind: Service
@@ -37,7 +120,7 @@ spec:
       terminationGracePeriodSeconds: 0
       containers:
       - name: mongodb
-        image: coco/mongodb
+        image: coco/coco-mongodb:v3.0.2
         resources:
           limits:
             memory: 2000Mi
