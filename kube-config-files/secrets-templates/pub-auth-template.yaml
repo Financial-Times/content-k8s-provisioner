@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pub-auth
+type: Opaque
+data:
+  pub-pre-prod-auth: {{pub-pre-prod-auth}}
