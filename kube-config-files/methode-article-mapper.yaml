@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name:  methode-article-mapper
-        image:  coco/methode-article-mapper:rework-config
+        image:  coco/methode-article-mapper:rework-config-rc2
         imagePullPolicy: Always
         resources:
           limits:
