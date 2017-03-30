@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: content-public-read
-        image: up-registry.ft.com/coco/content-public-read:k8s-v3
+        image: up-registry.ft.com/coco/content-public-read:k8s_v14
         imagePullPolicy: Always
         env:
         - name: JAVA_OPTS

@@ -1,38 +1,44 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: wordpress-article-mapper
+  name: relations-api
   labels:
-    app: wordpress-article-mapper
+    app: relations-api
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: wordpress-article-mapper
+      app: relations-api
   template:
     metadata:
       labels:
-        app: wordpress-article-mapper
+        app: relations-api
         visualize: "true"
     spec:
       containers:
-      - name: wordpress-article-mapper
-        image: coco/wordpress-article-mapper:rework-config-rc3
-        imagePullPolicy: Always
+      - name: relations-api
+        image: coco/relations-api:v1.0.1
+        resources:
+          limits:
+            memory: 256Mi
         env:
-        - name: JAVA_OPTS
-          value: "-Xms384m -Xmx384m -XX:+UseG1GC -server"
-        - name: KAFKA_PROXY
+        - name: APP_PORT
+          value: "8080"
+        - name: NEO_URL
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: kafka.proxy.url
-        - name: READ_ENDPOINT
-          value: "document-store-api:8080"
+              key: neo4j.url
+        - name: GRAPHITE_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
+        - name: GRAPHITE_PREFIX
+          value: "coco.services.k8s.relations-api"
         ports:
         - containerPort: 8080
-        - containerPort: 8081
         livenessProbe:
           initialDelaySeconds: 5
           tcpSocket:
@@ -49,18 +55,14 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: wordpress-article-mapper
+  name: relations-api
   labels:
-    app: wordpress-article-mapper
+    app: relations-api
     visualize: "true"
     hasHealthcheck: "true"
 spec:
   ports:
     - port: 8080
-      name: "app"
       targetPort: 8080
-    - port: 8081
-      name: "admin"
-      targetPort: 8081
   selector:
-    app: wordpress-article-mapper
+    app: relations-api
