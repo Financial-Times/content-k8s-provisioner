@@ -25,7 +25,7 @@ spec:
     kind: PersistentVolumeClaim
     name: mongo-persistent-mongodb-0
     namespace: default
-  persistentVolumeReclaimPolicy: Delete
+  persistentVolumeReclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -52,7 +52,7 @@ spec:
     kind: PersistentVolumeClaim
     name: mongo-persistent-mongodb-1
     namespace: default
-  persistentVolumeReclaimPolicy: Delete
+  persistentVolumeReclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -71,7 +71,7 @@ spec:
   - ReadWriteOnce
   awsElasticBlockStore:
     fsType: ext4
-    volumeID: aws://eu-west-1a/vol-00a09352c430259af
+    volumeID: aws://eu-west-1a/vol-072494b716f5b2fc5
   capacity:
     storage: 10Gi
   claimRef:
@@ -79,7 +79,7 @@ spec:
     kind: PersistentVolumeClaim
     name: mongo-persistent-mongodb-2
     namespace: default
-  persistentVolumeReclaimPolicy: Delete
+  persistentVolumeReclaimPolicy: Retain
 ---
 # A headless service to create DNS records
 apiVersion: v1
