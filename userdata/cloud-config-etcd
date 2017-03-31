@@ -77,6 +77,47 @@ coreos:
           [Install]
           WantedBy=timers.target
 
+    - name: diamond.service
+      command: start
+      runtime: true
+      content: |
+        [Unit]
+        Description=A diamond collector server metrics
+        Requires=docker.socket
+        Wants=cfn-etcd-environment.service
+        After=docker.socket
+
+        [Service]
+        EnvironmentFile=/etc/environment
+        Environment="DOCKER_APP_VERSION=latest"
+        TimeoutStartSec=0
+        ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
+        ExecStartPre=-/bin/bash -c '/usr/bin/docker kill "$(docker ps -q --filter=name=%p_)" > /dev/null 2>&1'
+        ExecStartPre=-/bin/bash -c '/usr/bin/docker rm "$(docker ps -q --filter=name=%p_)" > /dev/null 2>&1'
+        ExecStartPre=/bin/bash -c 'docker history coco/coco-diamond-auto:$DOCKER_APP_VERSION >/dev/null 2>&1 || docker pull coco/coco-diamond-auto:$DOCKER_APP_VERSION'
+
+        ExecStart=/bin/sh -c '\
+          ENV=$(/usr/bin/etcdctl get /ft/config/environment_tag); \
+          /usr/bin/docker run --rm --name=%p_$(uuidgen) \
+          -e GRAPHITE_HOST=graphite.ft.com \
+          -e GRAPHITE_PORT=2003 \
+          -e PREFIX=coco.servers \
+          -e NODE_NAME="$HOSTNAME" \
+          -e ENVIRONMENT=$ENV-etcd \
+          -e INTERVAL=60 \
+          -v /proc:/host_proc:ro \
+          -v /var/run/docker.sock:/var/run/docker.sock:ro \
+          coco/coco-diamond-auto:$DOCKER_APP_VERSION'
+
+        ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p_)"'
+        Restart=on-failure
+        RestartSec=60
+
+        [Install]
+        WantedBy=multi-user.target
+
+        [X-Fleet]
+        Global=true
     - name: var-lib-etcd2.mount
       enable: true
       content: |
