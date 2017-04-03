@@ -1,23 +1,23 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: v1-content-annotator-binding-service-red
+  name: v1-content-annotator-binding-service
   labels:
-    app: v1-content-annotator-binding-service-red
+    app: v1-content-annotator-binding-service
     visualize: "true"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: v1-content-annotator-binding-service-red
+      app: v1-content-annotator-binding-service
   template:
     metadata:
       labels:
-        app: v1-content-annotator-binding-service-red
+        app: v1-content-annotator-binding-service
         visualize: "true"
     spec:
       containers:
-      - name: v1-content-annotator-binding-service-red
+      - name: v1-content-annotator-binding-service
         image: up-registry.ft.com/coco/content-annotator-k8s:v9
         imagePullPolicy: Always
         livenessProbe:
@@ -34,7 +34,7 @@ spec:
         - name: TOPIC
           value: "ConceptSuggestions"
         - name: GROUP_ID
-          value: "v1-content-annotator-binding-service-red-k8s"
+          value: "v1-content-annotator-binding-service-k8s"
         - name: ZOOKEEPER_ENDPOINTS
           valueFrom:
             configMapKeyRef:
@@ -46,7 +46,7 @@ spec:
               name: global-config
               key: kafka.url  
         - name: WRITER_ENDPOINT
-          value: "v1-annotations-rw-red:8080:8080"
+          value: "v1-annotations-rw:8080:8080"
         - name: ANNOTATING_SYSTEM
           value: "http://cmdb.ft.com/systems/binding-service"
         - name: JAVA_OPTS
@@ -64,7 +64,7 @@ spec:
               name: global-config
               key: graphite.port
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.v1-content-annotator-binding-service-red"
+          value: "coco.services.k8s.v1-content-annotator-binding-service"
         ports:
         - containerPort: 8080
 
@@ -73,9 +73,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: v1-content-annotator-binding-service-red
+  name: v1-content-annotator-binding-service
   labels:
-    app: v1-content-annotator-binding-service-red
+    app: v1-content-annotator-binding-service
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -83,4 +83,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: v1-content-annotator-binding-service-red
+    app: v1-content-annotator-binding-service

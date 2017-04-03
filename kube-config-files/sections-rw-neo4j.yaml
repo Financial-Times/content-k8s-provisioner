@@ -1,24 +1,24 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: subjects-rw-neo4j-red
+  name: sections-rw-neo4j
   labels:
-    app: subjects-rw-neo4j-red
+    app: sections-rw-neo4j
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: subjects-rw-neo4j-red
+      app: sections-rw-neo4j
   template:
     metadata:
       labels:
-        app: subjects-rw-neo4j-red
+        app: sections-rw-neo4j
         visualize: "true"
     spec:
       containers:
-      - name: subjects-rw-neo4j-red
-        image: coco/subjects-rw-neo4j:v1.1.2
+      - name: sections-rw-neo4j
+        image: coco/sections-rw-neo4j:v1.1.3
         imagePullPolicy: Always
         resources:
           limits:
@@ -30,7 +30,7 @@ spec:
               name: global-config
               key: graphite.address
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.subjects-rw-neo4j-red"
+          value: "coco.services.k8s.sections-rw-neo4j"
         - name: BATCH_SIZE
           valueFrom:
             configMapKeyRef:
@@ -59,9 +59,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: subjects-rw-neo4j-red
+  name: sections-rw-neo4j
   labels:
-    app: subjects-rw-neo4j-red
+    app: sections-rw-neo4j
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -69,4 +69,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: subjects-rw-neo4j-red
+    app: sections-rw-neo4j

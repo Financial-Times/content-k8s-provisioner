@@ -1,24 +1,24 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: financial-instruments-rw-neo4j-red
+  name: organisations-rw-neo4j
   labels:
-    app: financial-instruments-rw-neo4j-red
+    app: organisations-rw-neo4j
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: financial-instruments-rw-neo4j-red
+      app: organisations-rw-neo4j
   template:
     metadata:
       labels:
-        app: financial-instruments-rw-neo4j-red
+        app: organisations-rw-neo4j
         visualize: "true"
     spec:
       containers:
-      - name: financial-instruments-rw-neo4j-red
-        image: coco/financial-instruments-rw-neo4j:v0.0.2
+      - name: organisations-rw-neo4j
+        image: coco/organisations-rw-neo4j:v0.4.4
         imagePullPolicy: Always
         resources:
           limits:
@@ -32,7 +32,7 @@ spec:
               name: global-config
               key: graphite.address
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.financial-instruments-rw-neo4j-red"
+          value: "coco.services.k8s.organisations-rw-neo4j"
         - name: BATCH_SIZE
           valueFrom:
             configMapKeyRef:
@@ -61,9 +61,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: financial-instruments-rw-neo4j-red
+  name: organisations-rw-neo4j
   labels:
-    app: financial-instruments-rw-neo4j-red
+    app: organisations-rw-neo4j
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -71,4 +71,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: financial-instruments-rw-neo4j-red
+    app: organisations-rw-neo4j

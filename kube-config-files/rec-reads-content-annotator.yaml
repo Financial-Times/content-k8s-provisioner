@@ -35,7 +35,7 @@ spec:
               name: global-config
               key: kafka.url  
         - name: WRITER_ENDPOINT
-          value: "v2-annotations-rw-red:8080:8080"
+          value: "v2-annotations-rw:8080:8080"
         - name: ANNOTATING_SYSTEM
           value: "concept-suggestor"
         - name: GRAPHITE_HOST

@@ -1,23 +1,23 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: concept-ingester-red
+  name: concept-ingester
   labels:
-    app: concept-ingester-red
+    app: concept-ingester
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: concept-ingester-red
+      app: concept-ingester
   template:
     metadata:
       labels:
-        app: concept-ingester-red
+        app: concept-ingester
         visualize: "true"
     spec:
       containers:
-      - name: concept-ingester-red
+      - name: concept-ingester
         image: coco/concept-ingester:remove-vulcan-based-routing
         imagePullPolicy: Always
         resources:
@@ -47,7 +47,7 @@ spec:
               name: global-config
               key: graphite.address
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.concept-ingester-red"
+          value: "coco.services.k8s.concept-ingester"
         - name: OFFSET
           value: "largest"
         - name: COMMIT_ENABLE
@@ -77,9 +77,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: concept-ingester-red
+  name: concept-ingester
   labels:
-    app: concept-ingester-red
+    app: concept-ingester
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -87,4 +87,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: concept-ingester-red
+    app: concept-ingester

@@ -1,39 +1,46 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: v2-annotations-rw-red
+  name: brightcove-annotations-rw
   labels:
-    app: v2-annotations-rw-red
+    app: brightcove-annotations-rw
     visualize: "true"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: v2-annotations-rw-red
+      app: brightcove-annotations-rw
   template:
     metadata:
       labels:
-        app: v2-annotations-rw-red
+        app: brightcove-annotations-rw
         visualize: "true"
     spec:
       containers:
-      - name: v2-annotations-rw-red
-        image: coco/annotations-rw-neo4j:v1.0.0-rc1
+      - name: brightcove-annotations-rw
+        image: coco/annotations-rw-neo4j:v0.1.8
+        imagePullPolicy: Always
         resources:
           limits:
             memory: 256Mi
+        livenessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
         env:
         - name: PLATFORM_VERSION
-          value: "v2"
-        - name: ANNOTATION_LIFECYCLE
-          value: "v2-annotations"
+          value: "brightcove"
         - name: NEO_URL
           valueFrom:
             configMapKeyRef:
               name: global-config
               key: neo4j.read.write.url  
-        - name: APP_PORT
-          value: "8080"
         - name: BATCH_SIZE
           valueFrom:
             configMapKeyRef:
@@ -45,30 +52,22 @@ spec:
               name: global-config
               key: graphite.address
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.v2-annotations-rw-red"
+          value: "coco.services.k8s.v1-annotations-rw-neo4j"
         - name: LOG_METRICS
           value: "false"
+        - name: APP_PORT
+          value: "8080"
         ports:
         - containerPort: 8080
-        livenessProbe:
-          initialDelaySeconds: 5
-          tcpSocket:
-            port: 8080
-        readinessProbe:
-          httpGet:
-            path: /__gtg
-            port: 8080
-          initialDelaySeconds: 10
-          periodSeconds: 30
 
 ---
 
 kind: Service
 apiVersion: v1
 metadata:
-  name: v2-annotations-rw-red
+  name: brightcove-annotations-rw
   labels:
-    app: v2-annotations-rw-red
+    app: brightcove-annotations-rw
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -76,4 +75,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: v2-annotations-rw-red
+    app: brightcove-annotations-rw

@@ -1,23 +1,23 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: v1-annotations-rw-red
+  name: v1-annotations-rw
   labels:
-    app: v1-annotations-rw-red
+    app: v1-annotations-rw
     visualize: "true"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: v1-annotations-rw-red
+      app: v1-annotations-rw
   template:
     metadata:
       labels:
-        app: v1-annotations-rw-red
+        app: v1-annotations-rw
         visualize: "true"
     spec:
       containers:
-      - name: v1-annotations-rw-red
+      - name: v1-annotations-rw
         image: coco/annotations-rw-neo4j:v0.1.8
         imagePullPolicy: Always
         resources:
@@ -52,7 +52,7 @@ spec:
               name: global-config
               key: graphite.address
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.v1-annotations-rw-neo4j-red"
+          value: "coco.services.k8s.v1-annotations-rw-neo4j"
         - name: LOG_METRICS
           value: "false"
         - name: APP_PORT
@@ -65,9 +65,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: v1-annotations-rw-red
+  name: v1-annotations-rw
   labels:
-    app: v1-annotations-rw-red
+    app: v1-annotations-rw
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -75,4 +75,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: v1-annotations-rw-red
+    app: v1-annotations-rw
