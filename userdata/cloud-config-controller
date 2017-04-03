@@ -400,6 +400,14 @@ ssh_authorized_keys:
 {{end}}
 
 write_files:
+  - path: /etc/systemd/journald.conf.d/10-override-config.conf
+    content: |
+      [Journal]
+      MaxLevelConsole=crit
+      Compress=false
+      RateLimitInterval=0
+      RateLimitBurst=0
+
 {{if .Experimental.AwsEnvironment.Enabled}}
   - path: /opt/bin/set-aws-environment
     owner: root:root
