@@ -40,7 +40,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: neo4j.url  
+              key: neo4j.read.write.url  
         - name: BATCH_SIZE
           valueFrom:
             configMapKeyRef:

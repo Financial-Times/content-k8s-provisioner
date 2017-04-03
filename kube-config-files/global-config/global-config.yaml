@@ -20,7 +20,10 @@ data:
   graphite.host: graphite.ft.com
   graphite.port: "2003"
   neo4j.statements.batch.size: "50"
-  neo4j.url: http://neo4j-red:7474/db/data/
+  # replace with rw ALB
+  neo4j.read.write.url: http://neo4j-red:7474/db/data/
+  # replace with ro ALB
+  neo4j.read.only.url: http://neo4j-red:7474/db/data/
   kafka.url : kafka:9092
   kafka.host : kafka
   kafka.port : "9092"
