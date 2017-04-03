@@ -82,10 +82,12 @@ coreos:
             EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
             ExecStartPre=/usr/bin/systemctl is-active flanneld.service
 
-        - name: 60-logfilelimit.conf
+        - name: 11-docker-opts.conf
           content: |
             [Service]
-            Environment="DOCKER_OPTS=--log-opt max-size=50m --log-opt max-file=3"
+            {{with $x := "{{.ImageName}}"}}
+            Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{$x}}"
+            {{end}}
 
     - name: flanneld.service
       drop-ins:
@@ -109,6 +111,50 @@ coreos:
             --endpoints="${ETCD_ENDPOINTS}" \
             set /coreos.com/network/config '{"Network" : "{{.PodCIDR}}", "Backend" : {"Type" : "vxlan"}}'
             TimeoutStartSec=120
+    - name: splunk-forwarder.service
+      command: start
+      runtime: true
+      content: |
+        [Unit]
+        Description=Splunk forwarder
+        Wants=kubelet.service docker.service cfn-etcd-environment.service
+        After=kubelet.service
+        [Service]
+        EnvironmentFile=/etc/etcd-environment
+        Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
+        Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.7"
+        TimeoutStartSec=1200
+        # Change killmode from "control-group" to "none" to let Docker remove
+        # work correctly.
+        KillMode=none
+        ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
+        ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+        ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+        ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+        ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+        ExecStartPre=/bin/bash -c 'docker history coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION >/dev/null 2>&1 \
+          || docker pull coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+        ExecStartPre=/bin/bash -c 'docker history coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION >/dev/null 2>&1 \
+          || docker pull coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION'
+        ExecStart=/bin/sh -c '\
+          alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
+          export FORWARD_URL=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_url); \
+          export TOKEN=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_token); \
+          BATCHSIZE=$(etcdctl_cmd get /ft/config/splunk-forwarder/batchsize  2>/dev/null) || BATCHSIZE=10; \
+          export ENV=$(etcdctl_cmd get /ft/config/environment_tag); \
+          journalctl -a -f --since=now --output=json \
+          | docker run -i --log-driver=none -e=ENV=$ENV --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
+          | docker run -i --log-driver=none --rm --name %p-http_$(uuidgen) --memory="256m" -e="FORWARD_URL=$FORWARD_URL" -e="ENV=$ENV" -e="HOSTNAME=$(hostname -s)" -e="WORKERS=8" -e="BUFFER=256" -e="TOKEN=$TOKEN" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+
+        ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-http_)"'
+        Restart=on-failure
+        RestartSec=60
+
+        [Install]
+        WantedBy=multi-user.target
+
+        [X-Fleet]
+        Global=true
 
     - name: kubelet.service
       command: start
@@ -354,6 +400,14 @@ ssh_authorized_keys:
 {{end}}
 
 write_files:
+  - path: /etc/systemd/journald.conf.d/10-override-config.conf
+    content: |
+      [Journal]
+      MaxLevelConsole=crit
+      Compress=false
+      RateLimitInterval=0
+      RateLimitBurst=0
+
 {{if .Experimental.AwsEnvironment.Enabled}}
   - path: /opt/bin/set-aws-environment
     owner: root:root
