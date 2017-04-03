@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: enriched-content-read-api
-        image: up-registry.ft.com/coco/enriched-content-read-api:k8s_v2
+        image: up-registry.ft.com/coco/enriched-content-read-api:k8s_v12
         env:
         - name: JAVA_OPTS
           value: "-Xms128m -Xmx128m -XX:+UseG1GC -server"
@@ -26,6 +26,8 @@ spec:
           value: content-public-read:8080
         - name: ANNOTATIONS_API_HOST
           value: public-annotations-api:8080
+        - name: RELATIONS_API_HOST
+          value: relations-api:8080
         - name: CACHE_TTL
           valueFrom:
             configMapKeyRef:
@@ -39,7 +41,7 @@ spec:
           tcpSocket:
             port: 8080
         readinessProbe:
-          httpGet: 
+          httpGet:
             path: "/__gtg"
             port: 8080
           initialDelaySeconds: 10
