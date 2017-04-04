@@ -40,11 +40,6 @@ spec:
             configMapKeyRef:
               name: global-config
               key: cache-max-age
-
-        resources:
-#          limits:
-#            memory: 256Mi
-#            cpu: 1.1
         ports:
         - containerPort: 8080
         - containerPort: 8081
