@@ -1,23 +1,23 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: content-ingester-neo4j-red
+  name: content-ingester-neo4j
   labels:
-    app: content-ingester-neo4j-red
+    app: content-ingester-neo4j
     visualize: "true"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: content-ingester-neo4j-red
+      app: content-ingester-neo4j
   template:
     metadata:
       labels:
-        app: content-ingester-neo4j-red
+        app: content-ingester-neo4j
         visualize: "true"
     spec:
       containers:
-      - name: content-ingester-neo4j-red
+      - name: content-ingester-neo4j
         image: up-registry.ft.com/coco/ingester-k8s:v5
         resources:
             limits:
@@ -40,7 +40,7 @@ spec:
               name: global-config
               key: kafka.port
         - name: KAFKA_GROUPNAME
-          value: "content-neo4j-red"
+          value: "content-neo4j"
         - name: KAFKA_SYSTEM_ID
           value: "ContentIngesterNeo4j"
         - name: KAFKA_TOPIC_NAME
@@ -63,7 +63,7 @@ spec:
               name: global-config
               key: kafka.proxy.url
         - name: WRITER_URL
-          value: "content-rw-neo4j-red:8080"
+          value: "content-rw-neo4j:8080"
         - name: ZOOKEEPER_HOST
           valueFrom:
             configMapKeyRef:
@@ -93,9 +93,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: content-ingester-neo4j-red
+  name: content-ingester-neo4j
   labels:
-    app: content-ingester-neo4j-red
+    app: content-ingester-neo4j
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -107,4 +107,4 @@ spec:
       name: "admin"
       targetPort: 8081
   selector:
-    app: content-ingester-neo4j-red
+    app: content-ingester-neo4j

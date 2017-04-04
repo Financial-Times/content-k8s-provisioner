@@ -1,24 +1,24 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: brands-rw-neo4j-red
+  name: people-rw-neo4j
   labels:
-    app: brands-rw-neo4j-red
+    app: people-rw-neo4j
     visualize: "true"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: brands-rw-neo4j-red
+      app: people-rw-neo4j
   template:
     metadata:
       labels:
-        app: brands-rw-neo4j-red
+        app: people-rw-neo4j
         visualize: "true"
     spec:
       containers:
-      - name: brands-rw-neo4j-red
-        image: coco/brands-rw-neo4j:v0.1.5
+      - name: people-rw-neo4j
+        image: coco/people-rw-neo4j:v0.1.7
         imagePullPolicy: Always
         resources:
           limits:
@@ -32,17 +32,17 @@ spec:
               name: global-config
               key: graphite.address
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.brands-rw-neo4j-red"
+          value: "coco.services.k8s.people-rw-neo4j"
         - name: BATCH_SIZE
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: neo4j.statements.batch.size	
+              key: neo4j.statements.batch.size
         - name: NEO_URL
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: neo4j.url  
+              key: neo4j.read.write.url  
         ports:
         - containerPort: 8080
         livenessProbe:
@@ -61,9 +61,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: brands-rw-neo4j-red
+  name: people-rw-neo4j
   labels:
-    app: brands-rw-neo4j-red
+    app: people-rw-neo4j
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -71,4 +71,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: brands-rw-neo4j-red
+    app: people-rw-neo4j

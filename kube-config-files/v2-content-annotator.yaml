@@ -1,40 +1,29 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: v1-content-annotator-brightcove-red-service
+  name: v2-content-annotator
   labels:
-    app: v1-content-annotator-brightcove-red-service
+    app: v2-content-annotator
     visualize: "true"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: v1-content-annotator-brightcove-red-service
+      app: v2-content-annotator
   template:
     metadata:
       labels:
-        app: v1-content-annotator-brightcove-red-service
+        app: v2-content-annotator
         visualize: "true"
     spec:
       containers:
-      - name: v1-content-annotator-brightcove-red-service
+      - name: v2-content-annotator
         image: up-registry.ft.com/coco/content-annotator-k8s:v9
-        imagePullPolicy: Always
-        livenessProbe:
-          initialDelaySeconds: 5
-          tcpSocket:
-            port: 8080
-        readinessProbe:
-          httpGet:
-            path: /__gtg
-            port: 8080
-          initialDelaySeconds: 10
-          periodSeconds: 30
         env:
         - name: TOPIC
           value: "ConceptSuggestions"
         - name: GROUP_ID
-          value: "v1-content-annotator-brightcove-red-service-k8s"
+          value: "k8s-v2-annotator"
         - name: ZOOKEEPER_ENDPOINTS
           valueFrom:
             configMapKeyRef:
@@ -46,13 +35,9 @@ spec:
               name: global-config
               key: kafka.url  
         - name: WRITER_ENDPOINT
-          value: "brightcove-annotations-rw-red:8080:8080"
+          value: "v2-annotations-rw:8080:8080"
         - name: ANNOTATING_SYSTEM
-          value: "http://cmdb.ft.com/systems/brightcove"
-        - name: JAVA_OPTS
-          value: "-Xms128m -Xmx128m -XX:+UseG1GC -server"
-        - name: FILTER_NOVELTIES
-          value: "true"
+          value: "concept-suggestor"
         - name: GRAPHITE_HOST
           valueFrom:
             configMapKeyRef:
@@ -63,19 +48,35 @@ spec:
             configMapKeyRef:
               name: global-config
               key: graphite.port
+        - name: JAVA_OPTS
+          value: "-Xms128m -Xmx128m -XX:+UseG1GC -server"
+        - name: FILTER_NOVELTIES
+          value: "true"
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.v1-content-annotator-brightcove-red-service"
+          value: "coco.services.k8s.v2-content-annotator"
+        - name: LOG_METRICS
+          value: "false"
         ports:
         - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
 
 ---
 
 kind: Service
 apiVersion: v1
 metadata:
-  name: v1-content-annotator-brightcove-red-service
+  name: v2-content-annotator
   labels:
-    app: v1-content-annotator-brightcove-red-service
+    app: v2-content-annotator
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -83,4 +84,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: v1-content-annotator-brightcove-red-service
+    app: v2-content-annotator

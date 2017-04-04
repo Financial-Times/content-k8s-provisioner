@@ -1,23 +1,23 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: brightcove-annotations-rw-red
+  name: v1-annotations-rw
   labels:
-    app: brightcove-annotations-rw-red
+    app: v1-annotations-rw
     visualize: "true"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: brightcove-annotations-rw-red
+      app: v1-annotations-rw
   template:
     metadata:
       labels:
-        app: brightcove-annotations-rw-red
+        app: v1-annotations-rw
         visualize: "true"
     spec:
       containers:
-      - name: brightcove-annotations-rw-red
+      - name: v1-annotations-rw
         image: coco/annotations-rw-neo4j:v0.1.8
         imagePullPolicy: Always
         resources:
@@ -35,12 +35,12 @@ spec:
           periodSeconds: 30
         env:
         - name: PLATFORM_VERSION
-          value: "brightcove"
+          value: "v1"
         - name: NEO_URL
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: neo4j.url  
+              key: neo4j.read.write.url  
         - name: BATCH_SIZE
           valueFrom:
             configMapKeyRef:
@@ -52,7 +52,7 @@ spec:
               name: global-config
               key: graphite.address
         - name: GRAPHITE_PREFIX
-          value: "coco.services.k8s.v1-annotations-rw-neo4j-red"
+          value: "coco.services.k8s.v1-annotations-rw-neo4j"
         - name: LOG_METRICS
           value: "false"
         - name: APP_PORT
@@ -65,9 +65,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: brightcove-annotations-rw-red
+  name: v1-annotations-rw
   labels:
-    app: brightcove-annotations-rw-red
+    app: v1-annotations-rw
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -75,4 +75,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: brightcove-annotations-rw-red
+    app: v1-annotations-rw

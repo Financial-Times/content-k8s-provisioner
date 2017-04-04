@@ -1,3 +1,4 @@
+# TODO delete once we have separate neo cluster
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:

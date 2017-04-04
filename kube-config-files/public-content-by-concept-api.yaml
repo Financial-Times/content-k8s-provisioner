@@ -25,7 +25,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: neo4j.url  
+              key: neo4j.read.only.url  
         - name: APP_PORT
           value: "8080"
         - name: CACHE_DURATION
