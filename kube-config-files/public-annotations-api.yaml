@@ -48,7 +48,7 @@ spec:
           tcpSocket:
             port: 8080
         readinessProbe:
-          httpGet: #
+          httpGet:
             path: "/__gtg"
             port: 8080
           initialDelaySeconds: 10
