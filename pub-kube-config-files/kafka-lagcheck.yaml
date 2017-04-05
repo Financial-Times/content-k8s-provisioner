@@ -1,0 +1,62 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: kafka-lagcheck
+  labels:
+    app: kafka-lagcheck
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-lagcheck
+  template:
+    metadata:
+      labels:
+        app: kafka-lagcheck
+        visualize: "true"
+    spec:
+      containers:
+      - name: kafka-lagcheck
+        image:  coco/kafka-lagcheck:v1.0.15-k8s
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 256Mi
+        env:
+        - name: WHITELISTED_TOPICS
+          value: "Concept"
+        - name: BURROW_URL
+          value: "http://burrow:8080"
+        - name: LAG_TOLERENCE
+          value: "30"
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: kafka-lagcheck
+  labels:
+    app: kafka-lagcheck
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: kafka-lagcheck
+
