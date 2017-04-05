@@ -27,6 +27,8 @@ spec:
         env:
         - name: PATH_PREFIX
           value: "/__health"
+        - name: ENVIRONMENT
+          value: "k8s-publishing-upp-uk"
         - name: GRAPHITE_URL
           valueFrom:
             configMapKeyRef:
