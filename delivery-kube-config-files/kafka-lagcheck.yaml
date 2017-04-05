@@ -28,7 +28,7 @@ spec:
           value: "Concept"
         - name: BURROW_URL
           value: "http://burrow:8080"
-        - name: LAG_TOLERENCE
+        - name: LAG_TOLERANCE
           value: "30"
         ports:
         - containerPort: 8080
