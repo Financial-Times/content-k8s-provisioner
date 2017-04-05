@@ -1,0 +1,34 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: image-cleaner
+  labels:
+    app: image-cleaner
+spec:
+  selector:
+    matchLabels:
+      app: image-cleaner
+  template:
+    metadata:
+      labels:
+        app: image-cleaner
+        visualize: "true"
+    spec:
+      containers:
+      - name: image-cleaner
+        image: coco/docker-gc:add-loop
+        volumeMounts:
+        - name: host-docker-sock
+          mountPath: /var/run/docker.sock
+        resources:
+          limits:
+            memory: 256Mi
+        env:
+          - name: TIME_BETWEEN_RUNS
+            value: "1d"
+        ports:
+        - containerPort: 8080
+      volumes:
+      - name: host-docker-sock
+        hostPath: 
+          path: /var/run/docker.sock
