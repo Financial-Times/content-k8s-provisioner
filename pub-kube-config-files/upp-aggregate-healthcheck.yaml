@@ -27,6 +27,11 @@ spec:
         env:
         - name: PATH_PREFIX
           value: "/__health"
+        - name: GRAPHITE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
         ports:
         - containerPort: 8080
         livenessProbe:
