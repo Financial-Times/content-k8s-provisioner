@@ -1,0 +1,64 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: system-healthcheck
+  labels:
+    app: system-healthcheck
+spec:
+  selector:
+    matchLabels:
+      app: system-healthcheck
+  template:
+    metadata:
+      labels:
+        app: system-healthcheck
+        visualize: "true"
+    spec:
+      containers:
+      - name: system-healthcheck
+        image: coco/coco-system-healthcheck:add-gtg
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /host_dir
+          name: host-root-directory
+        resources:
+            limits:
+              memory: 256Mi
+        env:
+        - name: SYS_HC_HOST_PATH
+          value: "host_dir"
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+      volumes:
+      - name: host-root-directory
+        hostPath:
+          path: /
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: system-healthcheck
+  labels:
+    app: system-healthcheck
+    visualize: "true"
+    hasHealthcheck: "true"
+    isResilient: "false"
+    isDaemon: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: system-healthcheck
