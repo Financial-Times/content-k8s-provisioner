@@ -17,9 +17,9 @@ spec:
   - ReadWriteOnce
   awsElasticBlockStore:
     fsType: ext4
-    volumeID: aws://eu-west-1a/vol-0e908cef9b28f47cd
+    volumeID: aws://eu-west-1a/vol-07588a32680f04754
   capacity:
-    storage: 10Gi
+    storage: 50Gi
   claimRef:
     apiVersion: v1
     kind: PersistentVolumeClaim
@@ -36,7 +36,7 @@ metadata:
     pv.kubernetes.io/provisioned-by: kubernetes.io/aws-ebs
   labels:
     failure-domain.beta.kubernetes.io/region: eu-west-1
-    failure-domain.beta.kubernetes.io/zone: eu-west-1a
+    failure-domain.beta.kubernetes.io/zone: eu-west-1b
   name: mongodb-1-vol
   namespace: ""
 spec:
@@ -44,9 +44,9 @@ spec:
   - ReadWriteOnce
   awsElasticBlockStore:
     fsType: ext4
-    volumeID: aws://eu-west-1a/vol-02ac9d6fcca597822
+    volumeID: aws://eu-west-1b/vol-01bdcc6868572a9f0
   capacity:
-    storage: 10Gi
+    storage: 50Gi
   claimRef:
     apiVersion: v1
     kind: PersistentVolumeClaim
@@ -63,7 +63,7 @@ metadata:
     pv.kubernetes.io/provisioned-by: kubernetes.io/aws-ebs
   labels:
     failure-domain.beta.kubernetes.io/region: eu-west-1
-    failure-domain.beta.kubernetes.io/zone: eu-west-1a
+    failure-domain.beta.kubernetes.io/zone: eu-west-1c
   name: mongodb-2-vol
   namespace: ""
 spec:
@@ -71,9 +71,9 @@ spec:
   - ReadWriteOnce
   awsElasticBlockStore:
     fsType: ext4
-    volumeID: aws://eu-west-1a/vol-072494b716f5b2fc5
+    volumeID: aws://eu-west-1c/vol-09a468d6ddf26cc9c
   capacity:
-    storage: 10Gi
+    storage: 50Gi
   claimRef:
     apiVersion: v1
     kind: PersistentVolumeClaim
@@ -134,13 +134,3 @@ spec:
         volumeMounts:
         - name: mongo-persistent
           mountPath: /data/db
-  volumeClaimTemplates:
-  - metadata:
-      name: mongo-persistent
-      annotations:
-        volume.alpha.kubernetes.io/storage-class: gp2
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: 10Gi
