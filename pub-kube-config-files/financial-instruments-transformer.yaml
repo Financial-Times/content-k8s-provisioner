@@ -1,0 +1,78 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: financial-instruments-transformer
+  labels:
+    app: financial-instruments-transformer
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: financial-instruments-transformer
+  template:
+    metadata:
+      labels:
+        app: financial-instruments-transformer
+        visualize: "true"
+    spec:
+      containers:
+      - name: financial-instruments-transformer
+        image: coco/financial-instruments-transformer:1.0.0
+        resources:
+            limits:
+              memory: 256Mi
+        env:
+        - name: PORT
+          value: "8080"
+        - name: BASE_URL
+          value: "http://financial-instruments-transformer:8080/transformers/financial-instruments/"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.secret_access_key
+        - name: BUCKET_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.s3.factset.bucket
+        - name: S3_DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.s3.domain
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 60
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: financial-instruments-transformer
+  labels:
+    app: financial-instruments-transformer
+    visualize: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: financial-instruments-transformer

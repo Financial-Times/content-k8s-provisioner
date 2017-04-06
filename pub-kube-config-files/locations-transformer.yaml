@@ -1,0 +1,87 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: locations-transformer
+  labels:
+    app: locations-transformer
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: locations-transformer
+  template:
+    metadata:
+      labels:
+        app: locations-transformer
+        visualize: "true"
+    spec:
+      containers:
+      - name: locations-transformer
+        image: coco/locations-transformer:v1.0.5
+        resources:
+            limits:
+              memory: 1Gi
+        env:
+        - name: PORT
+          value: "8080"
+        - name: BASE_URL
+          value: "http://locations-transformer:8080/transformers/locations/"
+        - name: TME_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: tme.url
+        - name: TME_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.username
+        - name: TME_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.password
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.token
+        - name: GRAPHITE_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
+        - name: GRAPHITE_PREFIX
+          value: "coco.services.k8s.locations-transformer"
+        - name: LOG_METRICS
+          value: "false"
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 120
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 5
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: locations-transformer
+  labels:
+    app: locations-transformer
+    visualize: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: locations-transformer

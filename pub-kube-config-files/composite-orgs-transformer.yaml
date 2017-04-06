@@ -1,0 +1,71 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: composite-orgs-transformer
+  labels:
+    app: composite-orgs-transformer
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: composite-orgs-transformer
+  template:
+    metadata:
+      labels:
+        app: composite-orgs-transformer
+        visualize: "true"
+    spec:
+      containers:
+      - name: composite-orgs-transformer
+        image: coco/composite-orgs-transformer:v0.1.0
+        resources:
+            limits:
+              memory: 4Gi
+        env:
+        - name: PORT
+          value: "8080"
+        - name: V1_TRANSFORMER_URL
+          value: "http://v1-orgs-transformer:8080/transformers/organisations"
+        - name: FS_TRANSFORMER_URL
+          value: "https://v2-organisations-transformer-up.ft.com/transformers/organisations"
+        - name: REDIRECT_BASE_URL
+          value: "/__composite-orgs-transformer/transformers/organisations/"
+        - name: CACHE_FILE_NAME
+          value: "/cache/composite-orgs-transformer.db"
+        volumeMounts:
+        - mountPath: /cache
+          name: cache
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 720
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 720
+          periodSeconds: 30
+          timeoutSeconds: 5
+      volumes:
+      - name: cache
+        hostPath:
+          path: /tmp
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: composite-orgs-transformer
+  labels:
+    app: composite-orgs-transformer
+    visualize: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: composite-orgs-transformer
