@@ -1,13 +1,13 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: upp-kube-aws-test-pub
+clusterName: upp-kube-aws-test2
 
 # DNS name routable to the Kubernetes controller nodes
 # from worker nodes and external clients. Configure the options
 # below if you'd like kube-aws to create a Route53 record sets/hosted zones
 # for you.  Otherwise the deployer is responsible for making this name routable
-externalDNSName: upp-kube-aws-test-pub-api.ft.com
+externalDNSName: upp-kube-aws-test-api.ft.com
 
 # CoreOS release channel to use. Currently supported options: alpha, beta, stable
 # See coreos.com/releases for more information
@@ -45,7 +45,7 @@ keyName: sorin.buliarca.key
 region: eu-west-1
 
 # Availability Zone to provision Kubernetes cluster when placing nodes in a single availability zone (not highly-available) Comment out for multi availability zone setting and use the below `subnets` section instead.
-#availabilityZone: eu-west-1a
+availabilityZone: eu-west-1a
 
 # ARN of the KMS key used to encrypt TLS assets.
 kmsKeyArn: "arn:aws:kms:eu-west-1:810385116814:key/780da7cd-6acf-48e6-9693-5ffc8c3b6484"
@@ -53,7 +53,7 @@ kmsKeyArn: "arn:aws:kms:eu-west-1:810385116814:key/780da7cd-6acf-48e6-9693-5ffc8
 # Number of controller nodes to create, for more control use `controller.autoScalingGroup` and do not use this setting
 controllerCount: 2
 
-controller:
+#controller:
 #  # Auto Scaling Group definition for controllers. If only `controllerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
 #  autoScalingGroup:
 #    minSize: 1
@@ -65,20 +65,17 @@ controller:
 #  # This is also intended to be used in combination with .experimental.kube2IamSupport. See #297 for more information.
 #  managedIamRoleName: "yourManagedRole"
 #  # If omitted, public subnets are created by kube-aws and used for controller nodes
-  subnets:
+#  subnets:
 #    # References subnets defined under the top-level `subnets` key by their names
-    - name: ManagedPublicSubnet1
-    - name: ManagedPublicSubnet2
-    - name: ManagedPublicSubnet3
-  loadBalancer:
+#    - name: ManagedPublicSubnet1
+#    - name: ManagedPublicSubnet2
+#  loadBalancer:
 #    # kube-aws creates the ELB for the k8s API endpoint as `Schema=internet-facing` by default and
 #    # only public subnets defined under the top-level `subnets` key are used for the ELB
 #    private: false
 #    # If you like specific public subnets to be used by the internet-facing ELB:
-    subnets:
-    - name: ManagedPublicSubnet1
-    - name: ManagedPublicSubnet2
-    - name: ManagedPublicSubnet3
+#    #subnets:
+#    #  - name: ManagedPublicSubnet0
 #
 #    # When explicitly set to true, the ELB for the k8s API endpoint becomes `Schema=internal` rather than default `Schema=internet-facing` one and
 #    # only private subnets defined under the top-level `subnets` key are used for the ELB
@@ -111,13 +108,11 @@ worker:
     - # Name of this node pool. Must be unique among all the node pools in this cluster
       name: nodepool1
 #      # Number of worker nodes to create for an autoscaling group based pool
-      count: 3
+      count: 4
 #      # If omitted, public subnets are created by kube-aws and used for worker nodes
-      subnet:
+#      subnet:
 #      - # References subnets defined under the top-level `subnets` key by their names
-        - name: ManagedPublicSubnet1
-        - name: ManagedPublicSubnet2
-        - name: ManagedPublicSubnet3
+#        name: ManagedPublicSubnet1
 #      # Auto Scaling Group definition for workers. If only `workerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
 #      autoScalingGroup:
 #        minSize: 1
@@ -290,13 +285,12 @@ workerInstanceType: m4.xlarge
 # (Set to an odd number >= 3 for HA control plane)
 etcdCount: 3
 
-etcd:
+#etcd:
 #  # If omitted, public subnets are created by kube-aws and used for etcd nodes
-  subnets:
+#  subnets:
 #    # References subnets defined under the top-level `subnets` key by their names
-    - name: ManagedPublicSubnet1
-    - name: ManagedPublicSubnet2
-    - name: ManagedPublicSubnet3
+#    - name: ManagedPrivateSubnet1
+#    - name: ManagedPrivateSubnet2
 
 # Instance type for etcd node
 etcdInstanceType: m3.medium
@@ -334,10 +328,10 @@ etcdDataVolumeEphemeral: true
 ## Networking config
 
 # ID of existing VPC to create subnet in. Leave blank to create a new VPC
-vpcId: vpc-4b6e7d2f
+# vpcId:
 
 # ID of existing Internet Gateway to associate subnet with. Leave blank to create a new Internet Gateway
-internetGatewayId: igw-1ce46778
+# internetGatewayId:
 
 # Advanced: ID of existing route table in existing VPC to attach subnet to.
 # Leave blank to use the VPC's main route table.
@@ -356,29 +350,22 @@ internetGatewayId: igw-1ce46778
 # routeTableId: rtb-xxxxxxxx
 
 # CIDR for Kubernetes VPC. If vpcId is specified, must match the CIDR of existing vpc.
-vpcCIDR: "10.0.0.0/16"
+# vpcCIDR: "10.0.0.0/16"
 
 # CIDR for Kubernetes subnet when placing nodes in a single availability zone (not highly-available) Leave commented out for multi availability zone setting and use the below `subnets` section instead.
 # instanceCIDR: "10.0.0.0/24"
 
 # Kubernetes subnets with their CIDRs and availability zones.
 # Differentiating availability zone for 2 or more subnets result in high-availability (failures of a single availability zone won't result in immediate downtimes)
-subnets:
+# subnets:
 #   #
 #   # Managed public subnet managed by kube-aws
 #   #
-   - name: ManagedPublicSubnet1
-     private: false
-     availabilityZone: eu-west-1a
-     instanceCIDR: "10.0.0.0/24"
-   - name: ManagedPublicSubnet2
-     private: false
-     availabilityZone: eu-west-1b
-     instanceCIDR: "10.0.1.0/24"
-   - name: ManagedPublicSubnet3
-     private: false
-     availabilityZone: eu-west-1c
-     instanceCIDR: "10.0.2.0/24"
+#   - name: ManagedPublicSubnet1
+#     # Set to false if this subnet is public
+#     # private: false
+#     availabilityZone: us-west-1a
+#     instanceCIDR: "10.0.0.0/24"
 #
 #   #
 #   # Managed private subnet managed by kube-aws
@@ -640,12 +627,9 @@ kubernetesVersion: v1.5.5_coreos.0
 
 # AWS Tags for cloudformation stack resources
 stackTags:
-  coco-environment-tag: "upp-kube-aws-test-pub"
-  stopSchedule: "nostop"
-  systemCode: "upp"
-  environment: "t"
-  ipCode: "P196"
-  teamDL: "universal.publishing.platform@ft.com"
+  Name: "Kubernetes"
+  Environment: "Development"
+  Dev: "sorin"
 
 # User-provided YAML map available in control-plane's stack-template.json
 #customSettings:
