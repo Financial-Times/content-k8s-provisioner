@@ -70,6 +70,7 @@ metadata:
   labels:
     app: financial-instruments-transformer
     visualize: "true"
+    hasHealthcheck: "true"
 spec:
   ports:
     - port: 8080
