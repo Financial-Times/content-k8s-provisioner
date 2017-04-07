@@ -89,18 +89,8 @@ items:
          healthcheck-categories-for: aggregate-healthcheck
     data:
       category.name: publishing-monitors
-      category.services: 
-      category.refreshrate: "60"
-  - kind: ConfigMap
-    apiVersion: v1
-    metadata:
-      name: category.read
-      labels: 
-         healthcheck-categories-for: aggregate-healthcheck
-    data:
-      category.name: read
       category.services: publish-availability-monitor, synthetic-article-publication-monitor, synthetic-list-publication-monitor
-      category.refreshrate: "4"
+      category.refreshrate: "60"
   - kind: ConfigMap
     apiVersion: v1
     metadata:
