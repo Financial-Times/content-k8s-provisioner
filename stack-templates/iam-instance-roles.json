@@ -1,0 +1,263 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Stack template for roles needed for the Kubernetes instances to run",
+  "Parameters": {
+    "KmsKey": {
+      "Type": "String",
+      "Description": "The KMS key ARN used for decrypting encrypted assets"
+    },
+    "SystemCode": {
+      "Type": "String",
+      "Description": "The system code tag of the resources to limit access to. Will apply to the resources created during provisioning"
+    },
+    "AccountId": {
+      "Type": "String",
+      "Description": "The account id of the resources to limit access to"
+    },
+    "S3Bucket": {
+      "Type": "String",
+      "Description": "The name of S3 bucket used for provisioning"
+    }
+  },
+  "Resources": {
+    "IAMRoleEtcd": {
+      "Properties": {
+        "RoleName": "k8s-etcd-role2",
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": "kms:Decrypt",
+                  "Resource": "${KmsKey}",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": "ec2:DescribeTags",
+                  "Effect": "Allow",
+                  "Resource": [
+                    "arn:aws:ec2::${AccountId}:/*"
+                  ],
+                  "Condition": {
+                    "StringEquals": {
+                      "ec2:ResourceTag/systemCode": "${SystemCode}"
+                    }
+                  }
+                }
+              ],
+              "Version": "2012-10-17"
+            },
+            "PolicyName": "root"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::Role"
+    },
+    "IAMRoleController": {
+      "Properties": {
+        "RoleName": "k8s-controller-role2",
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": [
+                    "ec2:CreateSecurityGroup",
+                    "ec2:CreateTags",
+                    "ec2:Describe*"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "ec2:AuthorizeSecurityGroupIngress",
+                    "ec2:DeleteSecurityGroup",
+                    "ec2:RevokeSecurityGroupIngress"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [
+                    "*"
+                  ],
+                  "Condition": {
+                    "StringLike": {
+                      "ec2:ResourceTag/KubernetesCluster": "*"
+                    }
+                  }
+                },
+                {
+                  "Action": [
+                    "ec2:AttachVolume",
+                    "ec2:DetachVolume"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [
+                    "arn:aws:ec2::${AccountId}:instance/*",
+                    "arn:aws:ec2::${AccountId}:volume/*"
+                  ],
+                  "Condition": {
+                    "StringEquals": {
+                      "ec2:ResourceTag/systemCode": "${SystemCode}"
+                    }
+                  }
+                },
+                {
+                  "Action": [
+                    "elasticloadbalancing:CreateLoadBalancer",
+                    "elasticloadbalancing:AddTags",
+                    "elasticloadbalancing:DescribeLoadBalancers",
+                    "elasticloadbalancing:DescribeLoadBalancerAttributes",
+                    "elasticloadbalancing:SetSecurityGroups",
+                    "elasticloadbalancing:SetSubnets",
+                    "elasticloadbalancing:DescribeTags",
+                    "elasticloadbalancing:DeleteLoadBalancerListeners",
+                    "elasticloadbalancing:CreateLoadBalancerListeners",
+                    "elasticloadbalancing:ModifyLoadBalancerAttributes",
+                    "elasticloadbalancing:DeleteLoadBalancer",
+                    "elasticloadbalancing:ConfigureHealthCheck",
+                    "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+                    "elasticloadbalancing:DeregisterInstancesFromLoadBalancer"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "s3:GetObject"
+                  ],
+                  "Resource": "arn:aws:s3:::${S3Bucket}/*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": "cloudformation:SignalResource",
+                  "Resource": "arn:aws:cloudformation::${AccountId}:stack/*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": "kms:Decrypt",
+                  "Resource": "${KmsKey}",
+                  "Effect": "Allow"
+                }
+              ],
+              "Version": "2012-10-17"
+            },
+            "PolicyName": "root"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::Role"
+    },
+    "IAMRoleWorker": {
+      "Properties": {
+        "RoleName": "k8s-worker-role2",
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": "ec2:Describe*",
+                  "Effect": "Allow",
+                  "Resource": [
+                    "arn:aws:ec2::${AccountId}:/*"
+                  ],
+                  "Condition": {
+                    "StringEquals": {
+                      "ec2:ResourceTag/systemCode": "${SystemCode}"
+                    }
+                  }
+                },
+                {
+                  "Action": [
+                    "ec2:AttachVolume",
+                    "ec2:DetachVolume"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [
+                    "arn:aws:ec2::${AccountId}:instance/*",
+                    "arn:aws:ec2::${AccountId}:volume/*"
+                  ],
+                  "Condition": {
+                    "StringEquals": {
+                      "ec2:ResourceTag/systemCode": "${SystemCode}"
+                    }
+                  }
+                },
+                {
+                  "Action": [
+                    "s3:GetObject"
+                  ],
+                  "Resource": "arn:aws:s3:::${S3Bucket}/*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": "kms:Decrypt",
+                  "Resource": "${KmsKey}",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": "cloudformation:SignalResource",
+                  "Resource": "arn:aws:cloudformation::${AccountId}:stack/*",
+                  "Effect": "Allow"
+                }
+              ],
+              "Version": "2012-10-17"
+            },
+            "PolicyName": "root"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::Role"
+    }
+  }
+}
