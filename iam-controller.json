@@ -1,0 +1,94 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "ec2:CreateSecurityGroup",
+        "ec2:CreateTags"
+      ],
+      "Resource": "*",
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+        "ec2:Describe*",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:DeleteSecurityGroup",
+        "ec2:RevokeSecurityGroupIngress"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:ec2::810385116814:/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:ResourceTag/systemCode": "upp"
+        }
+      }
+    },
+    {
+      "Action": [
+        "ec2:AttachVolume",
+        "ec2:DetachVolume"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:ec2::810385116814:instance/*",
+        "arn:aws:ec2::810385116814:volume/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:ResourceTag/systemCode": "upp"
+        }
+      }
+    },
+    {
+      "Action": [
+        "elasticloadbalancing:CreateLoadBalancer",
+        "elasticloadbalancing:AddTags"
+      ],
+      "Resource": "*",
+      "Effect": "Allow"
+    },
+    {
+      "Action": [
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:SetSecurityGroups",
+        "elasticloadbalancing:SetSubnets",
+        "elasticloadbalancing:DescribeTags",
+        "elasticloadbalancing:DeleteLoadBalancerListeners",
+        "elasticloadbalancing:CreateLoadBalancerListeners",
+        "elasticloadbalancing:DescribeLoadBalancerAttributes",
+        "elasticloadbalancing:ModifyLoadBalancerAttributes",
+        "elasticloadbalancing:DeleteLoadBalancer",
+        "elasticloadbalancing:ConfigureHealthCheck",
+        "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+        "elasticloadbalancing:DeregisterInstancesFromLoadBalancer"
+      ],
+      "Resource": "arn:aws:elasticloadbalancing:::loadbalancer/*",
+      "Effect": "Allow",
+      "Condition": {
+        "StringLike": {
+          "ec2:ResourceTag/kubernetes.io/service-name": "*"
+        }
+      }
+    },
+    {
+      "Action": [
+        "s3:GetObject"
+      ],
+      "Resource": "arn:aws:s3:::sorin-kube-aws-test/*",
+      "Effect": "Allow"
+    },
+    {
+      "Action": "cloudformation:SignalResource",
+      "Resource": "arn:aws:cloudformation:eu-west-1:810385116814:stack/*",
+      "Effect": "Allow"
+    },
+    {
+      "Action": "kms:Decrypt",
+      "Resource": "arn:aws:kms:eu-west-1:810385116814:key/780da7cd-6acf-48e6-9693-5ffc8c3b6484",
+      "Effect": "Allow"
+    }
+  ]
+}
