@@ -183,7 +183,7 @@
           }
           {{end}}
         ],
-        "IamInstanceProfile": "k8s-etcd-role",
+        "IamInstanceProfile": "upp-k8s-iam-instance-profile-roles-etcd-role",
         "ImageId": "{{$.AMI}}",
         "InstanceType": "{{$.EtcdInstanceType}}",
         {{if $.KeyName}}"KeyName": "{{$.KeyName}}",{{end}}
@@ -232,7 +232,7 @@
             }
           }
         ],
-        "IamInstanceProfile": "k8s-controller-role",
+        "IamInstanceProfile": "upp-k8s-iam-instance-profile-roles-controller-role",
         "ImageId": "{{.AMI}}",
         "AssociatePublicIpAddress": "true",
         "InstanceType": "{{.ControllerInstanceType}}",

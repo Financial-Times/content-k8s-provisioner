@@ -76,7 +76,7 @@
             {{if $spec.SpotPrice}}
             "SpotPrice": "{{$spec.SpotPrice}}",
             {{end}}
-            "IamInstanceProfile": "k8s-worker-role",
+            "IamInstanceProfile": "upp-k8s-iam-instance-profile-roles-worker-role",
             "BlockDeviceMappings": [
               {
                 "DeviceName": "/dev/xvda",
@@ -205,7 +205,7 @@
             }
           }
         ],
-        "IamInstanceProfile": "k8s-worker-role",
+        "IamInstanceProfile": "upp-k8s-iam-instance-profile-roles-worker-role",
         "ImageId": "{{.AMI}}",
         "InstanceType": "{{.InstanceType}}",
         {{if .KeyName}}"KeyName": "{{.KeyName}}",{{end}}
