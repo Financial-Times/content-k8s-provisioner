@@ -1,0 +1,74 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: content-public-read
+  labels:
+    app: content-public-read
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: content-public-read
+  template:
+    metadata:
+      labels:
+        app: content-public-read
+        visualize: "true"
+    spec:
+      containers:
+      - name: content-public-read
+        image: up-registry.ft.com/coco/content-public-read:k8s_v14
+        imagePullPolicy: Always
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms128m -Xmx128m -XX:+UseG1GC -server"
+        - name: DOCUMENT_STORE_HOST
+          value: document-store-api:8080:8081
+        - name: "CONTENT_PATH"
+          value: content/
+        - name: "CONTENT_HEALTHCHECK_PATH"
+          value: /__health
+# I had to hardcode this value here (10s), and not use the one from global config, since Kubernetes
+# doesn't support yet composing the value from another env var.
+        - name: CACHE_CONTROL_POLICY
+          value: max-age=10s
+        - name: API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: api.host
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        livenessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: content-public-read
+  labels:
+    app: content-public-read
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - port: 8080
+      name: "app"
+      targetPort: 8080
+    - port: 8081
+      name: "admin"
+      targetPort: 8081
+  selector:
+    app: content-public-read

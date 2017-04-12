@@ -1,0 +1,72 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: sections-rw-neo4j
+  labels:
+    app: sections-rw-neo4j
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sections-rw-neo4j
+  template:
+    metadata:
+      labels:
+        app: sections-rw-neo4j
+        visualize: "true"
+    spec:
+      containers:
+      - name: sections-rw-neo4j
+        image: coco/sections-rw-neo4j:v1.1.3
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 256Mi
+        env:
+        - name: GRAPHITE_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
+        - name: GRAPHITE_PREFIX
+          value: "coco.services.k8s.sections-rw-neo4j"
+        - name: BATCH_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.statements.batch.size	
+        - name: NEO_URL
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: neo4j.read.write.url  
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            path: "/__gtg"
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: sections-rw-neo4j
+  labels:
+    app: sections-rw-neo4j
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: sections-rw-neo4j

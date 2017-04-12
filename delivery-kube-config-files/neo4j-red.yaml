@@ -1,0 +1,59 @@
+# TODO delete once we have separate neo cluster
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: neo4j-red
+  labels:
+    app: neo4j-red
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neo4j-red
+  template:
+    metadata:
+      labels:
+        app: neo4j-red
+        visualize: "true"
+    spec:
+      containers:
+      - name: neo4j-red
+        image: coco/ft-neo4j:v2.3.7-4
+        imagePullPolicy: Always
+        env:
+          - name: NEO4J_AUTH
+            value: none
+          - name: NEO4J_HEAP_MEMORY
+            value: "3584"
+          - name: NEO4J_CACHE_MEMORY
+            value: "1024m"
+        ports:
+        - containerPort: 7474
+        livenessProbe:
+          tcpSocket:
+            port: 7474
+          initialDelaySeconds: 600
+        volumeMounts:
+         - name: neo4j-red-persistent-storage
+           mountPath: /data
+      volumes:
+       - name: neo4j-red-persistent-storage
+         awsElasticBlockStore:
+           volumeID: vol-09f84ecc1aa0a36ac
+           fsType: ext4
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: neo4j-red
+  labels:
+    app: neo4j-red
+    visualize: "true"
+spec:
+  ports:
+    - port: 7474
+      targetPort: 7474
+  selector:
+    app: neo4j-red

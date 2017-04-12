@@ -1,0 +1,72 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: list-notifications-rw
+  labels:
+    app: list-notifications-rw
+    visualize: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: list-notifications-rw
+  template:
+    metadata:
+      labels:
+        app: list-notifications-rw
+        visualize: "true"
+    spec:
+      containers:
+        - name: list-notifications-rw
+          image: coco/list-notifications-rw:v0.1.4
+          imagePullPolicy: Always
+          resources:
+            limits:
+              memory: 128Mi
+          env:
+            - name: MONGO_ADDRESSES
+              valueFrom:
+                configMapKeyRef:
+                  name: global-config
+                  key: mongodb.address
+            - name: DUMP_REQUESTS
+              value: "false"
+            - name: API_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: global-config
+                  key: api.host
+            - name: CACHE_TTL
+              valueFrom:
+                configMapKeyRef:
+                  name: global-config
+                  key: cache-max-age
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            initialDelaySeconds: 5
+            tcpSocket:
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /__gtg
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: list-notifications-rw
+  labels:
+    app: list-notifications-rw
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: list-notifications-rw
