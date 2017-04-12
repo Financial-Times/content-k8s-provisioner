@@ -1,13 +1,13 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: k8s-delivery-upp-uk
+clusterName: k8s-delivery-upp-eu
 
 # DNS name routable to the Kubernetes controller nodes
 # from worker nodes and external clients. Configure the options
 # below if you'd like kube-aws to create a Route53 record sets/hosted zones
 # for you.  Otherwise the deployer is responsible for making this name routable
-externalDNSName: k8s-delivery-upp-uk-api.ft.com
+externalDNSName: k8s-delivery-upp-eu-api.ft.com
 
 # CoreOS release channel to use. Currently supported options: alpha, beta, stable
 # See coreos.com/releases for more information
@@ -653,7 +653,7 @@ kubernetesVersion: v1.5.5_coreos.0
 
 # AWS Tags for cloudformation stack resources
 stackTags:
-  coco-environment-tag: "k8s-delivery-upp-uk"
+  coco-environment-tag: "k8s-delivery-upp-eu"
   stopSchedule: "nostop"
   systemCode: "upp"
   environment: "t"
