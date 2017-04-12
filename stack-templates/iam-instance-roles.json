@@ -2,28 +2,25 @@
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Stack template for roles needed for the Kubernetes instances to run",
   "Parameters": {
-    "KmsKey": {
+    "KmsKeyId": {
       "Type": "String",
-      "Description": "The KMS key ARN used for decrypting encrypted assets"
+      "Description": "The KMS key ID used for decrypting encrypted assets. This should not be the full ARN. Example value: 780da7cd-6acf-48e6-9693-5ffc8c3b6484"
     },
-    "SystemCode": {
+    "SystemCodeTag": {
       "Type": "String",
-      "Description": "The system code tag of the resources to limit access to. Will apply to the resources created during provisioning"
+      "Description": "The system code tag of the resources to limit access to. Will apply to the resources created during provisioning. Example value: upp"
     },
-    "AccountId": {
+    "S3BucketName": {
       "Type": "String",
-      "Description": "The account id of the resources to limit access to"
-    },
-    "S3Bucket": {
-      "Type": "String",
-      "Description": "The name of S3 bucket used for provisioning"
+      "Description": "The name of S3 bucket used for provisioning. Example value: com.ft.upp.k8s-provision"
     }
   },
   "Resources": {
     "IAMRoleEtcd": {
       "Properties": {
-        "RoleName": "k8s-etcd-role2",
+        "RoleName": {"Fn::Join" : ["", [{ "Ref" : "AWS::StackName" } , "-etcd-role" ]]},
         "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
           "Statement": [
             {
               "Action": [
@@ -36,33 +33,32 @@
                 ]
               }
             }
-          ],
-          "Version": "2012-10-17"
+          ]
         },
         "Path": "/",
         "Policies": [
           {
             "PolicyDocument": {
+              "Version": "2012-10-17",
               "Statement": [
                 {
                   "Action": "kms:Decrypt",
-                  "Resource": "${KmsKey}",
+                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , ":key/${KmsKeyId}" ]]},
                   "Effect": "Allow"
                 },
                 {
                   "Action": "ec2:DescribeTags",
                   "Effect": "Allow",
                   "Resource": [
-                    "arn:aws:ec2::${AccountId}:/*"
+                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":/*" ]]}
                   ],
                   "Condition": {
                     "StringEquals": {
-                      "ec2:ResourceTag/systemCode": "${SystemCode}"
+                      "ec2:ResourceTag/SystemCodeTag": "${SystemCodeTag}"
                     }
                   }
                 }
-              ],
-              "Version": "2012-10-17"
+              ]
             },
             "PolicyName": "root"
           }
@@ -72,7 +68,7 @@
     },
     "IAMRoleController": {
       "Properties": {
-        "RoleName": "k8s-controller-role2",
+        "RoleName": {"Fn::Join" : ["", [{ "Ref" : "AWS::StackName" } , "-controller-role" ]]},
         "AssumeRolePolicyDocument": {
           "Statement": [
             {
@@ -93,6 +89,7 @@
         "Policies": [
           {
             "PolicyDocument": {
+              "Version": "2012-10-17",
               "Statement": [
                 {
                   "Action": [
@@ -126,12 +123,12 @@
                   ],
                   "Effect": "Allow",
                   "Resource": [
-                    "arn:aws:ec2::${AccountId}:instance/*",
-                    "arn:aws:ec2::${AccountId}:volume/*"
+                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":instance/*" ]]},
+                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":volume/*" ]]}
                   ],
                   "Condition": {
                     "StringEquals": {
-                      "ec2:ResourceTag/systemCode": "${SystemCode}"
+                      "ec2:ResourceTag/SystemCodeTag": "${SystemCodeTag}"
                     }
                   }
                 },
@@ -159,21 +156,20 @@
                   "Action": [
                     "s3:GetObject"
                   ],
-                  "Resource": "arn:aws:s3:::${S3Bucket}/*",
+                  "Resource": "arn:aws:s3:::${S3BucketName}/*",
                   "Effect": "Allow"
                 },
                 {
                   "Action": "cloudformation:SignalResource",
-                  "Resource": "arn:aws:cloudformation::${AccountId}:stack/*",
+                  "Resource": {"Fn::Join" : ["", [ "arn:aws:cloudformation::", { "Ref" : "AWS::AccountId" } , ":stack/*" ]]},
                   "Effect": "Allow"
                 },
                 {
                   "Action": "kms:Decrypt",
-                  "Resource": "${KmsKey}",
+                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , ":key/${KmsKeyId}" ]]},
                   "Effect": "Allow"
                 }
-              ],
-              "Version": "2012-10-17"
+              ]
             },
             "PolicyName": "root"
           }
@@ -183,7 +179,7 @@
     },
     "IAMRoleWorker": {
       "Properties": {
-        "RoleName": "k8s-worker-role2",
+        "RoleName": {"Fn::Join" : ["", [{ "Ref" : "AWS::StackName" } , "-worker-role" ]]},
         "AssumeRolePolicyDocument": {
           "Statement": [
             {
@@ -204,16 +200,17 @@
         "Policies": [
           {
             "PolicyDocument": {
+              "Version": "2012-10-17",
               "Statement": [
                 {
                   "Action": "ec2:Describe*",
                   "Effect": "Allow",
                   "Resource": [
-                    "arn:aws:ec2::${AccountId}:/*"
+                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":/*" ]]}
                   ],
                   "Condition": {
                     "StringEquals": {
-                      "ec2:ResourceTag/systemCode": "${SystemCode}"
+                      "ec2:ResourceTag/SystemCodeTag": "${SystemCodeTag}"
                     }
                   }
                 },
@@ -224,12 +221,12 @@
                   ],
                   "Effect": "Allow",
                   "Resource": [
-                    "arn:aws:ec2::${AccountId}:instance/*",
-                    "arn:aws:ec2::${AccountId}:volume/*"
+                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":instance/*" ]]},
+                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":volume/*" ]]}
                   ],
                   "Condition": {
                     "StringEquals": {
-                      "ec2:ResourceTag/systemCode": "${SystemCode}"
+                      "ec2:ResourceTag/SystemCodeTag": "${SystemCodeTag}"
                     }
                   }
                 },
@@ -237,21 +234,20 @@
                   "Action": [
                     "s3:GetObject"
                   ],
-                  "Resource": "arn:aws:s3:::${S3Bucket}/*",
+                  "Resource": "arn:aws:s3:::${S3BucketName}/*",
                   "Effect": "Allow"
                 },
                 {
                   "Action": "kms:Decrypt",
-                  "Resource": "${KmsKey}",
+                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , ":key/${KmsKeyId}" ]]},
                   "Effect": "Allow"
                 },
                 {
                   "Action": "cloudformation:SignalResource",
-                  "Resource": "arn:aws:cloudformation::${AccountId}:stack/*",
+                  "Resource": {"Fn::Join" : ["", [ "arn:aws:cloudformation::", { "Ref" : "AWS::AccountId" } , ":stack/*" ]]},
                   "Effect": "Allow"
                 }
-              ],
-              "Version": "2012-10-17"
+              ]
             },
             "PolicyName": "root"
           }
