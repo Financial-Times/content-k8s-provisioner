@@ -55,7 +55,7 @@
               "Statement": [
                 {
                   "Action": "kms:Decrypt",
-                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , ":key/${KmsKeyId}" ]]},
+                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , {"Fn::Sub": ":key/${KmsKeyId}"} ]]},
                   "Effect": "Allow"
                 },
                 {
@@ -66,7 +66,7 @@
                   ],
                   "Condition": {
                     "StringEquals": {
-                      "ec2:ResourceTag/SystemCodeTag": "${SystemCodeTag}"
+                      "ec2:ResourceTag/SystemCodeTag": {"Fn::Sub": "${SystemCodeTag}"}
                     }
                   }
                 }
@@ -152,7 +152,7 @@
                   ],
                   "Condition": {
                     "StringEquals": {
-                      "ec2:ResourceTag/SystemCodeTag": "${SystemCodeTag}"
+                      "ec2:ResourceTag/SystemCodeTag": {"Fn::Sub": "${SystemCodeTag}"}
                     }
                   }
                 },
@@ -180,7 +180,7 @@
                   "Action": [
                     "s3:GetObject"
                   ],
-                  "Resource": "arn:aws:s3:::${S3BucketName}/*",
+                  "Resource": {"Fn::Sub": "arn:aws:s3:::${S3BucketName}/*"},
                   "Effect": "Allow"
                 },
                 {
@@ -190,7 +190,7 @@
                 },
                 {
                   "Action": "kms:Decrypt",
-                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , ":key/${KmsKeyId}" ]]},
+                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , {"Fn::Sub": ":key/${KmsKeyId}"} ]]},
                   "Effect": "Allow"
                 }
               ]
@@ -247,7 +247,7 @@
                   ],
                   "Condition": {
                     "StringEquals": {
-                      "ec2:ResourceTag/SystemCodeTag": "${SystemCodeTag}"
+                      "ec2:ResourceTag/SystemCodeTag": {"Fn::Sub": "${SystemCodeTag}"}
                     }
                   }
                 },
@@ -263,7 +263,7 @@
                   ],
                   "Condition": {
                     "StringEquals": {
-                      "ec2:ResourceTag/SystemCodeTag": "${SystemCodeTag}"
+                      "ec2:ResourceTag/SystemCodeTag": {"Fn::Sub": "${SystemCodeTag}"}
                     }
                   }
                 },
@@ -271,12 +271,12 @@
                   "Action": [
                     "s3:GetObject"
                   ],
-                  "Resource": "arn:aws:s3:::${S3BucketName}/*",
+                  "Resource": {"Fn::Sub": "arn:aws:s3:::${S3BucketName}/*"},
                   "Effect": "Allow"
                 },
                 {
                   "Action": "kms:Decrypt",
-                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , ":key/${KmsKeyId}" ]]},
+                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , {"Fn::Sub": ":key/${KmsKeyId}"} ]]},
                   "Effect": "Allow"
                 },
                 {
