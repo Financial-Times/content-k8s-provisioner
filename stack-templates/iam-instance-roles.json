@@ -16,6 +16,18 @@
     }
   },
   "Resources": {
+    "IAMInstanceProfileEtcd": {
+      "Properties": {
+        "InstanceProfileName" : {"Fn::Join" : ["", [{ "Ref" : "AWS::StackName" } , "-etcd-role" ]]},
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "IAMRoleEtcd"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::InstanceProfile"
+    },
     "IAMRoleEtcd": {
       "Properties": {
         "RoleName": {"Fn::Join" : ["", [{ "Ref" : "AWS::StackName" } , "-etcd-role" ]]},
@@ -65,6 +77,18 @@
         ]
       },
       "Type": "AWS::IAM::Role"
+    },
+    "IAMInstanceProfileController": {
+      "Properties": {
+        "InstanceProfileName" : {"Fn::Join" : ["", [{ "Ref" : "AWS::StackName" } , "-controller-role" ]]},
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "IAMRoleController"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::InstanceProfile"
     },
     "IAMRoleController": {
       "Properties": {
@@ -177,6 +201,19 @@
       },
       "Type": "AWS::IAM::Role"
     },
+    "IAMInstanceProfileWorker": {
+      "Properties": {
+        "InstanceProfileName" : {"Fn::Join" : ["", [{ "Ref" : "AWS::StackName" } , "-worker-role" ]]},
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "IAMRoleWorker"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::InstanceProfile"
+    },
+
     "IAMRoleWorker": {
       "Properties": {
         "RoleName": {"Fn::Join" : ["", [{ "Ref" : "AWS::StackName" } , "-worker-role" ]]},
