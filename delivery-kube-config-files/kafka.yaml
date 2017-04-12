@@ -85,6 +85,9 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
+  labels:
+    failure-domain.beta.kubernetes.io/region: eu-west-1
+    failure-domain.beta.kubernetes.io/zone: eu-west-1a
   name: kafka-pv
 spec:
   accessModes:
