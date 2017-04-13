@@ -4,7 +4,7 @@
   "Parameters": {
     "KmsKeyId": {
       "Type": "String",
-      "Description": "The KMS key ID used for decrypting encrypted assets. This should not be the full ARN. Example value: 780da7cd-6acf-48e6-9693-5ffc8c3b6484"
+      "Description": "The KMS key ARN used for decrypting encrypted assets. This should be the full ARN. Example value: arn:aws:kms:eu-west-1:027104099916:key/71f8113e-39b2-45eb-8561-721d28f3ddb7"
     },
     "SystemCodeTag": {
       "Type": "String",
@@ -55,7 +55,7 @@
               "Statement": [
                 {
                   "Action": "kms:Decrypt",
-                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , {"Fn::Sub": ":key/${KmsKeyId}"} ]]},
+                  "Resource": {"Fn::Sub": "${KmsKeyId}"},
                   "Effect": "Allow"
                 },
                 {
@@ -190,7 +190,7 @@
                 },
                 {
                   "Action": "kms:Decrypt",
-                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , {"Fn::Sub": ":key/${KmsKeyId}"} ]]},
+                  "Resource": {"Fn::Sub": "${KmsKeyId}"},
                   "Effect": "Allow"
                 }
               ]
@@ -276,7 +276,7 @@
                 },
                 {
                   "Action": "kms:Decrypt",
-                  "Resource": {"Fn::Join" : ["", [ "arn:aws:kms::", { "Ref" : "AWS::AccountId" } , {"Fn::Sub": ":key/${KmsKeyId}"} ]]},
+                  "Resource": {"Fn::Sub": "${KmsKeyId}"},
                   "Effect": "Allow"
                 },
                 {
