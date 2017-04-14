@@ -207,6 +207,7 @@
         ],
         "IamInstanceProfile": "upp-k8s-iam-instance-profile-roles-worker-role",
         "ImageId": "{{.AMI}}",
+        "AssociatePublicIpAddress": "true",
         "InstanceType": "{{.InstanceType}}",
         {{if .KeyName}}"KeyName": "{{.KeyName}}",{{end}}
         "SecurityGroups": [

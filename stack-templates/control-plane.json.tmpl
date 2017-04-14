@@ -138,17 +138,7 @@
     },
     {{ end }}
     {{range $etcdIndex, $etcdInstance := .EtcdInstances}}
-    "InstanceEtcd{{$etcdIndex}}eni": {
-      "Properties": {
-          "SubnetId": {{$etcdInstance.SubnetRef}},
-          "GroupSet": [
-            {
-              "Ref": "SecurityGroupEtcd"
-            }
-          ]
-      },
-      "Type": "AWS::EC2::NetworkInterface"
-    },
+
     {{if not $.EtcdDataVolumeEphemeral}}
     "InstanceEtcd{{$etcdIndex}}ebs": {
       "Properties": {
@@ -189,7 +179,10 @@
         {{if $.KeyName}}"KeyName": "{{$.KeyName}}",{{end}}
         "NetworkInterfaces": [
           {
-            "NetworkInterfaceId": { "Ref": "InstanceEtcd{{$etcdIndex}}eni" },
+            "AssociatePublicIpAddress": "true",
+            "GroupSet": [{"Ref": "SecurityGroupEtcd"}],
+            "SubnetId": {{$etcdInstance.SubnetRef}},
+
             "DeviceIndex": "0"
           }
         ],
