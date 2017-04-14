@@ -21,7 +21,9 @@ We'll share the same Kubernetes cluster that was provisioned on aws. Please do t
 1. Clone this repository
 1. Go to lastpass and search for the secure note "Kubernetes AWS cluster test credentials". 
 1. Download the attachment from this secure note and unzip it in the credentials folder. You should have now the key files needed to communicate with the Kubernetes cluster into this folder.
-1. Set the environment variable `KUBECONFIG` to point to the kubeconfig file in the cloned folder
+1. Set the environment variable `KUBECONFIG` to point to:
+    1. For the delivery cluster: the kubeconfig file in the cloned folder. 
+    1. For the publishing cluster: the kubeconfig-pub file in the cloned folder.
 
 You should be all set now. Test your setup by running
 ```

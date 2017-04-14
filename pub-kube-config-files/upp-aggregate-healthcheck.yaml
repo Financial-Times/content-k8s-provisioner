@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: aggregate-healthcheck
-        image: coco/upp-aggregate-healthcheck:v1.1.1-rc4
+        image: coco/upp-aggregate-healthcheck:v1.1.1-rc6
         imagePullPolicy: Always
         resources:
           limits:
@@ -28,7 +28,10 @@ spec:
         - name: PATH_PREFIX
           value: "/__health"
         - name: ENVIRONMENT
-          value: "k8s-publishing-upp-uk"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: environment
         - name: GRAPHITE_URL
           valueFrom:
             configMapKeyRef:
@@ -65,8 +68,8 @@ items:
     apiVersion: v1
     metadata:
       name: category.default
-      labels: 
-         healthcheck-categories-for: aggregate-healthcheck
+      labels:
+        healthcheck-categories-for: aggregate-healthcheck
     data:
       category.name: default
       category.refreshrate: "5"
@@ -74,7 +77,7 @@ items:
     apiVersion: v1
     metadata:
       name: category.publish
-      labels: 
+      labels:
         healthcheck-categories-for: aggregate-healthcheck
     data:
       category.name: publish
@@ -85,43 +88,22 @@ items:
     apiVersion: v1
     metadata:
       name: category.publishing-monitors
-      labels: 
+      labels:
          healthcheck-categories-for: aggregate-healthcheck
     data:
       category.name: publishing-monitors
-      category.services: 
+      category.services: publish-availability-monitor, synthetic-article-publication-monitor, synthetic-list-publication-monitor
       category.refreshrate: "60"
   - kind: ConfigMap
     apiVersion: v1
     metadata:
-      name: category.read
-      labels: 
-         healthcheck-categories-for: aggregate-healthcheck
-    data:
-      category.name: read
-      category.services: publish-availability-monitor, synthetic-article-publication-monitor, synthetic-list-publication-monitor
-      category.refreshrate: "4"
-  - kind: ConfigMap
-    apiVersion: v1
-    metadata:
       name: category.system
-      labels: 
+      labels:
          healthcheck-categories-for: aggregate-healthcheck
     data:
       category.name: system
       category.services: coreos-version-checker, system-healthcheck
       category.refreshrate: "60"
-  - kind: ConfigMap
-    apiVersion: v1
-    metadata:
-      name: category.essential-publish
-      labels: 
-         healthcheck-categories-for: aggregate-healthcheck
-    data:
-      category.name: essential-publish
-      category.services: cms-notifier, native-ingester-cms, nativerw, wordpress-notifier
-      category.refreshrate: "60"
-      category.issticky: "true"
 ---
 
 kind: ConfigMap

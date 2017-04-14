@@ -78,9 +78,44 @@ spec:
             port: 8082
       volumes:
        - name: kafka-persistent-storage
-         awsElasticBlockStore:
-           volumeID: vol-0da5c6a7e25e8f799
-           fsType: ext4
+         persistentVolumeClaim:
+           claimName: kafka-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    failure-domain.beta.kubernetes.io/region: eu-west-1
+    failure-domain.beta.kubernetes.io/zone: eu-west-1a
+  name: kafka-pv
+spec:
+  accessModes:
+  - ReadWriteOnce
+  awsElasticBlockStore:
+    fsType: ext4
+    volumeID: aws://eu-west-1a/vol-08c03b4fbf5192bc3
+  capacity:
+    storage: 10Gi
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: kafka-pvc
+    namespace: default
+  persistentVolumeReclaimPolicy: Retain
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: kafka-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
 
 ---
 
