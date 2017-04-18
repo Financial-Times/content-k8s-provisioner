@@ -6,7 +6,7 @@ metadata:
 data:
   #TODO parameterize this to be the cluster name
   dns.register_subdomain: k8s-publishing-upp-uk
-  k8s.entry_point_service: pub-varnish
+  k8s.entry_point_service: auth-varnish
 
 ---
 apiVersion: batch/v1

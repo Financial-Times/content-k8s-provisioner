@@ -1,0 +1,54 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: auth-varnish
+  labels:
+    app: auth-varnish
+    visualize: "true"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: auth-varnish
+  template:
+    metadata:
+      labels:
+        app: auth-varnish
+        visualize: "true"
+    spec:
+      containers:
+      - name: auth-varnish
+        image: coco/k8s-pub-auth-varnish:1.0.0-rc1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          tcpSocket:
+            port: 80
+          initialDelaySeconds: 5
+        volumeMounts:
+        - name: varnish-htpasswd
+          mountPath: /etc/varnish/auth
+      volumes:
+      - name: varnish-htpasswd
+        secret:
+          secretName: pub-varnish-auth
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: auth-varnish
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:iam::810385116814:server-certificate/self-kube"
+  labels:
+    app: auth-varnish
+    visualize: "true"
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 443
+      targetPort: 80
+  selector:
+    app: auth-varnish
