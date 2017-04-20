@@ -4,7 +4,7 @@ metadata:
   name: elb-registrator-config
   namespace: default
 data:
-  dns.register_subdomain: k8s-test-up
+  dns.register_subdomain: k8s-delivery-upp-eu
   k8s.entry_point_service: delivery-varnish
 
 ---
