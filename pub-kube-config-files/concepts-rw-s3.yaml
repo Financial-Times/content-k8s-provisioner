@@ -48,7 +48,8 @@ spec:
               name: global-secrets
               key: aws.secret_access_key
         - name: BUCKET_NAME
-          value: com.ft.upp.normalised-source-concepts.pub-k8s
+        # TODO read from config map
+          value: com.ft.upp.normalised-source-concepts.k8s-pub
         - name: LOG_METRICS
           value: "false"
         - name: RESOURCE_PATH
