@@ -1,0 +1,96 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: v1-people-transformer
+  labels:
+    app: v1-people-transformer
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: v1-people-transformer
+  template:
+    metadata:
+      labels:
+        app: v1-people-transformer
+        visualize: "true"
+    spec:
+      containers:
+      - name: v1-people-transformer
+        image: coco/v1-people-transformer:v0.1.0
+        resources:
+            limits:
+              memory: 1Gi
+        env:
+        - name: PORT
+          value: "8080"
+        - name: BASE_URL
+          value: "http://v1-people-transformer:8080/transformers/people/"
+        - name: TME_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: tme.url
+        - name: TME_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.username
+        - name: TME_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.password
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.token
+        - name: CACHE_FILE_NAME
+          value: "/cache/v1-people-transformer.db"
+        - name: GRAPHITE_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
+        - name: GRAPHITE_PREFIX
+          value: "coco.services.k8s.v1-people-transformer"
+        - name: LOG_METRICS
+          value: "false"
+        volumeMounts:
+        - mountPath: /cache
+          name: cache
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 30
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+      volumes:
+      - name: cache
+        hostPath:
+          path: /tmp
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: v1-people-transformer
+  labels:
+    app: v1-people-transformer
+    visualize: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: v1-people-transformer
