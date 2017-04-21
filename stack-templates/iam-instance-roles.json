@@ -61,14 +61,7 @@
                 {
                   "Action": "ec2:DescribeTags",
                   "Effect": "Allow",
-                  "Resource": [
-                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":/*" ]]}
-                  ],
-                  "Condition": {
-                    "StringEquals": {
-                      "ec2:ResourceTag/SystemCodeTag": {"Fn::Sub": "${SystemCodeTag}"}
-                    }
-                  }
+                  "Resource": "*"
                 }
               ]
             },
@@ -147,12 +140,12 @@
                   ],
                   "Effect": "Allow",
                   "Resource": [
-                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":instance/*" ]]},
-                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":volume/*" ]]}
+                    {"Fn::Join" : ["", [ "arn:aws:ec2:*:", { "Ref" : "AWS::AccountId" } , ":instance/*" ]]},
+                    {"Fn::Join" : ["", [ "arn:aws:ec2:*:", { "Ref" : "AWS::AccountId" } , ":volume/*" ]]}
                   ],
                   "Condition": {
                     "StringEquals": {
-                      "ec2:ResourceTag/SystemCodeTag": {"Fn::Sub": "${SystemCodeTag}"}
+                      "ec2:ResourceTag/systemCode": {"Fn::Sub": "${SystemCodeTag}"}
                     }
                   }
                 },
@@ -185,7 +178,7 @@
                 },
                 {
                   "Action": "cloudformation:SignalResource",
-                  "Resource": {"Fn::Join" : ["", [ "arn:aws:cloudformation::", { "Ref" : "AWS::AccountId" } , ":stack/*" ]]},
+                  "Resource": {"Fn::Join" : ["", [ "arn:aws:cloudformation:*:", { "Ref" : "AWS::AccountId" } , ":stack/*" ]]},
                   "Effect": "Allow"
                 },
                 {
@@ -242,14 +235,7 @@
                 {
                   "Action": "ec2:Describe*",
                   "Effect": "Allow",
-                  "Resource": [
-                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":/*" ]]}
-                  ],
-                  "Condition": {
-                    "StringEquals": {
-                      "ec2:ResourceTag/SystemCodeTag": {"Fn::Sub": "${SystemCodeTag}"}
-                    }
-                  }
+                  "Resource": "*"
                 },
                 {
                   "Action": [
@@ -258,12 +244,12 @@
                   ],
                   "Effect": "Allow",
                   "Resource": [
-                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":instance/*" ]]},
-                    {"Fn::Join" : ["", [ "arn:aws:ec2::", { "Ref" : "AWS::AccountId" } , ":volume/*" ]]}
+                    {"Fn::Join" : ["", [ "arn:aws:ec2:*:", { "Ref" : "AWS::AccountId" } , ":instance/*" ]]},
+                    {"Fn::Join" : ["", [ "arn:aws:ec2:*:", { "Ref" : "AWS::AccountId" } , ":volume/*" ]]}
                   ],
                   "Condition": {
                     "StringEquals": {
-                      "ec2:ResourceTag/SystemCodeTag": {"Fn::Sub": "${SystemCodeTag}"}
+                      "ec2:ResourceTag/systemCode": {"Fn::Sub": "${SystemCodeTag}"}
                     }
                   }
                 },
@@ -281,7 +267,7 @@
                 },
                 {
                   "Action": "cloudformation:SignalResource",
-                  "Resource": {"Fn::Join" : ["", [ "arn:aws:cloudformation::", { "Ref" : "AWS::AccountId" } , ":stack/*" ]]},
+                  "Resource": {"Fn::Join" : ["", [ "arn:aws:cloudformation:*:", { "Ref" : "AWS::AccountId" } , ":stack/*" ]]},
                   "Effect": "Allow"
                 }
               ]
