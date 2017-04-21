@@ -38,7 +38,7 @@ externalDNSName: k8s-pub-upp-eu-api.ft.com
 keyName: upp-provision-debug
 
 # Additional keys to preload on the coreos account (keep this to a minimum)
-# sshAuthorizedKeys:
+#sshAuthorizedKeys:
 # - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDPZPLtRvmeD8ZR/cm3SQ2GXc/tpDGPwP0slQDq3OV9R8+QiArvvfaGPpALM4xf3Y+DQxkG5W+PzPpYGUy4B17HVB9dywSZEjroqvf5/3LZp+X8dVQ/NPnOcox31zkmKhh8zODeWgcOv+tmf6hG82oGlMZci/6NMajpUT2RZYJfhN/aX+zeKkVZr1rckhuva7p0k3mcbtom9dMK0+W9rs2TjRTCrKo0l4jl9hhlc0omfRyQhvFmji/pgKoUoST9GFP7vS21QIAYR6K5PcIjYwn+p/jPKATHCD5PKHDilu+wt7GUaf3VyXljKavJsSAOydso+qsYivj/uwWhYfxppMTR sorin.buliarca@ft.com"
 
 # Region to provision Kubernetes cluster
@@ -71,12 +71,12 @@ controller:
     - name: ExistingPublicSubnet2
     - name: ExistingPublicSubnet3
 
-  loadBalancer:
+loadBalancer:
 #    # kube-aws creates the ELB for the k8s API endpoint as `Schema=internet-facing` by default and
 #    # only public subnets defined under the top-level `subnets` key are used for the ELB
   private: false
 #    # If you like specific public subnets to be used by the internet-facing ELB:
-    subnets:
+  subnets:
     - name: ExistingPublicSubnet1
     - name: ExistingPublicSubnet2
     - name: ExistingPublicSubnet3
