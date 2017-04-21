@@ -76,11 +76,7 @@
             {{if $spec.SpotPrice}}
             "SpotPrice": "{{$spec.SpotPrice}}",
             {{end}}
-            "IamInstanceProfile": {
-              "Arn": {
-                "Fn::GetAtt" : ["IAMInstanceProfileWorker", "Arn"]
-              }
-            },
+            "IamInstanceProfile": "k8s-worker-role",
             "BlockDeviceMappings": [
               {
                 "DeviceName": "/dev/xvda",
@@ -209,9 +205,7 @@
             }
           }
         ],
-        "IamInstanceProfile": {
-          "Ref": "IAMInstanceProfileWorker"
-        },
+        "IamInstanceProfile": "k8s-worker-role",
         "ImageId": "{{.AMI}}",
         "InstanceType": "{{.InstanceType}}",
         {{if .KeyName}}"KeyName": "{{.KeyName}}",{{end}}
@@ -229,7 +223,7 @@
         "UserData": {{template "UserData" $}}
       },
       "Type": "AWS::AutoScaling::LaunchConfiguration"
-    },
+    }
 {{end}}
 {
   "AWSTemplateFormatVersion": "2010-09-09",
@@ -246,149 +240,5 @@
     {{else}}
     {{template "AutoScaling" .}}
     {{end}}
-    "IAMInstanceProfileWorker": {
-      "Properties": {
-        "Path": "/",
-        "Roles": [
-          {
-            "Ref": "IAMRoleWorker"
-          }
-        ]
-      },
-      "Type": "AWS::IAM::InstanceProfile"
-    },
-    "IAMRoleWorker": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": [
-                "sts:AssumeRole"
-              ],
-              "Effect": "Allow",
-              "Principal": {
-                "Service": [
-                  "ec2.amazonaws.com{{if .IsChinaRegion}}.cn{{end}}"
-                ]
-              }
-            }
-          ],
-          "Version": "2012-10-17"
-        },
-        "Path": "/",
-        {{if .ManagedIamRoleName }}
-        "RoleName":  {"Fn::Join": ["",[{"Ref": "AWS::StackName"},"-",{"Ref": "AWS::Region"},"-","{{.ManagedIamRoleName}}"]]},
-        {{end}}
-        "Policies": [
-          {
-            "PolicyDocument": {
-              "Statement": [
-                {
-                  "Action": "ec2:Describe*",
-                  "Effect": "Allow",
-                  "Resource": "*"
-                },
-                {
-                  "Action": "ec2:AttachVolume",
-                  "Effect": "Allow",
-                  "Resource": "*"
-                },
-                {
-                  "Action": "ec2:DetachVolume",
-                  "Effect": "Allow",
-                  "Resource": "*"
-                },
-                {
-                  "Effect": "Allow",
-                  "Action": [
-                    "s3:GetObject"
-                  ],
-                  "Resource": "arn:aws:s3:::{{$.UserDataWorkerS3Path}}"
-                },
-                {{if .Kube2IamSupport.Enabled }}
-                {
-                  "Action": "sts:AssumeRole",
-                  "Effect":"Allow",
-                  "Resource":"*"
-                },
-                {{end}}
-				{{if .ManageCertificates}}
-                {
-                  "Action" : "kms:Decrypt",
-                  "Effect" : "Allow",
-                  "Resource" : "{{.KMSKeyARN}}"
-                },
-                {{end}}
-                {{if .WaitSignal.Enabled}}
-                {
-                  "Action": "cloudformation:SignalResource",
-                  "Effect": "Allow",
-                  "Resource":
-                    { "Fn::Join": [ "", [
-                      "arn:aws:cloudformation:",
-                      { "Ref": "AWS::Region" },
-                      ":",
-                      { "Ref": "AWS::AccountId" },
-                      ":stack/",
-                      { "Ref": "AWS::StackName" },
-                      "/*" ]
-                    ] }
-                },
-                {{end}}
-                {{if .AwsNodeLabels.Enabled}}
-                {
-                  "Action": "autoscaling:Describe*",
-                  "Effect": "Allow",
-                  "Resource": [ "*" ]
-                },
-                {{end}}
-                {{if .ClusterAutoscalerSupport.Enabled}}
-                {
-                "Effect": "Allow",
-                  "Action": [
-                    "autoscaling:DescribeAutoScalingGroups",
-                    "autoscaling:DescribeAutoScalingInstances",
-                    "autoscaling:SetDesiredCapacity",
-                    "autoscaling:TerminateInstanceInAutoScalingGroup"
-                  ],
-                  "Resource": "*"
-                },
-                {{end}}
-                {{if .SpotFleet.Enabled}}
-                {
-                  "Action": "ec2:CreateTags",
-                  "Effect": "Allow",
-                  "Resource": "*"
-                },
-                {{if or .LoadBalancer.Enabled  .TargetGroup.Enabled}}
-                {
-                  "Action": "elasticloadbalancing:*",
-                  "Effect": "Allow",
-                  "Resource": "*"
-                },
-                {{end}}
-                {{end}}
-                {
-                  "Action": [
-                    "ecr:GetAuthorizationToken",
-                    "ecr:BatchCheckLayerAvailability",
-                    "ecr:GetDownloadUrlForLayer",
-                    "ecr:GetRepositoryPolicy",
-                    "ecr:DescribeRepositories",
-                    "ecr:ListImages",
-                    "ecr:BatchGetImage"
-                  ],
-                  "Resource": "*",
-                  "Effect": "Allow"
-                }
-              ],
-              "Version": "2012-10-17"
-            },
-            "PolicyName": "root"
-          }
-        ]
-      },
-      "Type": "AWS::IAM::Role"
-    }
   }
 }

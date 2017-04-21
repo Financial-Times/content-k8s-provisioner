@@ -1,0 +1,115 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: upp-aggregate-healthcheck
+  labels:
+    app: upp-aggregate-healthcheck
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: upp-aggregate-healthcheck
+  template:
+    metadata:
+      labels:
+        app: upp-aggregate-healthcheck
+        version: "latest"
+        visualize: "true"
+    spec:
+      containers:
+      - name: aggregate-healthcheck
+        image: coco/upp-aggregate-healthcheck:1.1.1
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 256Mi
+        env:
+        - name: PATH_PREFIX
+          value: "/__health"
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: environment
+        - name: GRAPHITE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 30
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: upp-aggregate-healthcheck
+  labels:
+    app: upp-aggregate-healthcheck
+    visualize: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: upp-aggregate-healthcheck
+
+---
+
+kind: ConfigMapList
+apiVersion: v1
+items:
+  - kind: ConfigMap
+    apiVersion: v1
+    metadata:
+      name: category.default
+      labels:
+        healthcheck-categories-for: aggregate-healthcheck
+    data:
+      category.name: default
+      category.refreshrate: "5"
+  - kind: ConfigMap
+    apiVersion: v1
+    metadata:
+      name: category.publish
+      labels:
+        healthcheck-categories-for: aggregate-healthcheck
+    data:
+      category.name: publish
+      category.services: cms-notifier, native-ingester-cms, nativerw, wordpress-notifier
+      category.refreshrate: "60"
+      category.issticky: "true"
+  - kind: ConfigMap
+    apiVersion: v1
+    metadata:
+      name: category.publishing-monitors
+      labels:
+         healthcheck-categories-for: aggregate-healthcheck
+    data:
+      category.name: publishing-monitors
+      category.services: publish-availability-monitor, synthetic-article-publication-monitor, synthetic-list-publication-monitor
+      category.refreshrate: "60"
+  - kind: ConfigMap
+    apiVersion: v1
+    metadata:
+      name: category.system
+      labels:
+         healthcheck-categories-for: aggregate-healthcheck
+    data:
+      category.name: system
+      category.services: coreos-version-checker, system-healthcheck
+      category.refreshrate: "60"
+---
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: healthcheck.ack.messages
+  labels: 
+    healthcheck-acknowledgements-for: aggregate-healthcheck
+data:

@@ -1,35 +1,31 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: kafka-lagcheck
+  name: nativerw
   labels:
-    app: kafka-lagcheck
+    app: nativerw
     visualize: "true"
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: kafka-lagcheck
+      app: nativerw
   template:
     metadata:
       labels:
-        app: kafka-lagcheck
+        app: nativerw
         visualize: "true"
     spec:
       containers:
-      - name: kafka-lagcheck
-        image:  coco/kafka-lagcheck:v1.0.15-k8s
+      - name: nativerw
+        image: coco/nativerw:2.0.2-k8s-adjust-gtg-rc1
         imagePullPolicy: Always
         resources:
           limits:
             memory: 256Mi
         env:
-        - name: WHITELISTED_TOPICS
-          value: "Concept"
-        - name: BURROW_URL
-          value: "http://burrow:8080"
-        - name: LAG_TOLERANCE
-          value: "30"
+        - name: MONGOS
+          value: mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017
         ports:
         - containerPort: 8080
         livenessProbe:
@@ -48,9 +44,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: kafka-lagcheck
+  name: nativerw
   labels:
-    app: kafka-lagcheck
+    app: nativerw
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -58,5 +54,4 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: kafka-lagcheck
-
+    app: nativerw

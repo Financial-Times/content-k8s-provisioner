@@ -1,35 +1,32 @@
 apiVersion: extensions/v1beta1
-kind: Deployment
+kind: DaemonSet
 metadata:
-  name: kafka-lagcheck
+  name: system-healthcheck
   labels:
-    app: kafka-lagcheck
-    visualize: "true"
+    app: system-healthcheck
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: kafka-lagcheck
+      app: system-healthcheck
   template:
     metadata:
       labels:
-        app: kafka-lagcheck
+        app: system-healthcheck
         visualize: "true"
     spec:
       containers:
-      - name: kafka-lagcheck
-        image:  coco/kafka-lagcheck:v1.0.15-k8s
+      - name: system-healthcheck
+        image: coco/coco-system-healthcheck:add-gtg
         imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /host_dir
+          name: host-root-directory
         resources:
-          limits:
-            memory: 256Mi
+            limits:
+              memory: 256Mi
         env:
-        - name: WHITELISTED_TOPICS
-          value: "Concept"
-        - name: BURROW_URL
-          value: "http://burrow:8080"
-        - name: LAG_TOLERANCE
-          value: "30"
+        - name: SYS_HC_HOST_PATH
+          value: "host_dir"
         ports:
         - containerPort: 8080
         livenessProbe:
@@ -42,21 +39,26 @@ spec:
             port: 8080
           initialDelaySeconds: 10
           periodSeconds: 30
+      volumes:
+      - name: host-root-directory
+        hostPath:
+          path: /
 
 ---
 
 kind: Service
 apiVersion: v1
 metadata:
-  name: kafka-lagcheck
+  name: system-healthcheck
   labels:
-    app: kafka-lagcheck
+    app: system-healthcheck
     visualize: "true"
     hasHealthcheck: "true"
+    isResilient: "false"
+    isDaemon: "true"
 spec:
   ports:
     - port: 8080
       targetPort: 8080
   selector:
-    app: kafka-lagcheck
-
+    app: system-healthcheck
