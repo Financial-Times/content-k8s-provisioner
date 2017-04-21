@@ -4,4 +4,4 @@ metadata:
   name: generic-rw-s3-config
   namespace: default
 data:
-  bucket.name: com.ft.universalpublishing.v2-suggestions-cache.k8s
+  bucket.name: com.ft.universalpublishing.v2-suggestions-cache.k8s.test
