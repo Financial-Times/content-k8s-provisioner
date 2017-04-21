@@ -1,0 +1,98 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: v1-authors-transformer
+  labels:
+    app: v1-authors-transformer
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: v1-authors-transformer
+  template:
+    metadata:
+      labels:
+        app: v1-authors-transformer
+        visualize: "true"
+    spec:
+      containers:
+      - name: v1-authors-transformer
+        image: coco/v1-authors-transformer:v1.1.5
+        resources:
+            limits:
+              memory: 1Gi
+        env:
+        - name: PORT
+          value: "8080"
+        - name: BASE_URL
+          value: "http://v1-authors-transformer:8080/transformers/authors/"
+        - name: TME_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: tme.url
+        - name: TME_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.username
+        - name: TME_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.password
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.token
+        - name: CACHE_FILE_NAME
+          value: "/cache/v1-authors-transformer.db"
+        - name: BERTHA_SOURCE_URL
+          value: "http://bertha.ig.ft.com/view/publish/gss/1wEdVRLtayZ6-XBfYM3vKAGaOV64cNJD3L8MlLM8-uFY/TestAuthors"
+        - name: GRAPHITE_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: graphite.address
+        - name: GRAPHITE_PREFIX
+          value: "coco.services.k8s.v1-authors-transformer"
+        - name: LOG_METRICS
+          value: "false"
+        volumeMounts:
+        - mountPath: /cache
+          name: cache
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 5
+      volumes:
+      - name: cache
+        hostPath:
+          path: /tmp
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: v1-authors-transformer
+  labels:
+    app: v1-authors-transformer
+    visualize: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: v1-authors-transformer

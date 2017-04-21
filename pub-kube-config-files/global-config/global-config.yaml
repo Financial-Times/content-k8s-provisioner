@@ -35,3 +35,4 @@ data:
   zookeeper.url : kafka:2181
   zookeeper.host : kafka
   zookeeper.port : "2181"
+  tme.url: https://tme.ft.com

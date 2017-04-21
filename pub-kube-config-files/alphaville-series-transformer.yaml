@@ -1,0 +1,80 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: alphaville-series-transformer
+  labels:
+    app: alphaville-series-transformer
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alphaville-series-transformer
+  template:
+    metadata:
+      labels:
+        app: alphaville-series-transformer
+        visualize: "true"
+    spec:
+      containers:
+      - name: alphaville-series-transformer
+        image: coco/alphaville-series-transformer:v0.0.3
+        resources:
+            limits:
+              memory: 256Mi
+        env:
+        - name: PORT
+          value: "8080"
+        - name: BASE_URL
+          value: "http://alphaville-series-transformer:8080/transformers/alphaville-series/"
+        - name: TME_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: tme.url
+        - name: TME_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.username
+        - name: TME_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.password
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: tme.token
+        - name: TME_TAXONOMY_NAME
+          value: "AlphavilleSeriesClassification"
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 20
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          timeoutSeconds: 5
+          
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: alphaville-series-transformer
+  labels:
+    app: alphaville-series-transformer
+    visualize: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: alphaville-series-transformer
