@@ -17,9 +17,9 @@ spec:
   - ReadWriteOnce
   awsElasticBlockStore:
     fsType: ext4
-    volumeID: aws://eu-west-1a/vol-012c639211734f1c5
+    volumeID: aws://eu-west-1a/vol-013012ae805ba79c4
   capacity:
-    storage: 10Gi
+    storage: 50Gi
   claimRef:
     apiVersion: v1
     kind: PersistentVolumeClaim
@@ -44,9 +44,9 @@ spec:
   - ReadWriteOnce
   awsElasticBlockStore:
     fsType: ext4
-    volumeID: aws://eu-west-1b/vol-0d6c4ac346082d640
+    volumeID: aws://eu-west-1b/vol-00c0546b01c1c5aef
   capacity:
-    storage: 10Gi
+    storage: 50Gi
   claimRef:
     apiVersion: v1
     kind: PersistentVolumeClaim
@@ -71,9 +71,9 @@ spec:
   - ReadWriteOnce
   awsElasticBlockStore:
     fsType: ext4
-    volumeID: aws://eu-west-1c/vol-0a4b5d7543ecd647d
+    volumeID: aws://eu-west-1c/vol-0c47028bd6c341d49
   capacity:
-    storage: 10Gi
+    storage: 50Gi
   claimRef:
     apiVersion: v1
     kind: PersistentVolumeClaim
@@ -144,4 +144,4 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 10Gi
+          storage: 50Gi
