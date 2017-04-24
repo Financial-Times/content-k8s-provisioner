@@ -25,7 +25,7 @@ data:
   kafka.url: kafka:9092
   kafka.host: kafka
   kafka.port: "9092"
-  kafka.proxy.url : kafka:8082
+  kafka.proxy.url: kafka:8082
   kafka.proxy.host: kafka
   kafka.proxy.port: "8082"
   kafka.proxy.url.with.protocol: http://kafka:8082
