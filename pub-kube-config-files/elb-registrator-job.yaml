@@ -5,7 +5,7 @@ metadata:
   namespace: default
 data:
   #TODO parameterize this to be the cluster name
-  dns.register_subdomain: k8s-publishing-upp-uk
+  dns.register_subdomain: k8s-publishing-upp-eu
   k8s.entry_point_service: pub-varnish
 
 ---

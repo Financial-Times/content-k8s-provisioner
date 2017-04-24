@@ -1,13 +1,13 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: upp-kube-aws-test2
+clusterName: k8s-delivery-upp-eu
 
 # DNS name routable to the Kubernetes controller nodes
 # from worker nodes and external clients. Configure the options
 # below if you'd like kube-aws to create a Route53 record sets/hosted zones
 # for you.  Otherwise the deployer is responsible for making this name routable
-externalDNSName: upp-kube-aws-test-api.ft.com
+externalDNSName: k8s-delivery-upp-eu-api.ft.com
 
 # CoreOS release channel to use. Currently supported options: alpha, beta, stable
 # See coreos.com/releases for more information
@@ -35,47 +35,51 @@ externalDNSName: upp-kube-aws-test-api.ft.com
 
 # Name of the SSH keypair already loaded into the AWS
 # account being used to deploy this cluster.
-keyName: sorin.buliarca.key
+keyName: upp-provision-debug
 
 # Additional keys to preload on the coreos account (keep this to a minimum)
-# sshAuthorizedKeys:
-# - "ssh-rsa AAAAEXAMPLEKEYEXAMPLEKEYEXAMPLEKEYEXAMPLEKEYEXAMPLEKEYEXAMPLEKEYEXAMPLEKEYEXAMPLEKEYEXAMPLEKEYEXAMPLEKEY example@example.org"
+#sshAuthorizedKeys:
+# - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDPZPLtRvmeD8ZR/cm3SQ2GXc/tpDGPwP0slQDq3OV9R8+QiArvvfaGPpALM4xf3Y+DQxkG5W+PzPpYGUy4B17HVB9dywSZEjroqvf5/3LZp+X8dVQ/NPnOcox31zkmKhh8zODeWgcOv+tmf6hG82oGlMZci/6NMajpUT2RZYJfhN/aX+zeKkVZr1rckhuva7p0k3mcbtom9dMK0+W9rs2TjRTCrKo0l4jl9hhlc0omfRyQhvFmji/pgKoUoST9GFP7vS21QIAYR6K5PcIjYwn+p/jPKATHCD5PKHDilu+wt7GUaf3VyXljKavJsSAOydso+qsYivj/uwWhYfxppMTR sorin.buliarca@ft.com"
 
 # Region to provision Kubernetes cluster
 region: eu-west-1
 
 # Availability Zone to provision Kubernetes cluster when placing nodes in a single availability zone (not highly-available) Comment out for multi availability zone setting and use the below `subnets` section instead.
-availabilityZone: eu-west-1a
+#availabilityZone: eu-west-1a
 
 # ARN of the KMS key used to encrypt TLS assets.
-kmsKeyArn: "arn:aws:kms:eu-west-1:810385116814:key/780da7cd-6acf-48e6-9693-5ffc8c3b6484"
+kmsKeyArn: "arn:aws:kms:eu-west-1:027104099916:key/71f8113e-39b2-45eb-8561-721d28f3ddb7"
 
 # Number of controller nodes to create, for more control use `controller.autoScalingGroup` and do not use this setting
-controllerCount: 2
+# controllerCount: 2
 
-#controller:
+controller:
 #  # Auto Scaling Group definition for controllers. If only `controllerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
-#  autoScalingGroup:
-#    minSize: 1
-#    maxSize: 3
-#    rollingUpdateMinInstancesInService: 2
+  autoScalingGroup:
+    minSize: 2
+    maxSize: 2
+    rollingUpdateMinInstancesInService: 2
 #  # If you specify managedIamRoleName the role created for controller nodes will not suffix the random id at the end
 #  # Role will be created with "Ref": {"AWS::StackName"}-{"AWS::Region"}-yourManagedRole
 #  # to follow the recommendation in AWS documentation  http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
 #  # This is also intended to be used in combination with .experimental.kube2IamSupport. See #297 for more information.
 #  managedIamRoleName: "yourManagedRole"
 #  # If omitted, public subnets are created by kube-aws and used for controller nodes
-#  subnets:
+  subnets:
 #    # References subnets defined under the top-level `subnets` key by their names
-#    - name: ManagedPublicSubnet1
-#    - name: ManagedPublicSubnet2
-#  loadBalancer:
+    - name: ExistingPublicSubnet1
+    - name: ExistingPublicSubnet2
+    - name: ExistingPublicSubnet3
+
+loadBalancer:
 #    # kube-aws creates the ELB for the k8s API endpoint as `Schema=internet-facing` by default and
 #    # only public subnets defined under the top-level `subnets` key are used for the ELB
-#    private: false
+  private: false
 #    # If you like specific public subnets to be used by the internet-facing ELB:
-#    #subnets:
-#    #  - name: ManagedPublicSubnet0
+  subnets:
+    - name: ExistingPublicSubnet1
+    - name: ExistingPublicSubnet2
+    - name: ExistingPublicSubnet3
 #
 #    # When explicitly set to true, the ELB for the k8s API endpoint becomes `Schema=internal` rather than default `Schema=internet-facing` one and
 #    # only private subnets defined under the top-level `subnets` key are used for the ELB
@@ -110,9 +114,11 @@ worker:
 #      # Number of worker nodes to create for an autoscaling group based pool
       count: 4
 #      # If omitted, public subnets are created by kube-aws and used for worker nodes
-#      subnet:
+      subnet:
 #      - # References subnets defined under the top-level `subnets` key by their names
-#        name: ManagedPublicSubnet1
+       - name: ExistingPublicSubnet1
+       - name: ExistingPublicSubnet2
+       - name: ExistingPublicSubnet3
 #      # Auto Scaling Group definition for workers. If only `workerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
 #      autoScalingGroup:
 #        minSize: 1
@@ -285,12 +291,13 @@ workerInstanceType: m4.xlarge
 # (Set to an odd number >= 3 for HA control plane)
 etcdCount: 3
 
-#etcd:
+etcd:
 #  # If omitted, public subnets are created by kube-aws and used for etcd nodes
-#  subnets:
-#    # References subnets defined under the top-level `subnets` key by their names
-#    - name: ManagedPrivateSubnet1
-#    - name: ManagedPrivateSubnet2
+  subnets:
+    # References subnets defined under the top-level `subnets` key by their names
+    - name: ExistingPublicSubnet1
+    - name: ExistingPublicSubnet2
+    - name: ExistingPublicSubnet3
 
 # Instance type for etcd node
 etcdInstanceType: m3.medium
@@ -328,10 +335,10 @@ etcdDataVolumeEphemeral: true
 ## Networking config
 
 # ID of existing VPC to create subnet in. Leave blank to create a new VPC
-# vpcId:
+vpcId: vpc-36639c52
 
 # ID of existing Internet Gateway to associate subnet with. Leave blank to create a new Internet Gateway
-# internetGatewayId:
+internetGatewayId: igw-ff174e9a
 
 # Advanced: ID of existing route table in existing VPC to attach subnet to.
 # Leave blank to use the VPC's main route table.
@@ -350,14 +357,14 @@ etcdDataVolumeEphemeral: true
 # routeTableId: rtb-xxxxxxxx
 
 # CIDR for Kubernetes VPC. If vpcId is specified, must match the CIDR of existing vpc.
-# vpcCIDR: "10.0.0.0/16"
+vpcCIDR: "172.24.0.0/16"
 
 # CIDR for Kubernetes subnet when placing nodes in a single availability zone (not highly-available) Leave commented out for multi availability zone setting and use the below `subnets` section instead.
 # instanceCIDR: "10.0.0.0/24"
 
 # Kubernetes subnets with their CIDRs and availability zones.
 # Differentiating availability zone for 2 or more subnets result in high-availability (failures of a single availability zone won't result in immediate downtimes)
-# subnets:
+subnets:
 #   #
 #   # Managed public subnet managed by kube-aws
 #   #
@@ -382,12 +389,31 @@ etcdDataVolumeEphemeral: true
 #   # An internet gateway(igw) and a route table contains the route to the igw must have been properly configured by YOU.
 #   # kube-aws tries to reuse the subnet specified by id or idFromStackOutput but kube-aws never modify the subnet
 #   #
-#   - name: ExistingPublicSubnet1
+   - name: ExistingPublicSubnet1
 #     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
-#     availabilityZone: us-west-1a
+     availabilityZone: eu-west-1a
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
-#     id: "subnet-xxxxxxxx"
+     id: "subnet-b59b54c3"
+#     # Exported output's name from another stack
+#     # Only specify either id or idFromStackOutput but not both
+#     #idFromStackOutput: myinfra-PublicSubnet1
+
+   - name: ExistingPublicSubnet2
+#     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
+     availabilityZone: eu-west-1b
+#     # ID of existing subnet to be reused.
+#     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
+     id: "subnet-1cba5f44"
+#     # Exported output's name from another stack
+#     # Only specify either id or idFromStackOutput but not both
+#     #idFromStackOutput: myinfra-PublicSubnet1
+   - name: ExistingPublicSubnet3
+#     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
+     availabilityZone: eu-west-1c
+#     # ID of existing subnet to be reused.
+#     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
+     id: "subnet-fcfa5e98"
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
 #     #idFromStackOutput: myinfra-PublicSubnet1
@@ -627,9 +653,12 @@ kubernetesVersion: v1.5.5_coreos.0
 
 # AWS Tags for cloudformation stack resources
 stackTags:
-  Name: "Kubernetes"
-  Environment: "Development"
-  Dev: "sorin"
+  coco-environment-tag: "k8s-delivery-upp-eu"
+  stopSchedule: "nostop"
+  systemCode: "upp"
+  environment: "t"
+  ipCode: "P196"
+  teamDL: "universal.publishing.platform@ft.com"
 
 # User-provided YAML map available in control-plane's stack-template.json
 #customSettings:
