@@ -63,7 +63,10 @@ spec:
               name: global-config
               key: kafka.proxy.url
         - name: WRITER_URL
-          value: "upp-uk-gateway-test.in.ft.com:443"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: upp_gateway.url
         - name: WRITER_CREDENTIALS
           valueFrom:
             secretKeyRef:
