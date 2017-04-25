@@ -16,7 +16,7 @@ data:
   cache-max-age: "10"
   methode.api_uri: https://methodeapi-test.ft.com/eom-file/
   methode.health_uri: https://methodeapi-test.ft.com/build-info
-  environment: "upp-k8s-publishing-test-eu"
+  environment: "k8s-publishing-upp-eu"
   graphite.address: "graphite.ft.com:2003"
   graphite.host: graphite.ft.com
   graphite.port: "2003"
