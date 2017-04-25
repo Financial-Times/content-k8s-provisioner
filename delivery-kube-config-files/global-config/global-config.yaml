@@ -8,9 +8,9 @@ data:
   api.host: test.api.ft.com
   aws.region: eu-west
   k8s.app_namespace: default
-  aws.s3.image.binaries.bucket: com.ft.k8s-imagepublish
-  aws.s3.image.binaries.url: "http://com.ft.k8s-imagepublish.s3.amazonaws.com/"
-  aws.elasticsearch.endpoint: search-k8s-ltxvcgndw2flt6ygxwgq3qtdmm.eu-west-1.es.amazonaws.com
+  aws.s3.image.binaries.bucket: com.ft.imagepublish.k8s.test
+  aws.s3.image.binaries.url: "http://com.ft.imagepublish.k8s.test.s3.amazonaws.com/"
+  aws.elasticsearch.endpoint: search-upp-concepts-k8s-del-upp-uk-zgijfjwloktocpf7g6telaz774.eu-west-1.es.amazonaws.com
   aws.region: eu-west-1
   cache-max-age: "10"
   methode.api_uri: https://methodeapi-test.ft.com/eom-file/
@@ -20,17 +20,17 @@ data:
   graphite.host: graphite.ft.com
   graphite.port: "2003"
   neo4j.statements.batch.size: "50"
-  # replace with rw ALB
-  neo4j.read.write.url: http://neo4j-red:7474/db/data/
-  # replace with ro ALB
-  neo4j.read.only.url: http://neo4j-red:7474/db/data/
-  kafka.url : kafka:9092
-  kafka.host : kafka
-  kafka.port : "9092"
-  kafka.proxy.url : kafka:8082
-  kafka.proxy.host : kafka
-  kafka.proxy.port : "8082"
+  neo4j.read.write.url: http://upp-k8s-upp-uk-data-write-alb-up.ft.com/db/data/
+  neo4j.read.only.url: http://upp-k8s-upp-uk-data-read-alb-up.ft.com/db/data/
+  kafka.url: kafka:9092
+  kafka.host: kafka
+  kafka.port: "9092"
+  kafka.proxy.url: kafka:8082
+  kafka.proxy.host: kafka
+  kafka.proxy.port: "8082"
   kafka.proxy.url.with.protocol: http://kafka:8082
-  zookeeper.url : kafka:2181
-  zookeeper.host : kafka
-  zookeeper.port : "2181"
+  zookeeper.url: kafka:2181
+  zookeeper.host: kafka
+  zookeeper.port: "2181"
+  upp_gateway.url: upp-uk-gateway-test.in.ft.com:443
+  

@@ -138,17 +138,7 @@
     },
     {{ end }}
     {{range $etcdIndex, $etcdInstance := .EtcdInstances}}
-    "InstanceEtcd{{$etcdIndex}}eni": {
-      "Properties": {
-          "SubnetId": {{$etcdInstance.SubnetRef}},
-          "GroupSet": [
-            {
-              "Ref": "SecurityGroupEtcd"
-            }
-          ]
-      },
-      "Type": "AWS::EC2::NetworkInterface"
-    },
+
     {{if not $.EtcdDataVolumeEphemeral}}
     "InstanceEtcd{{$etcdIndex}}ebs": {
       "Properties": {
@@ -183,13 +173,16 @@
           }
           {{end}}
         ],
-        "IamInstanceProfile": "k8s-etcd-role",
+        "IamInstanceProfile": "upp-k8s-iam-instance-profile-roles-etcd-role",
         "ImageId": "{{$.AMI}}",
         "InstanceType": "{{$.EtcdInstanceType}}",
         {{if $.KeyName}}"KeyName": "{{$.KeyName}}",{{end}}
         "NetworkInterfaces": [
           {
-            "NetworkInterfaceId": { "Ref": "InstanceEtcd{{$etcdIndex}}eni" },
+            "AssociatePublicIpAddress": "true",
+            "GroupSet": [{"Ref": "SecurityGroupEtcd"}],
+            "SubnetId": {{$etcdInstance.SubnetRef}},
+
             "DeviceIndex": "0"
           }
         ],
@@ -232,7 +225,7 @@
             }
           }
         ],
-        "IamInstanceProfile": "k8s-controller-role",
+        "IamInstanceProfile": "upp-k8s-iam-instance-profile-roles-controller-role",
         "ImageId": "{{.AMI}}",
         "AssociatePublicIpAddress": "true",
         "InstanceType": "{{.ControllerInstanceType}}",

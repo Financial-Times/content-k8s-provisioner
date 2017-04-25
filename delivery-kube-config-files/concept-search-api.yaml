@@ -51,15 +51,12 @@ spec:
           initialDelaySeconds: 5
           tcpSocket:
             port: 8080
-        # The gtg will return 503 because the elasticsearch cluster status is yellow. 
-        # The elasticsearch cluster will be yellow as long as it's configured to use only one node.
-        # The readiness probe can be enabled when using a proper cluster configuration.
-        # readinessProbe:
-        #   httpGet:
-        #     path: /__gtg
-        #     port: 8080
-        #   initialDelaySeconds: 10
-        #   periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
 
 ---
 
