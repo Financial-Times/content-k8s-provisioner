@@ -110,7 +110,6 @@ spec:
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 30
-          timeoutSeconds: 5
       volumes:
       - name: v1-authors-transformer-cache
         persistentVolumeClaim:
