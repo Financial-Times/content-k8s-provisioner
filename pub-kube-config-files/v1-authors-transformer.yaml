@@ -1,3 +1,38 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: v1-authors-transformer-pv
+  labels:
+    failure-domain.beta.kubernetes.io/region: eu-west-1
+    failure-domain.beta.kubernetes.io/zone: eu-west-1a
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  awsElasticBlockStore:
+    fsType: ext4
+    volumeID: vol-047b82c621d42c174
+  persistentVolumeReclaimPolicy: Retain
+  claimRef:
+    name: v1-authors-transformer-pvc
+    namespace: default
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: v1-authors-transformer-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -61,8 +96,8 @@ spec:
         - name: LOG_METRICS
           value: "false"
         volumeMounts:
-        - mountPath: /cache
-          name: cache
+        - name: v1-authors-transformer-cache
+          mountPath: /cache
         ports:
         - containerPort: 8080
         livenessProbe:
@@ -77,9 +112,9 @@ spec:
           periodSeconds: 30
           timeoutSeconds: 5
       volumes:
-      - name: cache
-        hostPath:
-          path: /tmp
+      - name: v1-authors-transformer-cache
+        persistentVolumeClaim:
+          claimName: v1-authors-transformer-pvc
 
 ---
 
@@ -90,6 +125,7 @@ metadata:
   labels:
     app: v1-authors-transformer
     visualize: "true"
+    hasHealthcheck: "true"
 spec:
   ports:
     - port: 8080

@@ -1,3 +1,38 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: v1-orgs-transformer-pv
+  labels:
+    failure-domain.beta.kubernetes.io/region: eu-west-1
+    failure-domain.beta.kubernetes.io/zone: eu-west-1b
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  awsElasticBlockStore:
+    fsType: ext4
+    volumeID: vol-0912c7c449b8a59e9
+  persistentVolumeReclaimPolicy: Retain
+  claimRef:
+    name: v1-orgs-transformer-pvc
+    namespace: default
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: v1-orgs-transformer-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -59,25 +94,25 @@ spec:
         - name: LOG_METRICS
           value: "false"
         volumeMounts:
-        - mountPath: /cache
-          name: cache
+        - name: v1-orgs-transformer-cache
+          mountPath: /cache
         ports:
         - containerPort: 8080
         livenessProbe:
-          initialDelaySeconds: 150
+          initialDelaySeconds: 5
           tcpSocket:
             port: 8080
         readinessProbe:
           httpGet:
             path: /__gtg
             port: 8080
-          initialDelaySeconds: 150
+          initialDelaySeconds: 5
           periodSeconds: 30
           timeoutSeconds: 5
       volumes:
-      - name: cache
-        hostPath:
-          path: /tmp
+      - name: v1-orgs-transformer-cache
+        persistentVolumeClaim:
+          claimName: v1-orgs-transformer-pvc
 
 ---
 
@@ -88,6 +123,7 @@ metadata:
   labels:
     app: v1-orgs-transformer
     visualize: "true"
+    hasHealthcheck: "true"
 spec:
   ports:
     - port: 8080

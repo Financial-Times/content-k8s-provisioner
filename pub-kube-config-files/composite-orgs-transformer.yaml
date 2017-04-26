@@ -1,3 +1,38 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: composite-orgs-transformer-pv
+  labels:
+    failure-domain.beta.kubernetes.io/region: eu-west-1
+    failure-domain.beta.kubernetes.io/zone: eu-west-1a
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  awsElasticBlockStore:
+    fsType: ext4
+    volumeID: vol-0a2d380b52bcf7500
+  persistentVolumeReclaimPolicy: Retain
+  claimRef:
+    name: composite-orgs-transformer-pvc
+    namespace: default
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: composite-orgs-transformer-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -34,25 +69,24 @@ spec:
         - name: CACHE_FILE_NAME
           value: "/cache/composite-orgs-transformer.db"
         volumeMounts:
-        - mountPath: /cache
-          name: cache
+        - name: composite-orgs-transformer-cache
+          mountPath: /cache
         ports:
         - containerPort: 8080
         livenessProbe:
-          initialDelaySeconds: 720
+          initialDelaySeconds: 5
           tcpSocket:
             port: 8080
         readinessProbe:
           httpGet:
             path: /__gtg
             port: 8080
-          initialDelaySeconds: 720
+          initialDelaySeconds: 5
           periodSeconds: 30
-          timeoutSeconds: 5
       volumes:
-      - name: cache
-        hostPath:
-          path: /tmp
+      - name: composite-orgs-transformer-cache
+        persistentVolumeClaim:
+          claimName: composite-orgs-transformer-pvc
 
 ---
 
