@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: publish-availability-monitor
-        image: coco/publish-availability-monitor:v0.24.17-k8s-version-rc6
+        image: coco/publish-availability-monitor:v0.24.17-k8s-version-rc7
         imagePullPolicy: Always
         resources:
           limits:
