@@ -32,6 +32,11 @@ spec:
             configMapKeyRef:
               name: global-config
               key: graphite.address
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: environment
         ports:
         - containerPort: 8080
         livenessProbe:
