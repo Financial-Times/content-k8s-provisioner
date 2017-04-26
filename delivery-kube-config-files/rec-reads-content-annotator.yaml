@@ -34,8 +34,22 @@ spec:
             configMapKeyRef:
               name: global-config
               key: kafka.url  
+        - name: WRITER_PATH
+          value: "/rr-suggestions"
         - name: WRITER_ENDPOINT
-          value: "v2-annotations-rw:8080:8080"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: upp_gateway.url
+        - name: WRITER_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: upp_gateway.authorization_key
+        - name: WRITER_HEALTHCHECK_PATH
+          value: "/build-info"
+        - name: MESSAGE_FORWARDING_ENABLED
+          value: "false"
         - name: ANNOTATING_SYSTEM
           value: "concept-suggestor"
         - name: GRAPHITE_HOST
@@ -51,7 +65,7 @@ spec:
         - name: JAVA_OPTS
           value: "-Xms128m -Xmx128m -XX:+UseG1GC -server"
         - name: FILTER_NOVELTIES
-          value: "true"
+          value: "false"
         - name: GRAPHITE_PREFIX
           value: "coco.services.k8s.rec-reads-content-annotator"
         ports:

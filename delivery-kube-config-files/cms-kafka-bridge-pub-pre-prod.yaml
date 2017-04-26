@@ -26,9 +26,9 @@ spec:
         - name: QUEUE_PROXY_ADDRS
           value: "https://pub-pre-prod-uk-up.ft.com/__kafka-rest-proxy"
         - name: GROUP_ID
-          value: "k8s-kafka-bridge-pub-pre-prod-1"
+          value: "k8s-kafka-bridge-pub-pre-prod-infraprod"
         - name: CONSUMER_AUTOCOMMIT_ENABLE
-          value: "true"
+          value: "false"
         - name: TOPIC
           value: "NativeCmsPublicationEvents"
         - name: PRODUCER_HOST

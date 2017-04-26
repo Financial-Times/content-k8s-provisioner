@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: load-replicator
-        image: coco/load-replicator:data-for-k8s
+        image: coco/load-replicator:1.1.1-k8s-custom-data-rc2
         imagePullPolicy: Always
         resources:
           limits:
