@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: content-rw-neo4j
-        image: coco/content-rw-neo4j:v0.0.36
+        image: coco/content-rw-neo4j:1.0.3
         resources:
             limits:
               memory: 256Mi
