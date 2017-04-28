@@ -33,7 +33,7 @@ spec:
         - name: CONTENT_SOURCE_URI
           value: http://content-public-read-preview:8080/content-preview/
         - name: INTERNAL_COMPONENTS_SOURCE_URI
-          value: http://internal-components-preview:8080/internal-components-preview/content-preview/
+          value: http://internal-components-preview:8080/content-preview/
         - name: CONTENT_SOURCE_APP_HEALTH_URI
           value: http://content-public-read-preview:8080/__health
         - name: INTERNAL_COMPONENTS_SOURCE_APP_HEALTH_URI
