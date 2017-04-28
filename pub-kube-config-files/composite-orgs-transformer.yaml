@@ -1,40 +1,5 @@
-kind: PersistentVolume
-apiVersion: v1
-metadata:
-  name: composite-orgs-transformer-pv
-  labels:
-    failure-domain.beta.kubernetes.io/region: eu-west-1
-    failure-domain.beta.kubernetes.io/zone: eu-west-1a
-spec:
-  accessModes:
-  - ReadWriteOnce
-  capacity:
-    storage: 1Gi
-  awsElasticBlockStore:
-    fsType: ext4
-    volumeID: vol-0a2d380b52bcf7500
-  persistentVolumeReclaimPolicy: Retain
-  claimRef:
-    name: composite-orgs-transformer-pvc
-    namespace: default
-
----
-
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: composite-orgs-transformer-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-
----
-
-apiVersion: extensions/v1beta1
 kind: Deployment
+apiVersion: extensions/v1beta1
 metadata:
   name: composite-orgs-transformer
   labels:
@@ -86,7 +51,7 @@ spec:
       volumes:
       - name: composite-orgs-transformer-cache
         persistentVolumeClaim:
-          claimName: composite-orgs-transformer-pvc
+          claimName: transformers-cache-pvc
 
 ---
 
