@@ -9,6 +9,9 @@ coreos:
     etcd_keyfile: /etc/kubernetes/ssl/etcd-client-key.pem
 
   units:
+    - name: systemd-journald.service
+      command: restart
+
     - name: authorized_keys.service
       command: start
       content: |
