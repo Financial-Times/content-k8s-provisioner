@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  .htpasswd: {{varnish-auth-value}}
+kind: Secret
+metadata:
+  name: pub-varnish-auth
+type: Opaque

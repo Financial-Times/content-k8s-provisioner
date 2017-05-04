@@ -9,6 +9,9 @@ coreos:
     etcd_keyfile: /etc/kubernetes/ssl/etcd-client-key.pem
 
   units:
+    - name: systemd-journald.service
+      command: restart
+
     - name: authorized_keys.service
       command: start
       content: |
@@ -192,6 +195,8 @@ coreos:
         --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
         --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
         --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem
+        --image-gc-high-threshold=75
+        --image-gc-low-threshold=65
         Restart=always
         RestartSec=10
         [Install]

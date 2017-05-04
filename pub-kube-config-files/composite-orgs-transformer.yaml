@@ -1,5 +1,5 @@
-apiVersion: extensions/v1beta1
 kind: Deployment
+apiVersion: extensions/v1beta1
 metadata:
   name: composite-orgs-transformer
   labels:
@@ -34,25 +34,24 @@ spec:
         - name: CACHE_FILE_NAME
           value: "/cache/composite-orgs-transformer.db"
         volumeMounts:
-        - mountPath: /cache
-          name: cache
+        - name: composite-orgs-transformer-cache
+          mountPath: /cache
         ports:
         - containerPort: 8080
         livenessProbe:
-          initialDelaySeconds: 720
+          initialDelaySeconds: 5
           tcpSocket:
             port: 8080
         readinessProbe:
           httpGet:
             path: /__gtg
             port: 8080
-          initialDelaySeconds: 720
+          initialDelaySeconds: 5
           periodSeconds: 30
-          timeoutSeconds: 5
       volumes:
-      - name: cache
-        hostPath:
-          path: /tmp
+      - name: composite-orgs-transformer-cache
+        persistentVolumeClaim:
+          claimName: transformers-cache-pvc
 
 ---
 

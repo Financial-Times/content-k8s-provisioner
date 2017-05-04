@@ -1,5 +1,5 @@
-apiVersion: extensions/v1beta1
 kind: Deployment
+apiVersion: extensions/v1beta1
 metadata:
   name: v1-orgs-transformer
   labels:
@@ -59,25 +59,24 @@ spec:
         - name: LOG_METRICS
           value: "false"
         volumeMounts:
-        - mountPath: /cache
-          name: cache
+        - name: v1-orgs-transformer-cache
+          mountPath: /cache
         ports:
         - containerPort: 8080
         livenessProbe:
-          initialDelaySeconds: 150
+          initialDelaySeconds: 5
           tcpSocket:
             port: 8080
         readinessProbe:
           httpGet:
             path: /__gtg
             port: 8080
-          initialDelaySeconds: 150
+          initialDelaySeconds: 5
           periodSeconds: 30
-          timeoutSeconds: 5
       volumes:
-      - name: cache
-        hostPath:
-          path: /tmp
+      - name: v1-orgs-transformer-cache
+        persistentVolumeClaim:
+          claimName: transformers-cache-pvc
 
 ---
 
@@ -88,6 +87,7 @@ metadata:
   labels:
     app: v1-orgs-transformer
     visualize: "true"
+    hasHealthcheck: "true"
 spec:
   ports:
     - port: 8080
