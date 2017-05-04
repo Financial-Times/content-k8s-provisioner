@@ -32,8 +32,12 @@ spec:
             configMapKeyRef:
               name: global-config
               key: kafka.proxy.url
+##todo: template these env vars when switching to helm
         - name: QUEUE_ADDR
-          value: "http://kafka:8082"
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: kafka.proxy.url.with.protocol
         - name: CONTENT_URL
           value: "/__document-store-api/content/"
         - name: INTERNAL_COMPONENTS_URL
