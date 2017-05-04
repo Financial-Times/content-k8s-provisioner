@@ -4,5 +4,11 @@ metadata:
   name: monitoring-configs
   namespace: default
 data:
-  read-urls: "k8s:https://k8s-delivery-upp-eu.ft.com"
-  s3-image-bucket-urls: "k8s:http://com.ft.imagepublish.k8s.test.s3.amazonaws.com"
+  environments: |
+    [
+      {
+        "name":"k8s",
+        "read-url": "https://k8s-delivery-upp-eu.ft.com",
+        "s3-url": "http://com.ft.imagepublish.k8s.test.s3.amazonaws.com"
+      }
+    ]

@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: publish-availability-monitor
-        image: coco/publish-availability-monitor:v0.24.17-k8s-version-rc7
+        image: coco/publish-availability-monitor:v0.24.17-k8s-version-rc12
         imagePullPolicy: Always
         resources:
           limits:
@@ -74,6 +74,27 @@ spec:
             port: 8080
           initialDelaySeconds: 10
           periodSeconds: 30
+        volumeMounts:
+        - name: read-envs-config
+          mountPath: /etc/pam/envs
+        - name: pam-secrets
+          mountPath: /etc/pam/credentials
+      volumes:
+      - name: pam-secrets
+        secret:
+          secretName: publish-availability-monitor-secrets
+          items:
+          - key: read-credentials
+            path: read-environments-credentials.json
+          - key: validator-credentials
+            path: validator-credentials.json
+      - name: read-envs-config
+        configMap:
+          name: monitoring-configs
+          items:
+          - key: environments
+            path: read-environments.json
+
 ---
 
 kind: Service
