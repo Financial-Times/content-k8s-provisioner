@@ -1,0 +1,60 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: concept-publisher
+  labels:
+    app: concept-publisher
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: concept-publisher
+  template:
+    metadata:
+      labels:
+        app: concept-publisher
+        visualize: "true"
+    spec:
+      containers:
+      - name: concept-publisher
+        image: coco/concept-publisher:1.3.0-k8s-routing-rc.1
+        resources:
+            limits:
+              memory: 1Gi
+        env:
+        - name: PROXY_ADDRESS
+          value: "http://kafka:8082"
+        - name: TOPIC
+          value: "Concept"
+        - name: TRANSFORMER_GTG_RETRIES
+          value: "60"
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: concept-publisher
+  labels:
+    app: concept-publisher
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: concept-publisher
