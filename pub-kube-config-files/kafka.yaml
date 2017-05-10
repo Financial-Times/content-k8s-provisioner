@@ -140,3 +140,20 @@ spec:
       targetPort: 2181
   selector:
     app: kafka
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: kafka-rest-proxy
+  labels:
+    app: kafka-rest-proxy
+    visualize: "true"
+spec:
+  ports:
+    - port: 8080
+      name: "kafka-proxy-access-from-varnish"
+      targetPort: 8082
+  selector:
+    app: kafka

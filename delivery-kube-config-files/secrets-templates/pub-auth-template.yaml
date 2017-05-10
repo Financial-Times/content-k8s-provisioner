@@ -5,3 +5,4 @@ metadata:
 type: Opaque
 data:
   pub-pre-prod-auth: {{pub-pre-prod-auth}}
+  pub-k8s-auth: {{pub-k8s-auth}}
