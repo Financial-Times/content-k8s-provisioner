@@ -1,0 +1,70 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: snap-tasks
+  namespace: kube-system
+data:
+  core.json: |-
+    {
+    	"version": 1,
+    	"start": true,
+    	"schedule": {
+    		"type": "simple",
+    		"interval": "30s"
+    	},
+    	"max-failures": 10,
+    	"workflow": {
+    		"collect": {
+    			"metrics": {
+    				"/intel/docker/*/*/*/stats/cgroups/cpu_stats/cpu_usage/total_usage": {},
+    				"/intel/docker/*/*/*/stats/cgroups/memory_stats/usage/usage": {},
+    				"/intel/docker/*/*/*/stats/connection/tcp/*": {},
+    				"/intel/docker/*/*/*/stats/filesystem/*/available": {},
+    				"/intel/docker/*/*/*/stats/filesystem/*/capacity": {},
+    				"/intel/docker/*/*/*/stats/filesystem/*/reads_completed": {},
+    				"/intel/docker/*/*/*/stats/filesystem/*/usage": {},
+    				"/intel/docker/*/*/*/stats/filesystem/*/writes_completed": {},
+    				"/intel/docker/*/*/*/stats/network/*/rx_bytes": {},
+    				"/intel/docker/*/*/*/stats/network/*/tx_bytes": {},
+    				"/intel/procfs/cpu/all/*": {},
+    				"/intel/procfs/meminfo/mem_available": {},
+    				"/intel/procfs/meminfo/mem_available_perc": {},
+    				"/intel/procfs/meminfo/mem_free": {},
+    				"/intel/procfs/meminfo/mem_free_perc": {},
+    				"/intel/procfs/meminfo/mem_total": {},
+    				"/intel/procfs/meminfo/mem_total_perc": {},
+    				"/intel/procfs/meminfo/mem_used": {},
+    				"/intel/procfs/meminfo/mem_used_perc": {},
+    				"/intel/procfs/iface/*/bytes_recv": {},
+    				"/intel/procfs/iface/*/bytes_sent": {},
+    				"/intel/procfs/iface/*/packets_recv": {},
+    				"/intel/procfs/iface/*/packets_sent": {},
+    				"/intel/procfs/iface/*/errs_recv": {},
+    				"/intel/procfs/iface/*/errs_sent": {},
+    				"/intel/iostat/device/*/%util": {},
+    				"/intel/iostat/device/*/rkB_per_sec": {},
+    				"/intel/iostat/device/*/wkB_per_sec": {},
+    				"/intel/iostat/device/ALL/r_per_sec": {},
+    				"/intel/iostat/device/ALL/w_per_sec": {},
+    				"/intel/procfs/load/min1_rel": {}
+    			},
+    			"config": {
+    				"/intel/procfs": {
+    					"proc_path": "/proc_host"
+    				}
+    			},
+    			"process": null,
+    			"publish": [
+    				{
+    					"plugin_name": "graphite",
+    					"config": {
+    						"prefix_tags": "",
+    						"prefix": "snap.k8s-delivery-upp-eu.<%NODE%>",
+    						"server": "graphite.ft.com",
+    						"port": 2003
+    					}
+    				}
+    			]
+    		}
+    	}
+    }
