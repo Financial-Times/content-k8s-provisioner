@@ -1,33 +1,33 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: concepts-kafka-bridge-pub-pre-prod
+  name: concepts-kafka-bridge-pub-k8s
   labels:
-    app: concepts-kafka-bridge-pub-pre-prod
+    app: concepts-kafka-bridge-pub-k8s
     visualize: "true"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: concepts-kafka-bridge-pub-pre-prod
+      app: concepts-kafka-bridge-pub-k8s
   template:
     metadata:
       labels:
-        app: concepts-kafka-bridge-pub-pre-prod
+        app: concepts-kafka-bridge-pub-k8s
         visualize: "true"
     spec:
       containers:
-      - name: concepts-kafka-bridge-pub-pre-prod
-        image:  coco/coco-kafka-bridge:remove-host-based-routing-rc2
+      - name: concepts-kafka-bridge-k8s
+        image:  coco/coco-kafka-bridge:14.2.0-k8s-removed-host-based-routing-rc.2
         imagePullPolicy: Always
         volumeMounts:
         - mountPath: /etc/ssl/certs
           name: certificates-storage
         env:
         - name: QUEUE_PROXY_ADDRS
-          value: "https://pub-pre-prod-up.ft.com/__kafka-rest-proxy"
+          value: "https://k8s-publishing-upp-eu.ft.com/__kafka-rest-proxy"
         - name: GROUP_ID
-          value: "k8s-concepts-kafka-bridge-pub-pre-prod-infraprod"
+          value: "concepts-kafka-bridge-pub-k8s"
         - name: CONSUMER_AUTOCOMMIT_ENABLE
           value: "true"
         - name: TOPIC
@@ -43,7 +43,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: pub-auth
-              key: pub-pre-prod-auth
+              key: pub-k8s-auth
         ports:
         - containerPort: 8080
         livenessProbe:
@@ -66,9 +66,9 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: concepts-kafka-bridge-pub-pre-prod
+  name: concepts-kafka-bridge-pub-k8s
   labels:
-    app: concepts-kafka-bridge-pub-pre-prod
+    app: concepts-kafka-bridge-pub-k8s
     visualize: "true"
     hasHealthcheck: "true"
 spec:
@@ -76,5 +76,5 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: concepts-kafka-bridge-pub-pre-prod
+    app: concepts-kafka-bridge-pub-k8s
 
