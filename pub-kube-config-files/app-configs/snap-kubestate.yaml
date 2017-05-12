@@ -6,30 +6,30 @@ metadata:
 data:
   core.json: |-
     {
-    	"version": 1,
-    	"start": true,
-    	"schedule": {
-    		"type": "simple",
-    		"interval": "30s"
-    	},
-    	"max-failures": 10,
-    	"workflow": {
-    		"collect": {
-    			"metrics": {
-    				"/grafanalabs/kubestate/*": {}
-    			},
-    			"process": null,
-    			"publish": [
-    				{
-    					"plugin_name": "graphite",
-    					"config": {
-    						"prefix_tags": "",
-    						"prefix": "snap.k8s-publishing-upp-eu",
-    						"server": "graphite.ft.com",
-    						"port": 2003
-    					}
-    				}
-    			]
-    		}
-    	}
+      "version": 1,
+      "start": true,
+      "schedule": {
+        "type": "simple",
+        "interval": "30s"
+      },
+      "max-failures": 10,
+      "workflow": {
+        "collect": {
+          "metrics": {
+            "/grafanalabs/kubestate/*": {}
+          },
+          "process": null,
+          "publish": [
+            {
+              "plugin_name": "graphite",
+              "config": {
+                "prefix_tags": "",
+                "prefix": "snap.k8s-publishing-upp-eu",
+                "server": "graphite.ft.com",
+                "port": 2003
+              }
+            }
+          ]
+        }
+      }
     }
