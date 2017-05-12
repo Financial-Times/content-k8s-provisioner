@@ -58,7 +58,7 @@ controller:
   autoScalingGroup:
     minSize: 2
     maxSize: 2
-    rollingUpdateMinInstancesInService: 2
+    rollingUpdateMinInstancesInService: 1
 #  # If you specify managedIamRoleName the role created for controller nodes will not suffix the random id at the end
 #  # Role will be created with "Ref": {"AWS::StackName"}-{"AWS::Region"}-yourManagedRole
 #  # to follow the recommendation in AWS documentation  http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
@@ -556,7 +556,7 @@ subnets:
 #tlsCertDurationDays: 365
 
 # Version of hyperkube image to use. This is the tag for the hyperkube image repository.
-kubernetesVersion: v1.5.5_coreos.0
+kubernetesVersion: v1.5.7_coreos.0
 
 # Hyperkube image repository to use.
 # hyperkubeImageRepo: quay.io/coreos/hyperkube
