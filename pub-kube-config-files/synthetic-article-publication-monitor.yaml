@@ -44,7 +44,7 @@ spec:
           value: "/content/{uuid}"
         - name: ENVIRONMENT_TAG
           #TODO Template this value when using helm
-          value: "k8s"
+          value: "kubernetes"
         - name: MAX_READ_AGE
           value: "20minutes"
         - name: MAX_AGE_HEALTH_CHECK_NAME
