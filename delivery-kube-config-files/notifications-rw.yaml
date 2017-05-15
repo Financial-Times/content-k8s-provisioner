@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: notifications-rw
-        image: up-registry.ft.com/coco/notifications-rw:vgtg_endpoint
+        image: up-registry.ft.com/coco/notifications-rw:89
         env:
         - name: MONGO_ADDRESSES
           value: "mongodb-0.mongodb.default.svc.cluster.local:27017,mongodb-1.mongodb.default.svc.cluster.local:27017,mongodb-2.mongodb.default.svc.cluster.local:27017"
