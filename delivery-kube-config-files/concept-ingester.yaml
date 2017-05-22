@@ -36,7 +36,7 @@ spec:
         - name: TOPIC
           value: "Concept"
         - name: SERVICES
-          value: "http://content-rw-neo4j-red:8080,http://people-rw-neo4j-red:8080,http://organisations-rw-neo4j-red:8080,http://memberships-rw-neo4j-red:8080,http://brands-rw-neo4j-red:8080,http://roles-rw-neo4j-red:8080,http://alphaville-series-rw-neo4j-red:8080,http://financial-instruments-rw-neo4j-red:8080,http://special-reports-rw-neo4j-red:8080,http://locations-rw-neo4j-red:8080,http://genres-rw-neo4j-red:8080,http://topics-rw-neo4j-red:8080,http://sections-rw-neo4j-red:8080,http://subjects-rw-neo4j-red:8080,http://industry-classifications-rw-neo4j-red:8080"
+          value: "http://content-rw-neo4j:8080,http://people-rw-neo4j:8080,http://organisations-rw-neo4j:8080,http://memberships-rw-neo4j:8080,http://brands-rw-neo4j:8080,http://roles-rw-neo4j:8080,http://alphaville-series-rw-neo4j:8080,http://financial-instruments-rw-neo4j:8080,http://special-reports-rw-neo4j:8080,http://locations-rw-neo4j:8080,http://genres-rw-neo4j:8080,http://topics-rw-neo4j:8080,http://sections-rw-neo4j:8080,http://subjects-rw-neo4j:8080,http://industry-classifications-rw-neo4j:8080"
         - name: ELASTICSEARCH_WRITER_ADDRESS
           value: "http://concept-rw-elasticsearch:8080"
         - name: QUEUE_ID
