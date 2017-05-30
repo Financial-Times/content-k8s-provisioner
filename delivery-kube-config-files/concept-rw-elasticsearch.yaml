@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: concept-rw-elasticsearch
-        image:  coco/concept-rw-elasticsearch:v0.0.10
+        image:  coco/concept-rw-elasticsearch:0.0.12
         imagePullPolicy: Always
         resources:
           limits:

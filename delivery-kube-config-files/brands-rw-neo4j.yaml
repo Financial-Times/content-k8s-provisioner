@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: brands-rw-neo4j
-        image: coco/brands-rw-neo4j:v0.1.5
+        image: coco/brands-rw-neo4j:v0.1.7
         imagePullPolicy: Always
         resources:
           limits:
