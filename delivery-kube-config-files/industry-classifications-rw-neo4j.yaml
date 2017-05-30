@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: industry-classifications-rw-neo4j
-        image: coco/industry-classifications-rw-neo4j:v0.0.8
+        image: coco/industry-classifications-rw-neo4j:v0.0.10
         imagePullPolicy: Always
         resources:
           limits:
