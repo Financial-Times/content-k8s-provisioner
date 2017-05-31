@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: methode-image-model-mapper
-        image: coco/methode-image-model-mapper:remove-transformer-configuration
+        image: coco/methode-image-model-mapper:16.0.8-k8s-rm-transformer-conf-rc2
         imagePullPolicy: Always
         env:
         - name: JAVA_OPTS
