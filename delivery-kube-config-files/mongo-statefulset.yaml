@@ -97,7 +97,7 @@ spec:
       annotations:
         pod.alpha.kubernetes.io/initialized: "true"
     spec:
-      terminationGracePeriodSeconds: 0
+      terminationGracePeriodSeconds: 30
       containers:
       - name: mongodb
         image: coco/coco-mongodb:v3.0.2
@@ -110,10 +110,14 @@ spec:
         livenessProbe:
           tcpSocket:
             port: 27017
-          initialDelaySeconds: 5
+          initialDelaySeconds: 15
         volumeMounts:
         - name: mongo-persistent
           mountPath: /data/db
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/bash", "-c", 'printf "use admin\ndb.shutdownServer()" | mongo']
   volumeClaimTemplates:
   - metadata:
       name: mongo-persistent

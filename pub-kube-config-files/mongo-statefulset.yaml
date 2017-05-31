@@ -98,7 +98,7 @@ spec:
       annotations:
         pod.alpha.kubernetes.io/initialized: "true"
     spec:
-      terminationGracePeriodSeconds: 0
+      terminationGracePeriodSeconds: 30
       containers:
       - name: mongodb
         image: coco/coco-mongodb:v3.0.2
@@ -111,10 +111,14 @@ spec:
         livenessProbe:
           tcpSocket:
             port: 27017
-          initialDelaySeconds: 5
+          initialDelaySeconds: 15
         volumeMounts:
         - name: mongo-persistent
           mountPath: /data/db
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/bash", "-c", 'printf "use admin\ndb.shutdownServer()" | mongo']
 # This is needed in order for the stateful set to create persistent volume claims that will tie to the predefined persistent volumes
   volumeClaimTemplates:
   - metadata:
