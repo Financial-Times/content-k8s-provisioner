@@ -57,7 +57,7 @@ spec:
         - name: LOG_METRICS
           value: "false"
         - name: WRITER_ENDPOINT
-          value: "http://concepts-rw-s3/concepts"
+          value: "http://concepts-rw-s3:8080/concepts"
         volumeMounts:
         - name: basic-tme-transformer-cache
           mountPath: /cache
