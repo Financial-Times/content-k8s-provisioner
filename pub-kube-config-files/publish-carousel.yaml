@@ -1,0 +1,88 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: publish-carousel
+  labels:
+    app: publish-carousel
+    visualize: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: publish-carousel
+  template:
+    metadata:
+      labels:
+        app: publish-carousel
+        visualize: "true"
+    spec:
+      containers:
+      - name: publish-carousel
+        image: coco/publish-carousel:0.0.16-k8s-removed-etcd-watcher-rc.5
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 256Mi
+        env:
+        - name: MONGO_DB_URL
+          value: mongodb-0.mongodb:27017
+        - name: CMS_NOTIFIER_URL
+          value: http://cms-notifier:8080
+        - name: PAM_URL
+          value: http://publish-availability-monitor:8080
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.region
+        - name: LAGCHECK_URL
+          value: http://kafka-lagcheck:8080
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.secret_access_key
+        - name: S3_BUCKET
+          #TODO Template this value when using helm
+          value: com.ft.universalpublishing.publish-carousel.k8s-eu
+        - name: MONGO_DB_TIMEOUT
+          value: "30000"
+        - name: TOGGLE
+          value: "true"
+        - name: DEFAULT_THROTTLE
+          value: "1m"
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        livenessProbe:
+          initialDelaySeconds: 70
+          tcpSocket:
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /__gtg
+            port: 8080
+          initialDelaySeconds: 70
+          periodSeconds: 30
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: publish-carousel
+  labels:
+    app: publish-carousel
+    visualize: "true"
+    hasHealthcheck: "true"
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: publish-carousel
