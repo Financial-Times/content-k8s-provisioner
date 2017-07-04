@@ -15,6 +15,7 @@ data:
   methode.api_uri: https://methodeapi-test.ft.com/eom-file/
   methode.health_uri: https://methodeapi-test.ft.com/build-info
   environment: "k8s-delivery-upp-eu"
+  dns_subdomain: "k8s-delivery-upp-eu"
   graphite.address: "graphite.ft.com:2003"
   graphite.host: graphite.ft.com
   graphite.port: "2003"
