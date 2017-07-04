@@ -9,7 +9,7 @@ data:
   k8s.app_namespace: default
   aws.s3.image.binaries.bucket: com.ft.imagepublish.k8s.test
   aws.s3.image.binaries.url: "http://com.ft.imagepublish.k8s.test.s3.amazonaws.com/"
-  aws.elasticsearch.endpoint: search-upp-concepts-k8s-del-upp-uk-zgijfjwloktocpf7g6telaz774.eu-west-1.es.amazonaws.com
+  aws.elasticsearch.endpoint: https://search-upp-concepts-k8s-del-upp-uk-zgijfjwloktocpf7g6telaz774.eu-west-1.es.amazonaws.com
   aws.region: eu-west-1
   cache-max-age: "10"
   methode.api_uri: https://methodeapi-test.ft.com/eom-file/
