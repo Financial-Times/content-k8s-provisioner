@@ -46,7 +46,7 @@ spec:
               name: global-config
               key: kafka.url 
         - name: WRITER_ENDPOINT
-          value: "v1-annotations-rw:8080:8080"
+          value: "v1-annotations-rw-neo4j:8080:8080"
         - name: ANNOTATING_SYSTEM
           value: "http://cmdb.ft.com/systems/methode-web-pub"
         - name: JAVA_OPTS
