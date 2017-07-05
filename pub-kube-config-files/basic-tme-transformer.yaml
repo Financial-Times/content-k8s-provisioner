@@ -18,12 +18,12 @@ spec:
     spec:
       containers:
       - name: basic-tme-transformer
-        image: coco/basic-tme-transformer:1.0.0
+        image: coco/basic-tme-transformer:1.0.1
         resources:
             limits:
               memory: 1Gi
         env:
-        - name: TME_BASE
+        - name: BASE_URL
           value: "http://basic-tme-transformer:8080/transformers"
         - name: TME_BASE_URL
           valueFrom:

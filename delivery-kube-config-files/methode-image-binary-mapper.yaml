@@ -18,10 +18,10 @@ spec:
     spec:
       containers:
       - name: methode-image-binary-mapper
-        image: coco/methode-image-binary-mapper:v1.0.1
+        image: coco/methode-image-binary-mapper:v1.0.2
         env:
         - name: JAVA_OPTS
-          value: "-Xms256m -Xmx256m -XX:+UseG1GC -server"
+          value: "-Xms296m -Xmx296m -XX:+UseG1GC -server"
         - name: KAFKA_PROXY
           valueFrom:
             configMapKeyRef:

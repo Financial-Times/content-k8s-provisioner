@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: memberships-rw-neo4j
-        image: coco/memberships-rw-neo4j:v0.1.4
+        image: coco/memberships-rw-neo4j:v1.1.6
         imagePullPolicy: Always
         resources:
           limits:

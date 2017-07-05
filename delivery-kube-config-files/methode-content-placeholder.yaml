@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: methode-content-placeholder-mapper
-        image: coco/methode-content-placeholder-mapper:remove-host-routing
+        image: coco/methode-content-placeholder-mapper:0.0.10-k8s-rm-host-routing-rc2
         imagePullPolicy: Always
         resources:
           limits:

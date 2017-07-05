@@ -18,11 +18,15 @@ spec:
     spec:
       containers:
       - name: content-collection-rw-neo4j
-        image: coco/content-collection-rw-neo4j:1.0.0
+        image: coco/content-collection-rw-neo4j:1.1.0
         resources:
             limits:
               memory: 256Mi
         env:
+        - name: APP_SYSTEM_CODE
+          value: "upp-content-collection-rw-neo4j"
+        - name: APP_NAME
+          value: "Content Collection RW Neo4j"
         - name: APP_PORT
           value: "8080"
         - name: NEO_URL
@@ -42,6 +46,10 @@ spec:
               key: graphite.address
         - name: GRAPHITE_PREFIX
           value: "coco.services.k8s.content-collection-rw-neo4j"
+        - name: LOG_METRICS
+          value: "false"
+        - name: CACHE_DURATION
+          value: "30s"
         ports:
         - containerPort: 8080
         livenessProbe:

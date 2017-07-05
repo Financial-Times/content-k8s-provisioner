@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: cms-notifier
-        image: up-registry.ft.com/coco/cms-notifier:v44
+        image: up-registry.ft.com/coco/cms-notifier:v48
         imagePullPolicy: Always
         env:
         - name: JAVA_OPTS

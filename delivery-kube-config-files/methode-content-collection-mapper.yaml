@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: methode-content-collection-mapper
-        image: coco/methode-content-collection-mapper:remove-vulcan-routing
+        image: coco/methode-content-collection-mapper:1.0.4-k8s-rm-vulcan-routing-rc2
         imagePullPolicy: Always
         env:
         - name: JAVA_OPTS
