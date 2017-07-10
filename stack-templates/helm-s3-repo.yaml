@@ -1,0 +1,51 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Stack to create S3 bucket for holding the Helm repository for upp.
+
+Resources:
+
+  HelmRepoBucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: 'upp-helm-repo'
+      WebsiteConfiguration:
+        IndexDocument: "index.yaml"
+      VersioningConfiguration:
+        Status: "Enabled"
+      Tags:
+        - Key: "systemCode"
+          Value: "upp"
+        - Key: "environment"
+          Value: "p"
+        - Key: "ipCode"
+          Value: "P196"
+        - Key: "teamDL"
+          Value: "universal.publishing.platform@ft.com"
+
+  HelmRepoBucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket:
+        Ref: "HelmRepoBucket"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "HttpPublicReadOnly"
+            Action: "s3:GetObject"
+            Effect: "Allow"
+            Resource: !Join ["", [ !GetAtt HelmRepoBucket.Arn, "/*"]]
+            Principal: "*"
+          - Sid: ""
+            Action:
+              - "s3:Put*"
+              - "s3:List*"
+              - "s3:Get*"
+            Effect: "Allow"
+            Resource:
+              - !Join ["", [ !GetAtt HelmRepoBucket.Arn, "/*"]]
+              - !GetAtt HelmRepoBucket.Arn
+            Principal:
+              AWS:
+                - !Join ["", [ "arn:aws:iam::", !Ref 'AWS::AccountId', ":user/upp-helm-repo-access.prod"]]
