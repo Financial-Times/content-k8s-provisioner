@@ -37,6 +37,21 @@ Resources:
             Effect: "Allow"
             Resource: !Join ["", [ !GetAtt HelmRepoBucket.Arn, "/*"]]
             Principal: "*"
+            Condition:
+              IpAddress:
+                aws:SourceIp:
+                # Elastic IP address of the NAT gateway for Jenkins machines
+                - 54.194.189.228
+                # OSB + LDNWebPerf
+                - 82.136.1.214/32
+                # Park Royal
+                - 213.216.148.1/32
+                # XP - Cluj Office
+                - 194.117.242.0/23
+                 # EU VPN Client
+                - 62.25.64.1/32
+                # US VPN Client
+                - 64.210.200.1/32
           - Sid: ""
             Action:
               - "s3:Put*"
