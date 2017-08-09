@@ -93,7 +93,7 @@ loadBalancer:
 
 #  Instance type for controller node.
 # CAUTION: Don't use t2.micro or the cluster won't work. See https://github.com/kubernetes/kubernetes/issues/18975
-controllerInstanceType: c3.large
+controllerInstanceType: c4.large
 
 # Disk size (GiB) for controller node
 #controllerRootVolumeSize: 30
@@ -300,7 +300,7 @@ etcd:
     - name: ExistingPublicSubnet3
 
 # Instance type for etcd node
-etcdInstanceType: m3.medium
+etcdInstanceType: t2.medium
 
 # Root volume size (GiB) for etcd node
 # etcdRootVolumeSize: 30
