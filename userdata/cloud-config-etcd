@@ -98,6 +98,7 @@ coreos:
         ExecStartPre=/bin/bash -c 'docker history coco/coco-diamond-auto:$DOCKER_APP_VERSION >/dev/null 2>&1 || docker pull coco/coco-diamond-auto:$DOCKER_APP_VERSION'
 
         ExecStart=/bin/sh -c '\
+          set -e; \
           ENV=$(/usr/bin/etcdctl get /ft/config/environment_tag); \
           /usr/bin/docker run --rm --name=%p_$(uuidgen) \
           -e GRAPHITE_HOST=graphite.ft.com \
