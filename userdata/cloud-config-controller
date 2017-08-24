@@ -1,3 +1,21 @@
+{{ define "instance" -}}
+{{- $S3URI := self.Parts.s3.Asset.S3URL -}}
+#!/bin/bash -xe
+ . /etc/environment
+export COREOS_PRIVATE_IPV4 COREOS_PRIVATE_IPV6 COREOS_PUBLIC_IPV4 COREOS_PUBLIC_IPV6
+REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')
+USERDATA_FILE=userdata-controller
+while ! /usr/bin/rkt run \
+   --net=host \
+   --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true --mount volume=dns,target=/etc/resolv.conf  \
+   --volume=awsenv,kind=host,source=/var/run/coreos,readOnly=false --mount volume=awsenv,target=/var/run/coreos \
+   --trust-keys-from-https \
+   {{.AWSCliImage.Options}}{{.AWSCliImage.RktRepo}} --exec=aws -- s3 --region $REGION  cp {{$S3URI}} /var/run/coreos/$USERDATA_FILE; do
+  sleep 1
+done
+exec /usr/bin/coreos-cloudinit --from-file /var/run/coreos/$USERDATA_FILE
+{{ end }}
+{{ define "s3" -}}
 #cloud-config
 coreos:
   update:
@@ -9,8 +27,48 @@ coreos:
     etcd_keyfile: /etc/kubernetes/ssl/etcd-client-key.pem
 
   units:
-    - name: systemd-journald.service
-      command: restart
+{{- range $u := .Controller.CustomSystemdUnits}}
+    - name: {{$u.Name}}
+      command: {{ $u.Command }}
+      {{- if $u.Enable }}
+      enable: {{ $u.Enable }}
+      {{- end }}
+      {{- if $u.Runtime }}
+      runtime: {{ $u.Runtime }}
+      {{- end }}
+      content: |
+        {{- range $l := $u.ContentArray}}
+        {{ $l }}
+        {{- end }}
+{{- end}}
+{{if .CloudWatchLogging.Enabled}}
+    - name: journald-cloudwatch-logs.service
+      command: start
+      content: |
+        [Unit]
+        Description=Docker run journald-cloudwatch-logs to send journald logs to CloudWatch
+        Requires=network-online.target
+        After=network-online.target
+
+        [Service]
+        ExecStartPre=-/usr/bin/mkdir -p /var/journald-cloudwatch-logs
+        ExecStart=/usr/bin/rkt run \
+                  --insecure-options=image \
+                  --volume resolv,kind=host,source=/etc/resolv.conf,readOnly=true \
+                  --mount volume=resolv,target=/etc/resolv.conf \
+                  --volume journald-cloudwatch-logs,kind=host,source=/var/journald-cloudwatch-logs \
+                  --mount volume=journald-cloudwatch-logs,target=/var/journald-cloudwatch-logs \
+                  --volume journal,kind=host,source=/var/log/journal,readOnly=true \
+                  --mount volume=journal,target=/var/log/journal \
+                  --volume machine-id,kind=host,source=/etc/machine-id,readOnly=true \
+                  --mount volume=machine-id,target=/etc/machine-id \
+                  {{ .JournaldCloudWatchLogsImage.RktRepo }} -- {{.ClusterName}}
+        Restart=always
+        RestartSec=60s
+
+        [Install]
+        WantedBy=multi-user.target
+{{end}}
     - name: cfn-etcd-environment.service
       enable: true
       command: start
@@ -42,32 +100,6 @@ coreos:
         ExecStartPre=/bin/touch /etc/aws-environment
         ExecStart=/opt/bin/set-aws-environment
 {{end}}
-    - name: authorized_keys.service
-      command: start
-      content: |
-          [Unit]
-          Description=Update authorized_keys
-
-          [Service]
-          Type=oneshot
-          ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
-          ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys.sha512 https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys.sha512"
-          ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys"
-          ExecStart=/bin/sh -c "cd /tmp/ && sha512sum -c authorized_keys.sha512 && cp authorized_keys /home/core/.ssh/authorized_keys && chmod 700 /home/core/.ssh && chmod 600 /home/core/.ssh/authorized_keys && chown -R core:core /home/core/.ssh"
-          Restart=no
-    - name: authorized_keys.timer
-      command: start
-      content: |
-          [Unit]
-          Description=Authorized keys timer
-
-          [Timer]
-          OnBootSec=1min
-          OnUnitActiveSec=1min
-
-          [Install]
-          WantedBy=timers.target
-
     - name: docker.service
       drop-ins:
 {{if .Experimental.EphemeralImageStorage.Enabled}}
@@ -77,6 +109,12 @@ coreos:
             After=var-lib-docker.mount
             Wants=var-lib-docker.mount
 {{end}}
+        - name: 10-post-start-check.conf
+          content: |
+            [Service]
+            RestartSec=10
+            ExecStartPost=/usr/bin/docker pull {{.PauseImage.RepoWithTag}}
+
         - name: 40-flannel.conf
           content: |
             [Unit]
@@ -85,12 +123,10 @@ coreos:
             EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
             ExecStartPre=/usr/bin/systemctl is-active flanneld.service
 
-        - name: 11-docker-opts.conf
+        - name: 60-logfilelimit.conf
           content: |
             [Service]
-            {{with $x := "{{.ImageName}}"}}
-            Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{$x}}"
-            {{end}}
+            Environment="DOCKER_OPTS=--log-opt max-size=50m --log-opt max-file=3"
 
     - name: flanneld.service
       drop-ins:
@@ -106,7 +142,9 @@ coreos:
             EnvironmentFile=-/run/flannel/etcd-endpoints.opts
             ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
             ExecStartPre=/bin/sh -ec "echo FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS} >/run/flannel/etcd-endpoints.opts"
-            ExecStartPre=/opt/bin/decrypt-tls-assets
+            {{- if .AssetsEncryptionEnabled }}
+            ExecStartPre=/opt/bin/decrypt-assets
+            {{- end}}
             ExecStartPre=/usr/bin/etcdctl \
             --ca-file=/etc/kubernetes/ssl/ca.pem \
             --cert-file=/etc/kubernetes/ssl/etcd-client.pem \
@@ -114,51 +152,30 @@ coreos:
             --endpoints="${ETCD_ENDPOINTS}" \
             set /coreos.com/network/config '{"Network" : "{{.PodCIDR}}", "Backend" : {"Type" : "vxlan"}}'
             TimeoutStartSec=120
-    - name: splunk-forwarder.service
-      command: start
-      runtime: true
-      content: |
-        [Unit]
-        Description=Splunk forwarder
-        Wants=kubelet.service docker.service cfn-etcd-environment.service
-        After=kubelet.service
-        [Service]
-        EnvironmentFile=/etc/etcd-environment
-        Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
-        Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.7"
-        TimeoutStartSec=1200
-        # Change killmode from "control-group" to "none" to let Docker remove
-        # work correctly.
-        KillMode=none
-        ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
-        ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
-        ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
-        ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
-        ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
-        ExecStartPre=/bin/bash -c 'docker history coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION >/dev/null 2>&1 \
-          || docker pull coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
-        ExecStartPre=/bin/bash -c 'docker history coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION >/dev/null 2>&1 \
-          || docker pull coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION'
-        ExecStart=/bin/sh -c '\
-          alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
-          export FORWARD_URL=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_url); \
-          export TOKEN=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_token); \
-          BATCHSIZE=$(etcdctl_cmd get /ft/config/splunk-forwarder/batchsize  2>/dev/null) || BATCHSIZE=10; \
-          export ENV=$(etcdctl_cmd get /ft/config/environment_tag); \
-          journalctl -a -f --since=now --output=json \
-          | docker run -i --log-driver=none -e=ENV=$ENV --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
-          | docker run -i --log-driver=none --rm --name %p-http_$(uuidgen) --memory="256m" -e="FORWARD_URL=$FORWARD_URL" -e="ENV=$ENV" -e="HOSTNAME=$(hostname -s)" -e="WORKERS=8" -e="BUFFER=256" -e="TOKEN=$TOKEN" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
 
-        ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-http_)"'
-        Restart=on-failure
-        RestartSec=60
+{{if .FlannelImage.RktPullDocker}}
+        - name: 20-flannel-custom-image.conf
+          content: |
+            [Unit]
+            PartOf=flanneld.service
+            Before=docker.service
 
-        [Install]
-        WantedBy=multi-user.target
+            [Service]
+            Environment="FLANNEL_IMAGE={{.FlannelImage.RktRepo}}"
+            Environment="RKT_RUN_ARGS={{.FlannelImage.Options}}"
 
-        [X-Fleet]
-        Global=true
+    - name: flannel-docker-opts.service
+      drop-ins:
+        - name: 10-flannel-docker-options.conf
+          content: |
+            [Unit]
+            PartOf=flanneld.service
+            Before=docker.service
 
+            [Service]
+            Environment="FLANNEL_IMAGE={{.FlannelImage.RktRepo}}"
+            Environment="RKT_RUN_ARGS={{.FlannelImage.Options}} --uuid-file-save=/var/lib/coreos/flannel-wrapper2.uuid"
+{{end}}
     - name: kubelet.service
       command: start
       runtime: true
@@ -168,25 +185,29 @@ coreos:
         After=cfn-etcd-environment.service
         [Service]
         EnvironmentFile=-/etc/etcd-environment
-        Environment=KUBELET_VERSION={{.K8sVer}}
-        Environment=KUBELET_ACI={{.HyperkubeImageRepo}}
-        Environment="RKT_OPTS=--volume dns,kind=host,source=/etc/resolv.conf \
+        Environment=KUBELET_IMAGE_TAG={{.K8sVer}}
+        Environment=KUBELET_IMAGE_URL={{ .HyperkubeImage.RktRepoWithoutTag }}
+        Environment="RKT_RUN_ARGS=--volume dns,kind=host,source=/etc/resolv.conf {{.HyperkubeImage.Options}}\
         --set-env=ETCD_CA_CERT_FILE=/etc/kubernetes/ssl/ca.pem \
         --set-env=ETCD_CERT_FILE=/etc/kubernetes/ssl/etcd-client.pem \
         --set-env=ETCD_KEY_FILE=/etc/kubernetes/ssl/etcd-client-key.pem \
         --mount volume=dns,target=/etc/resolv.conf \
+        {{ if eq .ContainerRuntime "rkt" -}}
         --volume rkt,kind=host,source=/opt/bin/host-rkt \
         --mount volume=rkt,target=/usr/bin/rkt \
         --volume var-lib-rkt,kind=host,source=/var/lib/rkt \
         --mount volume=var-lib-rkt,target=/var/lib/rkt \
-        --volume var-lib-cni,kind=host,source=/var/lib/cni \
-        --mount volume=var-lib-cni,target=/var/lib/cni \
         --volume stage,kind=host,source=/tmp \
         --mount volume=stage,target=/tmp \
+        {{ end -}}
+        --volume var-lib-cni,kind=host,source=/var/lib/cni \
+        --mount volume=var-lib-cni,target=/var/lib/cni \
         --volume var-log,kind=host,source=/var/log \
         --mount volume=var-log,target=/var/log{{ if .UseCalico }} \
         --volume cni-bin,kind=host,source=/opt/cni/bin \
-        --mount volume=cni-bin,target=/opt/cni/bin{{ end }}"
+        --mount volume=cni-bin,target=/opt/cni/bin{{ end }} \
+        --volume etc-kubernetes,kind=host,source=/etc/kubernetes \
+        --mount volume=etc-kubernetes,target=/etc/kubernetes"
         ExecStartPre=/usr/bin/systemctl is-active flanneld.service
         ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
         ExecStartPre=/usr/bin/mkdir -p /var/lib/cni
@@ -200,18 +221,27 @@ coreos:
                        cluster-health
 
         ExecStartPre=/bin/sh -ec "find /etc/kubernetes/manifests /srv/kubernetes/manifests  -maxdepth 1 -type f | xargs --no-run-if-empty sed -i 's|#ETCD_ENDPOINTS#|${ETCD_ENDPOINTS}|'"
+        {{if .UseCalico -}}
+        ExecStartPre=/bin/sh -ec "find /etc/kubernetes/cni/net.d/ -maxdepth 1 -type f | xargs --no-run-if-empty sed -i 's|#ETCD_ENDPOINTS#|${ETCD_ENDPOINTS}|'"
+        ExecStartPre=/usr/bin/docker run --rm -e SLEEP=false -v /opt/cni/bin:/host/opt/cni/bin {{ .CalicoCniImage.RepoWithTag }} /install-cni.sh
+        {{end -}}
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
-        --api-servers=http://localhost:8080 \
+        --kubeconfig=/etc/kubernetes/controller-kubeconfig.yaml \
+        --require-kubeconfig \
         --cni-conf-dir=/etc/kubernetes/cni/net.d \
+        {{/* Work-around until https://github.com/kubernetes/kubernetes/issues/43967 is fixed via https://github.com/kubernetes/kubernetes/pull/43995 */ -}}
+        --cni-bin-dir=/opt/cni/bin \
         --network-plugin={{.K8sNetworkPlugin}} \
         --container-runtime={{.ContainerRuntime}} \
         --rkt-path=/usr/bin/rkt \
         --rkt-stage1-image=coreos.com/rkt/stage1-coreos \
-        --register-schedulable=false \
+        --node-labels node-role.kubernetes.io/master{{if .NodeLabels.Enabled}},{{.NodeLabels.String}} \
+        {{end}} \
+        --register-with-taints=node.alpha.kubernetes.io/role=master:NoSchedule \
         --allow-privileged=true \
         --pod-manifest-path=/etc/kubernetes/manifests \
-        --cluster_dns={{.DNSServiceIP}} \
-        --cluster_domain=cluster.local \
+        --cluster-dns={{.DNSServiceIP}} \
+        --cluster-domain=cluster.local \
         --cloud-provider=aws
         Restart=always
         RestartSec=10
@@ -285,24 +315,6 @@ coreos:
         [Install]
         WantedBy=kubelet.service
 {{ end }}
-    - name: kube-node-taint-and-uncordon.service
-      command: start
-      runtime: true
-      content: |
-        [Unit]
-        Description=Taint this kubernetes node with its role and then uncordon it
-        Wants=kubelet.service
-        After=kubelet.service
-        Before=cfn-signal.service
-
-        [Service]
-        Type=simple
-        StartLimitInterval=0
-        RestartSec=10
-        Restart=on-failure
-        ExecStartPre=/usr/bin/systemctl is-active kubelet.service
-        ExecStartPre=/usr/bin/bash -c "while sleep 1; do if /usr/bin/curl -s -m 20 -f  http://127.0.0.1:8080/healthz > /dev/null &&  /usr/bin/curl -s -m 20 -f  http://127.0.0.1:10252/healthz > /dev/null && /usr/bin/curl -s -m 20 -f  http://127.0.0.1:10251/healthz > /dev/null &&  /usr/bin/curl --insecure -s -m 20 -f  https://127.0.0.1:10250/healthz > /dev/null ; then break ; fi;  done"
-        ExecStart=/opt/bin/taint-and-uncordon
 {{if .WaitSignal.Enabled}}
     - name: cfn-signal.service
       command: start
@@ -315,7 +327,7 @@ coreos:
         Type=oneshot
         ExecStartPre=/usr/bin/bash -c "while sleep 1; do if /usr/bin/curl -s -m 20 -f  http://127.0.0.1:8080/healthz > /dev/null &&  /usr/bin/curl -s -m 20 -f  http://127.0.0.1:10252/healthz > /dev/null && /usr/bin/curl -s -m 20 -f  http://127.0.0.1:10251/healthz > /dev/null &&  /usr/bin/curl --insecure -s -m 20 -f  https://127.0.0.1:10250/healthz > /dev/null ; then break ; fi;  done"
         {{ if .UseCalico }}
-        ExecStartPre=/usr/bin/bash -c "until /usr/bin/docker run --net=host --pid=host --rm calico/ctl:v1.0.0 node status > /dev/null; do sleep 3; done && echo Calico running"
+        ExecStartPre=/usr/bin/bash -c "until /usr/bin/docker run --net=host --pid=host --rm {{ .CalicoCtlImage.RepoWithTag }} node status > /dev/null; do sleep 3; done && echo Calico running"
         {{ end }}
         ExecStart=/opt/bin/cfn-signal
 {{end}}
@@ -337,13 +349,13 @@ coreos:
         ExecStartPre=/bin/sh -c "/usr/bin/systemctl set-environment INSTANCE_ID=$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/instance-id)"
         ExecStartPre=/bin/sh -c "/usr/bin/systemctl set-environment SECURITY_GROUPS=\"$(/usr/bin/curl -s http://169.254.169.254/latest/meta-data/security-groups | tr '\n' ',')\""
         ExecStartPre=/bin/sh -c "/usr/bin/systemctl set-environment AUTOSCALINGGROUP=\"$(/usr/bin/docker run --rm --net=host \
-          {{.AWSCliImageRepo}}:{{.AWSCliTag}} aws \
+          {{.AWSCliImage.RepoWithTag}} aws \
           autoscaling describe-auto-scaling-instances \
           --instance-ids ${INSTANCE_ID} --region {{.Region}} \
           --query 'AutoScalingInstances[].AutoScalingGroupName' --output text)\""
         ExecStartPre=/bin/sh -c "/usr/bin/systemctl set-environment \
           LAUNCHCONFIGURATION=\"$(/usr/bin/docker run --rm --net=host \
-          {{.AWSCliImageRepo}}:{{.AWSCliTag}} \
+          {{.AWSCliImage.RepoWithTag}} \
           aws autoscaling describe-auto-scaling-groups \
           --auto-scaling-group-name $AUTOSCALINGGROUP --region {{.Region}} \
           --query 'AutoScalingGroups[].LaunchConfigurationName' --output text)\""
@@ -394,6 +406,23 @@ coreos:
 {{end}}
         Type={{.Experimental.EphemeralImageStorage.Filesystem}}
 {{end}}
+{{ if .SharedPersistentVolume }}
+    - name: load-efs-pv.service
+      command: start
+      content: |
+        [Unit]
+        Description=Load efs persistent volume mount
+        Wants=kubelet.service
+        After=kubelet.service
+        Before=cfn-signal.service
+        [Service]
+        Type=simple
+        RemainAfterExit=true
+        RestartSec=10
+        Restart=on-failure
+        ExecStartPre=/opt/bin/set-efs-pv
+        ExecStart=/opt/bin/load-efs-pv
+{{end}}
 
 {{if .SSHAuthorizedKeys}}
 ssh_authorized_keys:
@@ -402,15 +431,44 @@ ssh_authorized_keys:
   {{end}}
 {{end}}
 
-write_files:
-  - path: /etc/systemd/journald.conf.d/10-override-config.conf
-    content: |
-      [Journal]
-      MaxLevelConsole=crit
-      Compress=false
-      RateLimitInterval=0
-      RateLimitBurst=0
+{{if .Region.IsChina}}
+    - name: pause-amd64.service
+      enable: true
+      command: start
+      runtime: true
+      content: |
+        [Unit]
+        Description=Pull and tag a mirror image for pause-amd64
+        Wants=docker.service
+        After=docker.service
 
+        [Service]
+        Restart=on-failure
+        RemainAfterExit=true
+        ExecStartPre=/usr/bin/systemctl is-active docker.service
+        ExecStartPre=/usr/bin/docker pull {{.PauseImage.RepoWithTag}}
+        ExecStart=/usr/bin/docker tag {{.PauseImage.RepoWithTag}} gcr.io/google_containers/pause-amd64:3.0
+        ExecStop=/bin/true
+        [Install]
+        WantedBy=install-kube-system.service
+{{end}}
+write_files:
+{{- if .Controller.CustomFiles}}
+  {{- range $w := .Controller.CustomFiles}}
+  - path: {{$w.Path}}
+    permissions: {{$w.PermissionsString}}
+    encoding: gzip+base64
+    content: {{$w.GzippedBase64Content}}
+  {{- end }}
+{{- end }}
+{{if .Experimental.DisableSecurityGroupIngress}}
+  - path: /etc/kubernetes/additional-configs/cloud.config
+    owner: root:root
+    permissions: 0644
+    content: |
+      [global]
+      DisableSecurityGroupIngress = true
+{{end}}
 {{if .Experimental.AwsEnvironment.Enabled}}
   - path: /opt/bin/set-aws-environment
     owner: root:root
@@ -426,7 +484,7 @@ write_files:
         --uuid-file-save=/var/run/coreos/set-aws-environment.uuid \
         --net=host \
         --trust-keys-from-https \
-        {{.AWSCliImageRepo}}:{{.AWSCliTag}} --exec=/bin/bash -- \
+        {{.AWSCliImage.Options}}{{.AWSCliImage.RktRepo}} --exec=/bin/bash -- \
           -ec \
           'instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
            stack_name=$(
@@ -440,6 +498,36 @@ write_files:
           '
 
       rkt rm --uuid-file=/var/run/coreos/set-aws-environment.uuid || :
+{{end}}
+{{ if .SharedPersistentVolume }}
+  - path: /opt/bin/set-efs-pv
+    owner: root:root
+    permissions: 0700
+    content: |
+      #!/bin/bash -e
+
+      rkt run \
+        --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
+        --mount volume=dns,target=/etc/resolv.conf \
+        --volume=awsenv,kind=host,source=/etc/kubernetes,readOnly=false \
+        --mount volume=awsenv,target=/etc/kubernetes \
+        --uuid-file-save=/var/run/coreos/set-efs-pv.uuid \
+        --net=host \
+        --trust-keys-from-https \
+        {{.AWSCliImage.Options}}{{.AWSCliImage.RktRepo}} --exec=/bin/bash -- \
+          -ec \
+          'instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+           stack_name=$(
+             aws ec2 describe-tags --region {{.Region}} --filters \
+               "Name=resource-id,Values=$instance_id" \
+               "Name=key,Values=aws:cloudformation:stack-name" \
+               --output json \
+             | jq -r ".Tags[].Value"
+           )
+           cfn-init -v -c "load-efs-pv" --region {{.Region}} --resource {{.Controller.LogicalName}} --stack $stack_name
+          '
+
+      rkt rm --uuid-file=/var/run/coreos/set-efs-pv.uuid || :
 {{end}}
   - path: /opt/bin/cfn-signal
     owner: root:root
@@ -455,7 +543,7 @@ write_files:
         --uuid-file-save=/var/run/coreos/cfn-signal.uuid \
         --net=host \
         --trust-keys-from-https \
-        {{.AWSCliImageRepo}}:{{.AWSCliTag}} --exec=/bin/bash -- \
+        {{.AWSCliImage.Options}}{{.AWSCliImage.RktRepo}} --exec=/bin/bash -- \
           -ec \
           'instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
            stack_name=$(
@@ -484,7 +572,7 @@ write_files:
         --uuid-file-save=/var/run/coreos/cfn-etcd-environment.uuid \
         --net=host \
         --trust-keys-from-https \
-        {{.AWSCliImageRepo}}:{{.AWSCliTag}} --exec=/bin/bash -- \
+        {{.AWSCliImage.Options}}{{.AWSCliImage.RktRepo}} --exec=/bin/bash -- \
           -ec \
           'instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
            stack_name=$(
@@ -504,52 +592,74 @@ write_files:
     owner: root:root
     content: |
       #!/bin/bash -e
-      {{ if .UseCalico }}
-      /bin/bash /opt/bin/populate-tls-calico-etcd
-      /usr/bin/docker run --rm --net=host -v /srv/kubernetes/manifests:/host/manifests {{.HyperkubeImageRepo}}:{{.K8sVer}} /hyperkube kubectl apply -f /host/manifests/calico.yaml
-      {{ end }}
 
-      post_yaml() {
-          /usr/bin/curl  -H "Content-Type: application/yaml" -XPOST \
-          --data-binary "$1" "$2"
+      kubectl() {
+          /usr/bin/docker run --rm --net=host -v /srv/kubernetes:/srv/kubernetes {{.HyperkubeImage.RepoWithTag}} /hyperkube kubectl "$@"
       }
 
-      post_yaml_status_code(){
-          /usr/bin/curl  -H "Content-Type: application/yaml" -XPOST \
-          --write-out %{http_code} --silent --output /dev/null \
-          --data-binary "$1" "$2"
-      }
+      while ! kubectl get ns kube-system; do
+        echo Waiting until kube-system created.
+        sleep 3
+      done
 
       mfdir=/srv/kubernetes/manifests
-      for manifest in {kube-dns-de,kube-dns-autoscaler-de,heapster-de}.yaml; do
-          post_yaml "@$mfdir/$manifest" \
-          "http://127.0.0.1:8080/apis/extensions/v1beta1/namespaces/kube-system/deployments"
+
+      {{ if .UseCalico }}
+      /bin/bash /opt/bin/populate-tls-calico-etcd
+      kubectl apply -f "${mfdir}/calico.yaml"
+      {{ end }}
+
+      {{ if .Experimental.NodeDrainer.Enabled }}
+      kubectl apply -f "${mfdir}/kube-node-drainer-ds.yaml"
+      {{ end }}
+
+      # Configmaps
+      kubectl apply -f "${mfdir}/kube-dns-cm.yaml"
+
+      # Serviceaccounts
+      kubectl apply -f "${mfdir}/kube-dns-sa.yaml"
+      kubectl apply -f "${mfdir}/heapster-sa.yaml"
+
+      # Deployments
+      for manifest in {kube-dns-de,kube-dns-autoscaler-de,{{ if .Addons.ClusterAutoscaler.Enabled }}cluster-autoscaler-de,{{ end }}heapster-de{{ if .KubeResourcesAutosave.Enabled }},kube-resources-autosave{{ end }}}.yaml; do
+          kubectl apply -f "${mfdir}/$manifest"
       done
 
-      post_yaml "@$mfdir/kube-dashboard-rc.yaml" \
-      "http://127.0.0.1:8080/api/v1/namespaces/kube-system/replicationcontrollers"
+      # Replicationcontrollers
+      kubectl apply -f "${mfdir}/kube-dashboard-de.yaml"
 
+      # Services
       for manifest in {kube-dns,heapster,kube-dashboard}-svc.yaml;do
-          post_yaml "@$mfdir/$manifest" \
-          "http://127.0.0.1:8080/api/v1/namespaces/kube-system/services"
+          kubectl apply -f "${mfdir}/$manifest"
       done
+
+      {{- if .Addons.Rescheduler.Enabled }}
+      kubectl apply -f "${mfdir}/kube-rescheduler-de.yaml"
+      {{- end }}
 
       {{if .Experimental.Plugins.Rbac.Enabled}}
-      # k8s > 1.5 already have this clusterRole, so we accept http.code != 200
       mfdir=/srv/kubernetes/rbac
-      if [[ $(post_yaml_status_code "@mfdir/cluster-roles/cluster-admin.yaml" \
-          "http://127.0.0.1:8081/apis/rbac.authorization.k8s.io/v1alpha1/clusterroles") -ne "200" ]] ; then
-          echo 'Failed to create the cluster role named "cluster-admin". It is ok if you are using k8s newer than 1.5'
-      fi
 
-      post_yaml "@${mfdir}/cluster-roles/cluster-admin.yaml" \
-      "http://127.0.0.1:8080/apis/rbac.authorization.k8s.io/v1alpha1/clusterroles" |true
+      kubectl apply -f "${mfdir}/cluster-roles/node-extensions.yaml"
 
-      for manifest in {system-worker,kube-worker,kube-admin}; do
-          post_yaml "@${mfdir}/cluster-role-bindings/$manifest.yaml" \
-          "http://127.0.0.1:8080/apis/rbac.authorization.k8s.io/v1alpha1/clusterrolebindings"
+      for manifest in {kube-admin,system-worker,node,node-proxier,node-extensions,heapster}; do
+          kubectl apply -f "${mfdir}/cluster-role-bindings/$manifest.yaml"
       done
 
+      {{ if .Experimental.TLSBootstrap.Enabled }}
+      kubectl create -f "${mfdir}/cluster-roles/node-bootstrapper.yaml" | echo 'Failed to create the cluster role named "kube-aws:node-bootstrapper". Skipping'
+      kubectl create -f "${mfdir}/cluster-role-bindings/node-bootstrapper.yaml" | echo 'Failed to create the cluster role binding "kube-aws:node-bootstrapper". Skipping'
+      {{ end }}
+      {{ end }}
+
+      {{ if .Experimental.Dex.Enabled }}
+      if kubectl get cm dex -n kube-system;
+        then echo "Configmap for dex already exists and could have been customized. Skipping.";
+      else
+        mfdir=/srv/kubernetes/manifests
+        kubectl apply -f "${mfdir}/dex-cm.yaml"
+        kubectl apply -f "${mfdir}/dex-deployment.yaml";
+      fi
       {{ end }}
 
   - path: /etc/kubernetes/cni/docker_opts_cni.env
@@ -634,20 +744,26 @@ write_files:
         selector:
           matchLabels:
             k8s-app: calico-node
+        updateStrategy:
+          type: RollingUpdate
         template:
           metadata:
             labels:
               k8s-app: calico-node
             annotations:
               scheduler.alpha.kubernetes.io/critical-pod: ''
-              scheduler.alpha.kubernetes.io/tolerations: |
-                [{"key": "node.alpha.kubernetes.io/role", "value": "master", "effect": "NoSchedule" },
-                {"key":"CriticalAddonsOnly", "operator":"Exists"}]
           spec:
+            tolerations:
+            - operator: Exists
+              effect: NoSchedule
+            - operator: Exists
+              effect: NoExecute
+            - operator: Exists
+              key: CriticalAddonsOnly
             hostNetwork: true
             containers:
               - name: calico-node
-                image: quay.io/calico/node:v1.0.2
+                image: {{ .CalicoNodeImage.RepoWithTag }}
                 env:
                   - name: ETCD_ENDPOINTS
                     valueFrom:
@@ -689,30 +805,6 @@ write_files:
                   - mountPath: /etc/resolv.conf
                     name: dns
                     readOnly: true
-              - name: install-cni
-                image: quay.io/calico/cni:v1.5.6
-                imagePullPolicy: Always
-                command: ["/install-cni.sh"]
-                env:
-                  - name: ETCD_ENDPOINTS
-                    valueFrom:
-                      configMapKeyRef:
-                        name: calico-config
-                        key: etcd_endpoints
-                  - name: CNI_NETWORK_CONFIG
-                    valueFrom:
-                      configMapKeyRef:
-                        name: calico-config
-                        key: cni_network_config
-                  - name: CNI_NET_DIR
-                    value: "/etc/kubernetes/cni/net.d"
-                volumeMounts:
-                  - mountPath: /host/opt/cni/bin
-                    name: cni-bin-dir
-                  - mountPath: /host/etc/cni/net.d
-                    name: cni-net-dir
-                  - mountPath: /calico-secrets
-                    name: etcd-certs
             volumes:
               - name: lib-modules
                 hostPath:
@@ -744,9 +836,6 @@ write_files:
           k8s-app: calico-policy
         annotations:
           scheduler.alpha.kubernetes.io/critical-pod: ''
-          scheduler.alpha.kubernetes.io/tolerations: |
-            [{"key": "node.alpha.kubernetes.io/role", "value": "master", "effect": "NoSchedule" },
-            {"key":"CriticalAddonsOnly", "operator":"Exists"}]
 
       spec:
         replicas: 1
@@ -757,10 +846,17 @@ write_files:
             labels:
               k8s-app: calico-policy
           spec:
+            tolerations:
+            - key: "node.alpha.kubernetes.io/role"
+              operator: "Equal"
+              value: "master"
+              effect: "NoSchedule"
+            - key: "CriticalAddonsOnly"
+              operator: "Exists"
             hostNetwork: true
             containers:
               - name: calico-policy-controller
-                image: quay.io/calico/kube-policy-controller:v0.5.2
+                image: {{ .CalicoPolicyControllerImage.RepoWithTag }}
                 env:
                   - name: ETCD_ENDPOINTS
                     valueFrom:
@@ -809,25 +905,136 @@ write_files:
       sed -i -e "s#\$ETCDKEY#$etcd_key#g" /srv/kubernetes/manifests/calico.yaml
 
 {{ end }}
+{{ if .KubeResourcesAutosave.Enabled }}
+  - path: /srv/kubernetes/manifests/kube-resources-autosave.yaml
+    content: |
+      ---
+      apiVersion: extensions/v1beta1
+      kind: Deployment
+      metadata:
+        name: kube-resources-autosave
+        namespace: kube-system
+        labels:
+          k8s-app: kube-resources-autosave-policy
+      spec:
+        replicas: 1
+        template:
+          metadata:
+            name: kube-resources-autosave
+            namespace: kube-system
+            labels:
+              k8s-app: kube-resources-autosave-policy
+          spec:
+            containers:
+            - name: kube-resources-autosave-dumper
+              image: {{.HyperkubeImage.RepoWithTag}}
+              command: ["/bin/bash", "-c" ]
+              args:
+                - |
+                    set -x ;
+                    DUMP_DIR_COMPLETE=/kube-resources-autosave/complete ;
+                    mkdir -p ${DUMP_DIR_COMPLETE} ;
+                    while true; do
+                      TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+                      DUMP_DIR=/kube-resources-autosave/tmp/${TIMESTAMP} ;
+                      mkdir -p ${DUMP_DIR} ;
+                      RESOURCES_OUT_NAMESPACE=( namespaces persistentvolumes nodes storageclasses clusterrolebindings clusterroles ) ;
+                      for r in ${RESOURCES_OUT_NAMESPACE[@]};do
+                        echo " Searching for resources: ${r}" ;
+                        /kubectl get --export -o=json ${r} | \
+                        jq '.items |= ([ .[] |
+                            del(.status,
+                            .metadata.uid,
+                            .metadata.selfLink,
+                            .metadata.resourceVersion,
+                            .metadata.creationTimestamp,
+                            .metadata.generation,
+                            .spec.claimRef
+                          )])' > ${DUMP_DIR}/${r}.json ;
+                      done ;
+                      RESOURCES_IN_NAMESPACE=( componentstatuses configmaps daemonsets deployments endpoints events horizontalpodautoscalers
+                      ingresses jobs limitranges networkpolicies  persistentvolumeclaims pods podsecuritypolicies podtemplates replicasets
+                      replicationcontrollers resourcequotas secrets serviceaccounts services statefulsets thirdpartyresources
+                      poddisruptionbudgets roles rolebindings) ;
+                      for ns in $(jq -r '.items[].metadata.name' < ${DUMP_DIR}/namespaces.json);do
+                        echo "Searching in namespace: ${ns}" ;
+                        mkdir -p ${DUMP_DIR}/${ns} ;
+                        for r in ${RESOURCES_IN_NAMESPACE[@]};do
+                          echo " Searching for resources: ${r}" ;
+                          /kubectl --namespace=${ns} get --export -o=json ${r} | \
+                          jq '.items |= ([ .[] |
+                            select(.type!="kubernetes.io/service-account-token") |
+                            del(
+                              .spec.clusterIP,
+                              .metadata.uid,
+                              .metadata.selfLink,
+                              .metadata.resourceVersion,
+                              .metadata.creationTimestamp,
+                              .metadata.generation,
+                              .metadata.annotations."pv.kubernetes.io/bind-completed",
+                              .status
+                            )])' > ${DUMP_DIR}/${ns}/${r}.json && touch /probe-token ;
+                        done ;
+                      done ;
+                    mv ${DUMP_DIR} ${DUMP_DIR_COMPLETE}/${TIMESTAMP} ;
+                    rm -r -f ${DUMP_DIR} ;
+                    sleep 24h ;
+                    done
+              livenessProbe:
+                exec:
+                  command: ["/bin/bash", "-c", "(( $(date +%s) - $(stat -c%Y /probe-token) < 25*60*60 ))" ]
+                initialDelaySeconds: 240
+                periodSeconds: 10
+              volumeMounts:
+              - name: dump-dir
+                mountPath: /kube-resources-autosave
+                readOnly: false
+            - name: kube-resources-autosave-pusher
+              image: {{.AWSCliImage.RepoWithTag}}
+              command: ["/bin/bash", "-c" ]
+              args:
+                - |
+                    set -x ;
+                    DUMP_DIR_COMPLETE=/kube-resources-autosave/complete ;
+                    while true; do
+                      for FILE in ${DUMP_DIR_COMPLETE}/* ; do
+                        aws s3 mv ${FILE} s3://{{ .KubeResourcesAutosave.S3Path }}/$(basename ${FILE}) --recursive && rm -r -f ${FILE} && touch /probe-token ;
+                      done ;
+                      sleep 1m ;
+                    done
+              livenessProbe:
+                exec:
+                  command: ["/bin/bash", "-c", "(( $(date +%s) - $(stat -c%Y /probe-token) < 25*60*60 ))" ]
+                initialDelaySeconds: 240
+                periodSeconds: 10
+              volumeMounts:
+              - name: dump-dir
+                mountPath: /kube-resources-autosave
+                readOnly: false
+            volumes:
+            - name: dump-dir
+              emptyDir: {}
+{{ end }}
 
-  - path: /opt/bin/decrypt-tls-assets
+{{if .AssetsEncryptionEnabled }}
+  - path: /opt/bin/decrypt-assets
     owner: root:root
     permissions: 0700
     content: |
       #!/bin/bash -e
 
       rkt run \
-        --volume=ssl,kind=host,source=/etc/kubernetes/ssl,readOnly=false \
-        --mount=volume=ssl,target=/etc/kubernetes/ssl \
-        --uuid-file-save=/var/run/coreos/decrypt-tls-assets.uuid \
+        --volume=kube,kind=host,source=/etc/kubernetes,readOnly=false \
+        --mount=volume=kube,target=/etc/kubernetes \
+        --uuid-file-save=/var/run/coreos/decrypt-assets.uuid \
         --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true --mount volume=dns,target=/etc/resolv.conf \
         --net=host \
         --trust-keys-from-https \
-        {{.AWSCliImageRepo}}:{{.AWSCliTag}} --exec=/bin/bash -- \
+        {{.AWSCliImage.Options}}{{.AWSCliImage.RktRepo}} --exec=/bin/bash -- \
           -ec \
-          'echo decrypting tls assets
+          'echo decrypting assets
            shopt -s nullglob
-           for encKey in /etc/kubernetes/ssl/*.pem.enc; do
+           for encKey in /etc/kubernetes/{ssl,{{ if or (.AssetsConfig.HasAuthTokens) ( and .Experimental.TLSBootstrap.Enabled .AssetsConfig.HasTLSBootstrapToken) }}auth{{end}}}/*.enc; do
              echo decrypting $encKey
              f=$(mktemp $encKey.XXXXXXXX)
              /usr/bin/aws \
@@ -838,55 +1045,221 @@ write_files:
              | base64 -d > $f
              mv -f $f ${encKey%.enc}
            done;
+
+           {{- if or (.AssetsConfig.HasAuthTokens) ( and .Experimental.TLSBootstrap.Enabled .AssetsConfig.HasTLSBootstrapToken) }}
+           authDir=/etc/kubernetes/auth
+           echo generating $authDir/tokens.csv
+           echo > $authDir/tokens.csv
+
+           {{- if .AssetsConfig.HasTLSBootstrapToken }}
+           echo $(cat $authDir/kubelet-tls-bootstrap-token.tmp),kubelet-bootstrap,10001,system:kubelet-bootstrap >> $authDir/tokens.csv
+           {{- end }}
+           {{- if .AssetsConfig.HasAuthTokens }}
+           cat $authDir/tokens.csv.tmp >> $authDir/tokens.csv
+           {{- end }}
+           {{- end }}
+
            echo done.'
 
-      rkt rm --uuid-file=/var/run/coreos/decrypt-tls-assets.uuid || :
+      rkt rm --uuid-file=/var/run/coreos/decrypt-assets.uuid || :
+{{ end }}
 
-  - path: /opt/bin/taint-and-uncordon
-    owner: root:root
-    permissions: 0700
+{{if .Experimental.NodeDrainer.Enabled}}
+  - path: /srv/kubernetes/manifests/kube-node-drainer-ds.yaml
     content: |
-      #!/bin/bash -e
+        kind: DaemonSet
+        apiVersion: extensions/v1beta1
+        metadata:
+          name: kube-node-drainer-sg-ds
+          namespace: kube-system
+          labels:
+            k8s-app: kube-node-drainer-sg-ds
+        spec:
+          updateStrategy:
+            type: RollingUpdate
+          template:
+            metadata:
+              labels:
+                k8s-app: kube-node-drainer-sg-ds
+              annotations:
+                scheduler.alpha.kubernetes.io/critical-pod: ''
+            spec:
+              tolerations:
+              - operator: Exists
+                effect: NoSchedule
+              - operator: Exists
+                effect: NoExecute
+              - operator: Exists
+                key: CriticalAddonsOnly
+              initContainers:
+                - name: hyperkube
+                  image: {{.HyperkubeImage.RepoWithTag}}
+                  command:
+                  - /bin/cp
+                  - -f
+                  - /hyperkube
+                  - /workdir/hyperkube
+                  volumeMounts:
+                  - mountPath: /workdir
+                    name: workdir
+              containers:
+                - name: main
+                  image: {{.AWSCliImage.RepoWithTag}}
+                  env:
+                  - name: NODE_NAME
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: spec.nodeName
+                  command:
+                  - /bin/sh
+                  - -xec
+                  - |
+                    metadata() { wget -O - -q http://169.254.169.254/2016-09-02/"$1"; }
+                    asg()      { aws --region="${REGION}" autoscaling "$@"; }
 
-      hostname=$(hostname)
+                    # Hyperkube binary is not statically linked, so we need to use
+                    # the musl interpreter to be able to run it in this image
+                    # See: https://github.com/kubernetes-incubator/kube-aws/pull/674#discussion_r118889687
+                    kubectl() { /lib/ld-musl-x86_64.so.1 /opt/bin/hyperkube kubectl "$@"; }
 
-      docker run --rm --net=host \
-        -v /etc/kubernetes:/etc/kubernetes \
-        -v /etc/resolv.conf:/etc/resolv.conf \
-        {{.HyperkubeImageRepo}}:{{.K8sVer}} /bin/bash \
-          -vxec \
-          'echo "tainting this node."
-           hostname="'${hostname}'"
-           kubectl="/kubectl --server=http://127.0.0.1:8080"
-           taint="$kubectl taint node --overwrite"
-           $taint "$hostname" "node.alpha.kubernetes.io/role=master:NoSchedule"
-           echo "done."
-           echo "uncordoning this node."
-           $kubectl uncordon "$hostname"
-           echo "done."'
+                    INSTANCE_ID=$(metadata meta-data/instance-id)
+                    REGION=$(metadata dynamic/instance-identity/document | jq -r .region)
+                    [ -n "${REGION}" ]
 
-  {{if .Experimental.Plugins.Rbac.Enabled }}
+                    # Not customizable (for now)
+                    SPOT_POLL_INTERVAL=5
+                    SG_POLL_INTERVAL=30
 
-  #https://github.com/coreos/kube-aws/issues/230#issuecomment-274946933
-  - path: /srv/kubernetes/rbac/cluster-roles/cluster-admin.yaml
+                    # Used to control when to execute each termination check
+                    secs=0
+
+                    # Used to identify which was the source that requested the instance termination ('spot' or 'asg', for now)
+                    termination_source=''
+
+                    # Instance termination detection loop
+                    while sleep ${SPOT_POLL_INTERVAL}; do
+                      secs=$((secs + SPOT_POLL_INTERVAL))
+
+                      # Spot instance termination check
+                      http_status=$(curl -o /dev/null -w '%{http_code}' -sL http://169.254.169.254/latest/meta-data/spot/termination-time)
+                      if [ "${http_status}" -eq 200 ]; then
+                        termination_source=spot
+                        break
+                      fi
+
+                      if [ $((secs % SG_POLL_INTERVAL)) -eq 0 ]; then
+                        # Reset counter to avoid overflow
+                        secs=0
+
+                        # AutoScalingGroup lifecycle check
+                        state=$(asg describe-auto-scaling-instances --region "${REGION}" --instance-ids "${INSTANCE_ID}" | jq -r '.AutoScalingInstances[].LifecycleState')
+                        if [ "${state}" = Terminating:Wait ]; then
+                          termination_source=asg
+                          break
+                        fi
+                      fi
+                    done
+
+                    # Node draining loop
+                    while true; do
+                      echo Node is terminating, draining it...
+
+                      if ! kubectl drain --ignore-daemonsets=true --delete-local-data=true --force=true --timeout=60s "${NODE_NAME}"; then
+                        echo Not all pods on this host can be evicted, will try again
+                        continue
+                      fi
+
+                      if [ "${termination_source}" == asg ]; then
+                        echo All evictable pods are gone, notifying AutoScalingGroup that instance ${INSTANCE_ID} can be shutdown
+                        ASG_NAME=$(asg describe-auto-scaling-instances --instance-ids "${INSTANCE_ID}" | jq -r '.AutoScalingInstances[].AutoScalingGroupName')
+                        HOOK_NAME=$(asg describe-lifecycle-hooks --auto-scaling-group-name "${ASG_NAME}" | jq -r '.LifecycleHooks[].LifecycleHookName' | grep -i nodedrainer)
+
+                        echo Sending notification to ASG_NAME=${ASG_NAME} HOOK_NAME=${HOOK_NAME}
+                        asg complete-lifecycle-action --lifecycle-action-result CONTINUE --instance-id "${INSTANCE_ID}" --lifecycle-hook-name "${HOOK_NAME}" --auto-scaling-group-name "${ASG_NAME}"
+                      fi
+
+                      # Expect instance will be shut down in 5 minutes
+                      sleep 300
+                    done
+                  volumeMounts:
+                  - mountPath: /opt/bin
+                    name: workdir
+              volumes:
+                - name: workdir
+                  emptyDir: {}
+{{end}}
+
+{{if .Experimental.Plugins.Rbac.Enabled }}
+  # TODO: remove the following binding once the TLS Bootstrapping feature is enabled by default, see:
+  # https://github.com/kubernetes-incubator/kube-aws/pull/618#discussion_r115162048
+  # https://kubernetes.io/docs/admin/authorization/rbac/#core-component-roles
+
+  # Makes kube-worker user behave like a regular member of system:nodes group,
+  # needed when TLS bootstrapping is disabled
+  - path: /srv/kubernetes/rbac/cluster-role-bindings/node.yaml
+    content: |
+        kind: ClusterRoleBinding
+        apiVersion: rbac.authorization.k8s.io/v1beta1
+        metadata:
+          name: kube-aws:node
+        subjects:
+          - kind: User
+            name: kube-worker
+        roleRef:
+          kind: ClusterRole
+          name: system:node
+          apiGroup: rbac.authorization.k8s.io
+
+  # We need to give nodes a few extra permissions so that both the node
+  # draining and node labeling with AWS metadata work as expected
+  - path: /srv/kubernetes/rbac/cluster-roles/node-extensions.yaml
     content: |
         kind: ClusterRole
-        apiVersion: rbac.authorization.k8s.io/v1alpha1
+        apiVersion: rbac.authorization.k8s.io/v1beta1
         metadata:
-            name: cluster-admin
+            name: kube-aws:node-extensions
         rules:
-          - apiGroups: ["*"]
-            resources: ["*"]
-            verbs: ["*"]
+          - apiGroups: ["extensions"]
+            resources:
+            - daemonsets
+            verbs:
+            - get
+          - apiGroups: [""]
+            resources:
+            - nodes
+            verbs:
+            - patch
+            - update
+          - apiGroups: ["extensions"]
+            resources:
+            - replicasets
+            verbs:
+            - get
+          - apiGroups: ["batch"]
+            resources:
+            - jobs
+            verbs:
+            - get
+          - apiGroups: [""]
+            resources:
+            - replicationcontrollers
+            verbs:
+            - get
+          - apiGroups: [""]
+            resources:
+            - pods/eviction
+            verbs:
+            - create
           - nonResourceURLs: ["*"]
             verbs: ["*"]
 
+  # Grants super-user permissions to the kube-admin user
   - path: /srv/kubernetes/rbac/cluster-role-bindings/kube-admin.yaml
     content: |
         kind: ClusterRoleBinding
-        apiVersion: rbac.authorization.k8s.io/v1alpha1
+        apiVersion: rbac.authorization.k8s.io/v1beta1
         metadata:
-          name: kube-admin
+          name: kube-aws:admin
         subjects:
           - kind: User
             name: kube-admin
@@ -895,26 +1268,33 @@ write_files:
           name: cluster-admin
           apiGroup: rbac.authorization.k8s.io
 
-  - path: /srv/kubernetes/rbac/cluster-role-bindings/kube-worker.yaml
+  # Allows both `kube-worker` user and members of the `system:nodes` group
+  # to perform actions needed by the `kube-proxy` component. Once kube-proxy
+  # is migrated to DaemonSets, we could set up a ServiceAccount for it and
+  # associate this role to it instead.
+  - path: /srv/kubernetes/rbac/cluster-role-bindings/node-proxier.yaml
     content: |
         kind: ClusterRoleBinding
-        apiVersion: rbac.authorization.k8s.io/v1alpha1
+        apiVersion: rbac.authorization.k8s.io/v1beta1
         metadata:
-          name: kube-worker
+          name: kube-aws:node-proxier
         subjects:
           - kind: User
             name: kube-worker
+          - kind: Group
+            name: system:nodes
         roleRef:
           kind: ClusterRole
-          name: cluster-admin
+          name: system:node-proxier
           apiGroup: rbac.authorization.k8s.io
 
+  # Allows add-ons running with the default service account in kube-sytem to have super-user access
   - path: /srv/kubernetes/rbac/cluster-role-bindings/system-worker.yaml
     content: |
         kind: ClusterRoleBinding
-        apiVersion: rbac.authorization.k8s.io/v1alpha1
+        apiVersion: rbac.authorization.k8s.io/v1beta1
         metadata:
-          name: system-worker
+          name: kube-aws:system-worker
         subjects:
           - kind: ServiceAccount
             namespace: kube-system
@@ -923,6 +1303,79 @@ write_files:
           kind: ClusterRole
           name: cluster-admin
           apiGroup: rbac.authorization.k8s.io
+
+  # TODO: remove the following binding once the TLS Bootstrapping feature is enabled by default, see:
+  # https://github.com/kubernetes-incubator/kube-aws/pull/618#discussion_r115162048
+  # https://kubernetes.io/docs/admin/authorization/rbac/#core-component-roles
+
+  # Associates the add-on role `kube-aws:node-extensions` to all nodes, so that
+  # extra kube-aws features (like node draining) work as expected
+  - path: /srv/kubernetes/rbac/cluster-role-bindings/node-extensions.yaml
+    content: |
+        kind: ClusterRoleBinding
+        apiVersion: rbac.authorization.k8s.io/v1beta1
+        metadata:
+          name: kube-aws:node-extensions
+        subjects:
+          - kind: User
+            name: kube-worker
+          - kind: Group
+            name: system:nodes
+        roleRef:
+          kind: ClusterRole
+          name: kube-aws:node-extensions
+          apiGroup: rbac.authorization.k8s.io
+
+  # Allow heapster access to the built in cluster role via its service account
+  - path: /srv/kubernetes/rbac/cluster-role-bindings/heapster.yaml
+    content: |
+        kind: ClusterRoleBinding
+        apiVersion: rbac.authorization.k8s.io/v1beta1
+        metadata:
+          name: heapster
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: system:heapster
+        subjects:
+        - kind: ServiceAccount
+          name: heapster
+          namespace: kube-system
+
+{{ if .Experimental.TLSBootstrap.Enabled }}
+  # Only allows certificate signing requests to be performed with the bootstrap token
+  - path: /srv/kubernetes/rbac/cluster-roles/node-bootstrapper.yaml
+    content: |
+        kind: ClusterRole
+        apiVersion: rbac.authorization.k8s.io/v1beta1
+        metadata:
+          name: kube-aws:node-bootstrapper
+        rules:
+          - apiGroups:
+              - '*'
+            resources:
+              - certificatesigningrequests
+            verbs:
+            - create
+            - get
+            - list
+            - watch
+
+  - path: /srv/kubernetes/rbac/cluster-role-bindings/node-bootstrapper.yaml
+    content: |
+        kind: ClusterRoleBinding
+        apiVersion: rbac.authorization.k8s.io/v1beta1
+        metadata:
+          name: kube-aws:node-bootstrapper
+        subjects:
+          - kind: Group
+            namespace: '*'
+            name: system:kubelet-bootstrap
+        roleRef:
+          kind: ClusterRole
+          name: kube-aws:node-bootstrapper
+          apiGroup: rbac.authorization.k8s.io
+{{ end }}
 {{ end }}
 
   - path: /etc/kubernetes/manifests/kube-proxy.yaml
@@ -941,7 +1394,7 @@ write_files:
           hostNetwork: true
           containers:
           - name: kube-proxy
-            image: {{.HyperkubeImageRepo}}:{{.K8sVer}}
+            image: {{.HyperkubeImage.RepoWithTag}}
             command:
             - /hyperkube
             - proxy
@@ -976,10 +1429,11 @@ write_files:
         hostNetwork: true
         containers:
         - name: kube-apiserver
-          image: {{.HyperkubeImageRepo}}:{{.K8sVer}}
+          image: {{.HyperkubeImage.RepoWithTag}}
           command:
           - /hyperkube
           - apiserver
+          - --apiserver-count={{if .MinControllerCount}}{{ .MinControllerCount }}{{else}}{{ .ControllerCount }}{{end}}
           - --bind-address=0.0.0.0
           - --etcd-servers=#ETCD_ENDPOINTS#
           - --etcd-cafile=/etc/kubernetes/ssl/ca.pem
@@ -988,10 +1442,19 @@ write_files:
           - --allow-privileged=true
           - --service-cluster-ip-range={{.ServiceCIDR}}
           - --secure-port=443
+          {{if .Etcd.Version.Is3}}
+          - --storage-backend=etcd3
+          {{else}}
+          - --storage-backend=etcd2
+          {{end}}
           - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
+          {{if or (.AssetsConfig.HasAuthTokens) ( and .Experimental.TLSBootstrap.Enabled .AssetsConfig.HasTLSBootstrapToken)}}
+          - --token-auth-file=/etc/kubernetes/auth/tokens.csv
+          {{ end }}
           {{if .Experimental.AuditLog.Enabled}}
           - --audit-log-maxage={{.Experimental.AuditLog.MaxAge}}
           - --audit-log-path={{.Experimental.AuditLog.LogPath}}
+          - --audit-log-maxbackup=1
           {{ end }}
           {{if .Experimental.Plugins.Rbac.Enabled}}
           - --authorization-mode=RBAC
@@ -1004,11 +1467,25 @@ write_files:
           - --advertise-address=$private_ipv4
           - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass{{if .Experimental.Admission.PodSecurityPolicy.Enabled}},PodSecurityPolicy{{ end }},ResourceQuota
           - --anonymous-auth=false
+          {{if .Experimental.Dex.Enabled}}
+          - --oidc-issuer-url={{.Experimental.Dex.Url}}
+          - --oidc-client-id={{.Experimental.Dex.ClientId}}
+          {{if .Experimental.Dex.Username}}
+          - --oidc-username-claim={{.Experimental.Dex.Username}}
+          {{ end -}}
+          {{if .Experimental.Dex.Groups}}
+          - --oidc-groups-claim={{.Experimental.Dex.Groups}}
+          {{ end -}}
+          {{if .Experimental.Dex.SelfSignedCa}}
+          - --oidc-ca-file=/etc/kubernetes/ssl/ca.pem
+          {{ end -}}
+          {{ end -}}
+          - --cert-dir=/etc/kubernetes/ssl
           - --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem
           - --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
           - --client-ca-file=/etc/kubernetes/ssl/ca.pem
           - --service-account-key-file=/etc/kubernetes/ssl/apiserver-key.pem
-          - --runtime-config=extensions/v1beta1/networkpolicies=true,batch/v2alpha1{{if .Experimental.Plugins.Rbac.Enabled}},rbac.authorization.k8s.io/v1alpha1=true{{ end }}{{if .Experimental.Admission.PodSecurityPolicy.Enabled}},extensions/v1beta1/podsecuritypolicy=true{{ end }}
+          - --runtime-config=extensions/v1beta1/networkpolicies=true,batch/v2alpha1{{if .Experimental.Plugins.Rbac.Enabled}},rbac.authorization.k8s.io/v1beta1=true{{ end }}{{if .Experimental.Admission.PodSecurityPolicy.Enabled}},extensions/v1beta1/podsecuritypolicy=true{{ end }}
           - --cloud-provider=aws
           livenessProbe:
             httpGet:
@@ -1031,11 +1508,21 @@ write_files:
           - mountPath: /etc/ssl/certs
             name: ssl-certs-host
             readOnly: true
+          {{if or (.AssetsConfig.HasAuthTokens) ( and .Experimental.TLSBootstrap.Enabled .AssetsConfig.HasTLSBootstrapToken)}}
+          - mountPath: /etc/kubernetes/auth
+            name: auth-kubernetes
+            readOnly: true
+          {{end}}
           {{if .Experimental.Authentication.Webhook.Enabled}}
           - mountPath: /etc/kubernetes/webhooks
             name: kubernetes-webhooks
             readOnly: true
-          {{ end }}
+          {{end}}
+          {{if .Experimental.AuditLog.Enabled}}
+          - mountPath: /var/log
+            name: var-log
+            readOnly: false
+          {{end}}
         volumes:
         - hostPath:
             path: /etc/kubernetes/ssl
@@ -1043,10 +1530,20 @@ write_files:
         - hostPath:
             path: /usr/share/ca-certificates
           name: ssl-certs-host
+        {{if or (.AssetsConfig.HasAuthTokens) ( and .Experimental.TLSBootstrap.Enabled .AssetsConfig.HasTLSBootstrapToken)}}
+        - hostPath:
+            path: /etc/kubernetes/auth
+          name: auth-kubernetes
+        {{end}}
         {{if .Experimental.Authentication.Webhook.Enabled}}
         - hostPath:
             path: /etc/kubernetes/webhooks
           name: kubernetes-webhooks
+        {{end}}
+        {{if .Experimental.AuditLog.Enabled}}
+        - hostPath:
+            path: /var/log
+          name: var-log
         {{end}}
 
   - path: /etc/kubernetes/manifests/kube-controller-manager.yaml
@@ -1061,15 +1558,26 @@ write_files:
       spec:
         containers:
         - name: kube-controller-manager
-          image: {{.HyperkubeImageRepo}}:{{.K8sVer}}
+          image: {{.HyperkubeImage.RepoWithTag}}
           command:
           - /hyperkube
           - controller-manager
           - --master=http://127.0.0.1:8080
           - --leader-elect=true
           - --service-account-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem
+          {{ if .Experimental.TLSBootstrap.Enabled }}
+          - --insecure-experimental-approve-all-kubelet-csrs-for-group=system:kubelet-bootstrap
+          - --cluster-signing-cert-file=/etc/kubernetes/ssl/ca.pem
+          - --cluster-signing-key-file=/etc/kubernetes/ssl/ca-key.pem
+          {{ end }}
           - --root-ca-file=/etc/kubernetes/ssl/ca.pem
           - --cloud-provider=aws
+          {{if .Experimental.NodeMonitorGracePeriod}}
+          - --node-monitor-grace-period={{ .Experimental.NodeMonitorGracePeriod }}
+          {{end}}
+          {{if .Experimental.DisableSecurityGroupIngress}}
+          - --cloud-config=/etc/kubernetes/additional-configs/cloud.config
+          {{end}}
           resources:
             requests:
               cpu: 200m
@@ -1081,6 +1589,11 @@ write_files:
             initialDelaySeconds: 15
             timeoutSeconds: 15
           volumeMounts:
+          {{if .Experimental.DisableSecurityGroupIngress}}
+          - mountPath: /etc/kubernetes/additional-configs
+            name: additional-configs
+            readOnly: true
+          {{end}}
           - mountPath: /etc/kubernetes/ssl
             name: ssl-certs-kubernetes
             readOnly: true
@@ -1089,6 +1602,11 @@ write_files:
             readOnly: true
         hostNetwork: true
         volumes:
+        {{if .Experimental.DisableSecurityGroupIngress}}
+        - hostPath:
+            path: /etc/kubernetes/additional-configs
+          name: additional-configs
+        {{end}}
         - hostPath:
             path: /etc/kubernetes/ssl
           name: ssl-certs-kubernetes
@@ -1109,7 +1627,7 @@ write_files:
         hostNetwork: true
         containers:
         - name: kube-scheduler
-          image: {{.HyperkubeImageRepo}}:{{.K8sVer}}
+          image: {{.HyperkubeImage.RepoWithTag}}
           command:
           - /hyperkube
           - scheduler
@@ -1126,6 +1644,57 @@ write_files:
             initialDelaySeconds: 15
             timeoutSeconds: 15
 
+  {{- if .Addons.Rescheduler.Enabled }}
+  - path: /srv/kubernetes/manifests/kube-rescheduler-de.yaml
+    content: |
+      apiVersion: extensions/v1beta1
+      kind: Deployment
+      metadata:
+        name: kube-rescheduler
+        namespace: kube-system
+        labels:
+          k8s-app: kube-rescheduler
+          kubernetes.io/cluster-service: "true"
+          kubernetes.io/name: "Rescheduler"
+      spec:
+        # `replicas` should always be the default of 1, rescheduler crashes otherwise
+        template:
+          metadata:
+            labels:
+              k8s-app: kube-rescheduler
+            annotations:
+              scheduler.alpha.kubernetes.io/critical-pod: ''
+          spec:
+            tolerations:
+            - key: "CriticalAddonsOnly"
+              operator: "Exists"
+            hostNetwork: true
+            containers:
+            - name: kube-rescheduler
+              image: {{ .KubeReschedulerImage.RepoWithTag }}
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 100Mi
+  {{- end }}
+
+  - path: /srv/kubernetes/manifests/kube-dns-sa.yaml
+    content: |
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: kube-dns
+          namespace: kube-system
+          labels:
+            kubernetes.io/cluster-service: "true"
+
+  - path: /srv/kubernetes/manifests/kube-dns-cm.yaml
+    content: |
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: kube-dns
+          namespace: kube-system
 
   - path: /srv/kubernetes/manifests/kube-dns-autoscaler-de.yaml
     content: |
@@ -1144,11 +1713,13 @@ write_files:
                 k8s-app: kube-dns-autoscaler
               annotations:
                 scheduler.alpha.kubernetes.io/critical-pod: ''
-                scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
             spec:
+              tolerations:
+              - key: "CriticalAddonsOnly"
+                operator: "Exists"
               containers:
               - name: autoscaler
-                image: gcr.io/google_containers/cluster-proportional-autoscaler-amd64:1.0.0
+                image: {{ .ClusterProportionalAutoscalerImage.RepoWithTag }}
                 resources:
                     requests:
                         cpu: "20m"
@@ -1157,7 +1728,6 @@ write_files:
                   - /cluster-proportional-autoscaler
                   - --namespace=kube-system
                   - --configmap=kube-dns-autoscaler
-                  - --mode=linear
                   - --target=Deployment/kube-dns
                   - --default-params={"linear":{"coresPerReplica":256,"nodesPerReplica":16,"min":2}}
                   - --logtostderr=true
@@ -1191,11 +1761,18 @@ write_files:
                 k8s-app: kube-dns
               annotations:
                 scheduler.alpha.kubernetes.io/critical-pod: ''
-                scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
             spec:
+              volumes:
+              - name: kube-dns-config
+                configMap:
+                  name: kube-dns
+                  optional: true
+              tolerations:
+              - key: "CriticalAddonsOnly"
+                operator: "Exists"
               containers:
               - name: kubedns
-                image: gcr.io/google_containers/kubedns-amd64:1.9
+                image: {{ .KubeDnsImage.RepoWithTag }}
                 resources:
                   limits:
                     memory: 170Mi
@@ -1204,8 +1781,8 @@ write_files:
                     memory: 70Mi
                 livenessProbe:
                   httpGet:
-                    path: /healthz-kubedns
-                    port: 8080
+                    path: /healthcheck/kubedns
+                    port: 10054
                     scheme: HTTP
                   initialDelaySeconds: 60
                   timeoutSeconds: 5
@@ -1221,7 +1798,7 @@ write_files:
                 args:
                 - --domain=cluster.local.
                 - --dns-port=10053
-                - --config-map=kube-dns
+                - --config-dir=/kube-dns-config
                 # This should be set to v=2 only after the new image (cut from 1.5) has
                 # been released, otherwise we will flood the logs.
                 - --v=2
@@ -1238,22 +1815,32 @@ write_files:
                 - containerPort: 10055
                   name: metrics
                   protocol: TCP
+                volumeMounts:
+                - name: kube-dns-config
+                  mountPath: /kube-dns-config
               - name: dnsmasq
-                image: gcr.io/google_containers/kube-dnsmasq-amd64:1.4
+                image: {{ .KubeDnsMasqImage.RepoWithTag }}
                 livenessProbe:
                   httpGet:
-                    path: /healthz-dnsmasq
-                    port: 8080
+                    path: /healthcheck/dnsmasq
+                    port: 10054
                     scheme: HTTP
                   initialDelaySeconds: 60
                   timeoutSeconds: 5
                   successThreshold: 1
                   failureThreshold: 5
                 args:
+                - -v=2
+                - -logtostderr
+                - -configDir=/etc/k8s/dns/dnsmasq-nanny
+                - -restartDnsmasq=true
+                - --
+                - -k
                 - --cache-size=1000
-                - --no-resolv
-                - --server=127.0.0.1#10053
                 - --log-facility=-
+                - --server=/cluster.local/127.0.0.1#10053
+                - --server=/in-addr.arpa/127.0.0.1#10053
+                - --server=/ip6.arpa/127.0.0.1#10053
                 ports:
                 - containerPort: 53
                   name: dns
@@ -1265,9 +1852,12 @@ write_files:
                 resources:
                   requests:
                     cpu: 150m
-                    memory: 10Mi
-              - name: dnsmasq-metrics
-                image: gcr.io/google_containers/dnsmasq-metrics-amd64:1.0
+                    memory: 20Mi
+                volumeMounts:
+                - name: kube-dns-config
+                  mountPath: /etc/k8s/dns/dnsmasq-nanny
+              - name: sidecar
+                image: {{ .DnsMasqMetricsImage.RepoWithTag }}
                 livenessProbe:
                   httpGet:
                     path: /metrics
@@ -1280,32 +1870,18 @@ write_files:
                 args:
                 - --v=2
                 - --logtostderr
+                - --probe=kubedns,127.0.0.1:10053,kubernetes.default.svc.cluster.local,5,A
+                - --probe=dnsmasq,127.0.0.1:53,kubernetes.default.svc.cluster.local,5,A
                 ports:
                 - containerPort: 10054
                   name: metrics
                   protocol: TCP
                 resources:
                   requests:
-                    memory: 10Mi
-              - name: healthz
-                image: gcr.io/google_containers/exechealthz-amd64:1.2
-                resources:
-                  limits:
-                    memory: 50Mi
-                  requests:
+                    memory: 20Mi
                     cpu: 10m
-                    memory: 50Mi
-                args:
-                - --cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1 >/dev/null
-                - --url=/healthz-dnsmasq
-                - --cmd=nslookup kubernetes.default.svc.cluster.local 127.0.0.1:10053 >/dev/null
-                - --url=/healthz-kubedns
-                - --port=8080
-                - --quiet
-                ports:
-                - containerPort: 8080
-                  protocol: TCP
               dnsPolicy: Default
+              serviceAccountName: kube-dns
 
   - path: /srv/kubernetes/manifests/kube-dns-svc.yaml
     content: |
@@ -1330,34 +1906,47 @@ write_files:
             port: 53
             protocol: TCP
 
+  - path: /srv/kubernetes/manifests/heapster-sa.yaml
+    content: |
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: heapster
+          namespace: kube-system
+          labels:
+            kubernetes.io/cluster-service: "true"
+
   - path: /srv/kubernetes/manifests/heapster-de.yaml
     content: |
         apiVersion: extensions/v1beta1
         kind: Deployment
         metadata:
-          name: heapster-v1.2.0
+          name: heapster-v1.3.0
           namespace: kube-system
           labels:
             k8s-app: heapster
             kubernetes.io/cluster-service: "true"
-            version: v1.2.0
+            version: v1.3.0
         spec:
           replicas: 1
           selector:
             matchLabels:
               k8s-app: heapster
-              version: v1.2.0
+              version: v1.3.0
           template:
             metadata:
               labels:
                 k8s-app: heapster
-                version: v1.2.0
+                version: v1.3.0
               annotations:
                 scheduler.alpha.kubernetes.io/critical-pod: ''
-                scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
             spec:
+              tolerations:
+              - key: "CriticalAddonsOnly"
+                operator: "Exists"
+              serviceAccountName: heapster
               containers:
-                - image: gcr.io/google_containers/heapster:v1.2.0
+                - image: {{ .HeapsterImage.RepoWithTag }}
                   name: heapster
                   livenessProbe:
                     httpGet:
@@ -1376,7 +1965,7 @@ write_files:
                   command:
                     - /heapster
                     - --source=kubernetes.summary_api:''
-                - image: gcr.io/google_containers/addon-resizer:1.6
+                - image: {{ .AddonResizerImage.RepoWithTag }}
                   name: heapster-nanny
                   resources:
                     limits:
@@ -1401,10 +1990,72 @@ write_files:
                     - --memory=200Mi
                     - --extra-memory=4Mi
                     - --threshold=5
-                    - --deployment=heapster-v1.2.0
+                    - --deployment=heapster-v1.3.0
                     - --container=heapster
                     - --poll-period=300000
                     - --estimator=exponential
+
+  {{if .Addons.ClusterAutoscaler.Enabled}}
+  - path: /srv/kubernetes/manifests/cluster-autoscaler-de.yaml
+    content: |
+        apiVersion: extensions/v1beta1
+        kind: Deployment
+        metadata:
+          name: cluster-autoscaler
+          namespace: kube-system
+          labels:
+            app: cluster-autoscaler
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: cluster-autoscaler
+          template:
+            metadata:
+              labels:
+                app: cluster-autoscaler
+              annotations:
+                scheduler.alpha.kubernetes.io/critical-pod: ''
+            spec:
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                    - matchExpressions:
+                      - key: "kube-aws.coreos.com/cluster-autoscaler-supported"
+                        operator: "In"
+                        values:
+                        - "true"
+              tolerations:
+              - key: "node.alpha.kubernetes.io/role"
+                operator: "Equal"
+                value: "master"
+                effect: "NoSchedule"
+              - key: "CriticalAddonsOnly"
+                operator: "Exists"
+              containers:
+                - image: {{ .ClusterAutoscalerImage.RepoWithTag }}
+                  name: cluster-autoscaler
+                  resources:
+                    limits:
+                      cpu: 100m
+                      memory: 300Mi
+                    requests:
+                      cpu: 100m
+                      memory: 300Mi
+                  command:
+                    - ./cluster-autoscaler
+                    - --v=4
+                    - --stderrthreshold=info
+                    - --cloud-provider=aws
+                    - --skip-nodes-with-local-storage=false
+                    - --expander=least-waste
+                    - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled
+                  env:
+                    - name: AWS_REGION
+                      value: {{.Region}}
+                  imagePullPolicy: "Always"
+  {{end}}
 
   - path: /srv/kubernetes/manifests/heapster-svc.yaml
     content: |
@@ -1424,34 +2075,37 @@ write_files:
           selector:
             k8s-app: heapster
 
-  - path: /srv/kubernetes/manifests/kube-dashboard-rc.yaml
+  - path: /srv/kubernetes/manifests/kube-dashboard-de.yaml
     content: |
-        apiVersion: v1
-        kind: ReplicationController
+        apiVersion: extensions/v1beta1
+        kind: Deployment
         metadata:
-          name: kubernetes-dashboard-v1.5.1
+          name: kubernetes-dashboard
           namespace: kube-system
           labels:
             k8s-app: kubernetes-dashboard
-            version: v1.5.1
+            version: {{ .KubeDashboardImage.Tag }}
             kubernetes.io/cluster-service: "true"
         spec:
           replicas: 1
           selector:
-            k8s-app: kubernetes-dashboard
+            matchLabels:
+              k8s-app: kubernetes-dashboard
           template:
             metadata:
               labels:
                 k8s-app: kubernetes-dashboard
-                version: v1.5.1
+                version: {{ .KubeDashboardImage.Tag }}
                 kubernetes.io/cluster-service: "true"
               annotations:
                 scheduler.alpha.kubernetes.io/critical-pod: ''
-                scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
             spec:
+              tolerations:
+              - key: "CriticalAddonsOnly"
+                operator: "Exists"
               containers:
               - name: kubernetes-dashboard
-                image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.5.1
+                image: {{ .KubeDashboardImage.RepoWithTag }}
                 resources:
                   limits:
                     cpu: 100m
@@ -1485,28 +2139,72 @@ write_files:
           - port: 80
             targetPort: 9090
 
-{{ if .ManageCertificates }}
-  - path: /etc/kubernetes/ssl/ca.pem.enc
+{{ if .AssetsConfig.HasTLSBootstrapToken }}
+  - path: /etc/kubernetes/auth/kubelet-tls-bootstrap-token.tmp{{if .AssetsEncryptionEnabled}}.enc{{end}}
     encoding: gzip+base64
-    content: {{.TLSConfig.CACert}}
-
-  - path: /etc/kubernetes/ssl/apiserver.pem.enc
-    encoding: gzip+base64
-    content: {{.TLSConfig.APIServerCert}}
-
-  - path: /etc/kubernetes/ssl/apiserver-key.pem.enc
-    encoding: gzip+base64
-    content: {{.TLSConfig.APIServerKey}}
-
-  - path: /etc/kubernetes/ssl/etcd-client.pem.enc
-    encoding: gzip+base64
-    content: {{.TLSConfig.EtcdClientCert}}
-
-  - path: /etc/kubernetes/ssl/etcd-client-key.pem.enc
-    encoding: gzip+base64
-    content: {{.TLSConfig.EtcdClientKey}}
+    content: {{.AssetsConfig.TLSBootstrapToken}}
 {{ end }}
 
+{{ if .AssetsConfig.HasAuthTokens }}
+  - path: /etc/kubernetes/auth/tokens.csv.tmp{{if .AssetsEncryptionEnabled}}.enc{{end}}
+    encoding: gzip+base64
+    content: {{.AssetsConfig.AuthTokens}}
+{{ end }}
+
+{{ if .ManageCertificates }}
+  - path: /etc/kubernetes/ssl/ca.pem{{if .AssetsEncryptionEnabled}}.enc{{end}}
+    encoding: gzip+base64
+    content: {{.AssetsConfig.CACert}}
+
+{{ if .Experimental.TLSBootstrap.Enabled }}
+  - path: /etc/kubernetes/ssl/ca-key.pem.enc
+    encoding: gzip+base64
+    content: {{.AssetsConfig.CAKey}}
+{{ end }}
+
+  - path: /etc/kubernetes/ssl/apiserver.pem{{if .AssetsEncryptionEnabled}}.enc{{end}}
+    encoding: gzip+base64
+    content: {{.AssetsConfig.APIServerCert}}
+
+  - path: /etc/kubernetes/ssl/apiserver-key.pem{{if .AssetsEncryptionEnabled}}.enc{{end}}
+    encoding: gzip+base64
+    content: {{.AssetsConfig.APIServerKey}}
+
+  - path: /etc/kubernetes/ssl/etcd-client.pem{{if .AssetsEncryptionEnabled}}.enc{{end}}
+    encoding: gzip+base64
+    content: {{.AssetsConfig.EtcdClientCert}}
+
+  - path: /etc/kubernetes/ssl/etcd-client-key.pem{{if .AssetsEncryptionEnabled}}.enc{{end}}
+    encoding: gzip+base64
+    content: {{.AssetsConfig.EtcdClientKey}}
+
+{{ if .Experimental.Dex.Enabled }}
+  - path: /etc/kubernetes/ssl/dex.pem{{if .AssetsEncryptionEnabled}}.enc{{end}}
+    encoding: gzip+base64
+    content: {{.AssetsConfig.DexCert}}
+
+  - path: /etc/kubernetes/ssl/dex-key.pem{{if .AssetsEncryptionEnabled}}.enc{{end}}
+    encoding: gzip+base64
+    content: {{.AssetsConfig.DexKey}}
+{{ end }}
+{{ end }}
+
+  - path: /etc/kubernetes/controller-kubeconfig.yaml
+    content: |
+        apiVersion: v1
+        kind: Config
+        clusters:
+        - name: local
+          cluster:
+            server: http://localhost:8080
+        users:
+        - name: kubelet
+        contexts:
+        - context:
+            cluster: local
+            user: kubelet
+          name: kubelet-context
+        current-context: kubelet-context
 
 {{ if not .UseCalico }}
   - path: /etc/kubernetes/cni/net.d/10-flannel.conf
@@ -1518,10 +2216,162 @@ write_files:
                 "isDefaultGateway": true
             }
         }
+
+{{ else }}
+
+  - path: /etc/kubernetes/cni/net.d/10-calico.conf
+    content: |
+      {
+        "name": "calico",
+        "type": "flannel",
+        "delegate": {
+          "type": "calico",
+          "etcd_endpoints": "#ETCD_ENDPOINTS#",
+          "etcd_key_file": "/etc/kubernetes/ssl/etcd-client-key.pem",
+          "etcd_cert_file": "/etc/kubernetes/ssl/etcd-client.pem",
+          "etcd_ca_cert_file": "/etc/kubernetes/ssl/ca.pem",
+          "log_level": "info",
+          "policy": {
+            "type": "k8s",
+            "k8s_api_root": "http://127.0.0.1:8080/api/v1/"
+          }
+        }
+      }
+
 {{ end }}
 
 {{if .Experimental.Authentication.Webhook.Enabled}}
   - path: /etc/kubernetes/webhooks/authentication.yaml
     encoding: base64
     content: {{ .Experimental.Authentication.Webhook.Config }}
+{{ end }}
+
+{{ if .SharedPersistentVolume }}
+  - path: /opt/bin/load-efs-pv
+    owner: root:root
+    permissions: 0700
+    content: |
+      #!/bin/bash -e
+
+      docker run --rm --net=host \
+        -v /etc/kubernetes:/etc/kubernetes \
+        -v /etc/resolv.conf:/etc/resolv.conf \
+        {{ .HyperkubeImage.RepoWithTag }} /bin/bash \
+          -vxec \
+          'echo "Starting Loading EFS Persistent Volume"
+           /kubectl create -f /etc/kubernetes/efs-pv.yaml
+           echo "Finished Loading EFS Persistent Volume"'
+
+{{ end }}
+{{if .Experimental.Dex.Enabled}}
+  - path: /srv/kubernetes/manifests/dex-deployment.yaml
+    content: |
+      apiVersion: extensions/v1beta1
+      kind: Deployment
+      metadata:
+        name: dex
+        namespace: kube-system
+        labels:
+          app: dex
+          component: identity
+        annotations:
+          scheduler.alpha.kubernetes.io/critical-pod: ''
+      spec:
+        replicas: 1
+        minReadySeconds: 30
+        strategy:
+          rollingUpdate:
+            maxUnavailable: 0
+        template:
+          metadata:
+            name: dex
+            labels:
+              app: dex
+              component: identity
+          spec:
+            volumes:
+            - name: config
+              configMap:
+                name: dex
+                items:
+                - key: config.yaml
+                  path: config.yaml
+            containers:
+            - name: dex
+              imagePullPolicy: IfNotPresent
+              image: {{.DexImage.RepoWithTag}}
+              command: ["/usr/local/bin/dex", "serve", "/etc/dex/config.yaml"]
+              volumeMounts:
+              - name: config
+                mountPath: /etc/dex
+              ports:
+              - containerPort: 5556
+                protocol: TCP
+              livenessProbe:
+                httpGet:
+                  path: /healthz
+                  port: 5556
+                initialDelaySeconds: 5
+                timeoutSeconds: 1
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 50Mi
+                limits:
+                  cpu: 100m
+                  memory: 50Mi
+
+  - path: /srv/kubernetes/manifests/dex-cm.yaml
+    content: |
+      kind: ConfigMap
+      apiVersion: v1
+      metadata:
+        name: dex
+        namespace: kube-system
+      data:
+        config.yaml: |
+          issuer: {{.Experimental.Dex.Url}}
+          storage:
+            type: kubernetes
+            config:
+              inCluster: true
+          web:
+            http: 0.0.0.0:5556
+          frontend:
+            theme: 'coreos'
+            issuer: 'KubeAWS Identity'
+          {{ if .Experimental.Dex.Connectors -}}
+          connectors:
+            {{- range $connector := .Experimental.Dex.Connectors }}
+            - type: {{ $connector.Type }}
+              id: {{ $connector.Id }}
+              name: {{ $connector.Name }}
+              config:
+                {{ range $key, $value := $connector.Config -}}
+                {{ $key }}: {{ $value }}
+                {{ end -}}
+            {{ end -}}
+          {{- end }}
+          oauth2:
+            skipApprovalScreen: true
+          staticClients:
+          {{- range $staticClient := .Experimental.Dex.StaticClients }}
+          - id: '{{ $staticClient.Id }}'
+            redirectURIs:
+            - '{{ $staticClient.RedirectURIs }}'
+            name: '{{ $staticClient.Name }}'
+            secret: '{{ $staticClient.Secret }}'
+          {{- end }}
+          {{if .Experimental.Dex.StaticPasswords -}}
+          enablePasswordDB: true
+          {{ end -}}
+          {{- range $staticPassword := .Experimental.Dex.StaticPasswords }}
+          staticPasswords:
+          - email: "{{ $staticPassword.Email }}"
+            hash: "{{ $staticPassword.Hash }}"
+            username: "{{ $staticPassword.Username }}"
+            userID: "{{ $staticPassword.UserId }}"
+         {{ end -}}
+  {{ end }}
+
 {{ end }}

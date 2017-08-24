@@ -1,21 +1,3 @@
-{{define "UserData"}}
-{ "Fn::Base64": { "Fn::Join" : ["\n", [
-  "#!/bin/bash",
-  "# userdata hash: {{ .UserDataWorker | sha1 }}",
-  {"Fn::Join":["",[ "echo '{{.StackNameEnvVarName}}=", { "Ref": "AWS::StackName" }, "' >> {{.StackNameEnvFileName}}" ]]},
-  " . /etc/environment",
-  "export COREOS_PRIVATE_IPV4 COREOS_PRIVATE_IPV6 COREOS_PUBLIC_IPV4 COREOS_PUBLIC_IPV6",
-  "REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')",
-  "USERDATA_FILE=userdata-worker",
-  "/usr/bin/rkt run \\",
-  "   --net=host \\",
-  "   --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true --mount volume=dns,target=/etc/resolv.conf  \\",
-  "   --volume=awsenv,kind=host,source=/var/run/coreos,readOnly=false --mount volume=awsenv,target=/var/run/coreos \\",
-  "   --trust-keys-from-https \\",
-  "   {{.AWSCliImageRepo}}:{{.AWSCliTag}} -- aws s3 --region $REGION  cp {{ .S3URI }}/{{ .StackName }}/$USERDATA_FILE /var/run/coreos/",
-  "exec /usr/bin/coreos-cloudinit --from-file /var/run/coreos/$USERDATA_FILE"
-]]}}
-{{end}}
 {{define "Metadata"}}
 {
   "AWS::CloudFormation::Init" : {
@@ -43,9 +25,10 @@
         "/var/run/coreos/etcd-environment": {
           "content": { "Fn::Join" : [ "", [
             "ETCD_ENDPOINTS='",
-            {{range $index, $_ := $.EtcdInstances}}
+            {{range $index, $instance := $.EtcdNodes}}
             {{if $index}}",", {{end}} "https://",
-              { "Fn::ImportValue" : "{{$.ClusterName}}-InstanceEtcd{{$index}}PrivateDnsName" }, ":2379",
+            {{$instance.ImportedAdvertisedFQDNRef}},
+            ":2379",
             {{end}}
             "'\n"
           ]]}
@@ -70,24 +53,46 @@
           {{if or (gt $subnetIndex 0) (gt $specIndex 0) }},{{end}}
           {
             "ImageId": "{{$.AMI}}",
+            "Monitoring": { "Enabled": "true" },
             "InstanceType": "{{$spec.InstanceType}}",
             {{if $.KeyName}}"KeyName": "{{$.KeyName}}",{{end}}
             "WeightedCapacity": {{$spec.WeightedCapacity}},
             {{if $spec.SpotPrice}}
             "SpotPrice": "{{$spec.SpotPrice}}",
             {{end}}
-            "IamInstanceProfile": "upp-k8s-iam-instance-profile-roles-worker-role",
+            {{if $.IAMConfig.InstanceProfile.Arn }}
+            "IamInstanceProfile": {
+              "Arn": "{{$.IAMConfig.InstanceProfile.Arn}}" 
+            },
+            {{else}}
+            "IamInstanceProfile": {
+              "Arn": {
+                "Fn::GetAtt" : ["IAMInstanceProfileWorker", "Arn"]
+              }
+            },
+            {{end}}
             "BlockDeviceMappings": [
               {
                 "DeviceName": "/dev/xvda",
                 "Ebs": {
-                  "VolumeSize": "{{$spec.RootVolumeSize}}",
-                  {{if gt $spec.RootVolumeIOPS 0}}
-                  "Iops": "{{$spec.RootVolumeIOPS}}",
+                  "VolumeSize": "{{$spec.RootVolume.Size}}",
+                  {{if gt $spec.RootVolume.IOPS 0}}
+                  "Iops": "{{$spec.RootVolume.IOPS}}",
                   {{end}}
-                  "VolumeType": "{{$spec.RootVolumeType}}"
+                  "VolumeType": "{{$spec.RootVolume.Type}}"
+                }
+              }{{range $volumeMountSpecIndex, $volumeMountSpec := $.VolumeMounts}},
+              {
+                "DeviceName": "{{$volumeMountSpec.Device}}",
+                "Ebs": {
+                  "VolumeSize": "{{$volumeMountSpec.Size}}",
+                  {{if gt $volumeMountSpec.Iops 0}}
+                  "Iops": "{{$volumeMountSpec.Iops}}",
+                  {{end}}
+                  "VolumeType": "{{$volumeMountSpec.Type}}"
                 }
               }
+              {{- end -}}
             ],
             "SecurityGroups": [
               {{range $sgIndex, $sgRef := $.SecurityGroupRefs}}
@@ -96,7 +101,7 @@
               {{end}}
             ],
             "SubnetId": {{$workerSubnet.Ref}},
-            "UserData": {{template "UserData" $}}
+            "UserData": {{ $.UserDataWorker.Parts.instance.Template }}
           }
           {{end}}
           {{end}}
@@ -122,10 +127,17 @@
         ],
         "MinSize": "{{.MinCount}}",
         "Tags": [
+          {{if .Autoscaling.ClusterAutoscaler.Enabled}}
           {
-            "Key": "KubernetesCluster",
+            "Key": "{{.Autoscaling.ClusterAutoscaler.AutoDiscoveryTagKey}}",
+            "PropagateAtLaunch": "false",
+            "Value": ""
+          },
+          {{end}}
+          {
+            "Key": "kubernetes.io/cluster/{{ .ClusterName }}",
             "PropagateAtLaunch": "true",
-            "Value": "{{.ClusterName}}"
+            "Value": "true"
           },
           {
             "Key": "kube-aws:node-pool:name",
@@ -190,24 +202,52 @@
       },
       "Metadata": {{template "Metadata" .}}
     },
-
+    {{if .NodeDrainer.Enabled }}
+    "{{.LogicalName}}NodeDrainerLH" : {
+      "Properties" : {
+        "AutoScalingGroupName" : {
+          "Ref": "{{.LogicalName}}"
+        },
+        "DefaultResult" : "CONTINUE",
+        "HeartbeatTimeout" : "{{.NodeDrainer.DrainTimeoutInSeconds}}",
+        "LifecycleTransition" : "autoscaling:EC2_INSTANCE_TERMINATING",
+        "NotificationTargetARN" : { "Ref": "NotificationTargetARN" },
+        "RoleARN" : { "Ref": "NotificationRoleARN" }
+      },
+      "Type" : "AWS::AutoScaling::LifecycleHook"
+    },
+    {{end}}
     "{{.LogicalName}}LC": {
       "Properties": {
         "BlockDeviceMappings": [
           {
             "DeviceName": "/dev/xvda",
             "Ebs": {
-              "VolumeSize": "{{.RootVolumeSize}}",
-              {{if gt .RootVolumeIOPS 0}}
-              "Iops": "{{.RootVolumeIOPS}}",
+              "VolumeSize": "{{.RootVolume.Size}}",
+              {{if gt .RootVolume.IOPS 0}}
+              "Iops": "{{.RootVolume.IOPS}}",
               {{end}}
-              "VolumeType": "{{.RootVolumeType}}"
+              "VolumeType": "{{.RootVolume.Type}}"
+            }
+          }{{range $volumeMountSpecIndex, $volumeMountSpec := .VolumeMounts}},
+          {
+            "DeviceName": "{{$volumeMountSpec.Device}}",
+            "Ebs": {
+              "VolumeSize": "{{$volumeMountSpec.Size}}",
+              {{if gt $volumeMountSpec.Iops 0}}
+              "Iops": "{{$volumeMountSpec.Iops}}",
+              {{end}}
+              "VolumeType": "{{$volumeMountSpec.Type}}"
             }
           }
+          {{- end -}}
         ],
-        "IamInstanceProfile": "upp-k8s-iam-instance-profile-roles-worker-role",
+         {{if .IAMConfig.InstanceProfile.Arn }}
+        "IamInstanceProfile": "{{.IAMConfig.InstanceProfile.Arn}}",
+        {{else}}
+        "IamInstanceProfile": { "Ref": "IAMInstanceProfileWorker" },
+        {{end}}
         "ImageId": "{{.AMI}}",
-        "AssociatePublicIpAddress": "true",
         "InstanceType": "{{.InstanceType}}",
         {{if .KeyName}}"KeyName": "{{.KeyName}}",{{end}}
         "SecurityGroups": [
@@ -221,9 +261,222 @@
         {{else}}
         "PlacementTenancy": "{{.Tenancy}}",
         {{end}}
-        "UserData": {{template "UserData" $}}
+        "UserData": {{ .UserDataWorker.Parts.instance.Template }}
       },
       "Type": "AWS::AutoScaling::LaunchConfiguration"
+    {{if not .IAMConfig.InstanceProfile.Arn}}
+    },
+    {{else}}
+    }
+    {{end}}
+{{end}}
+{{define "IAMRole"}}
+    "IAMInstanceProfileWorker": {
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "IAMRoleWorker"
+          }
+        ]
+      },
+      "Type": "AWS::IAM::InstanceProfile"
+    },
+    "IAMManagedPolicyWorker" : {
+      "Type" : "AWS::IAM::ManagedPolicy",
+      "Properties" : {
+        "Description" : "Policy for managing kube-aws k8s Node Pool {{.NodePoolName}} ",
+        "Path" : "/",
+        "PolicyDocument" :   {
+          "Version":"2012-10-17",
+          "Statement": [
+                {
+                  "Action": "ec2:Describe*",
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {
+                  "Action": "ec2:AttachVolume",
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {
+                  "Action": "ec2:DetachVolume",
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {{- if $.UserDataWorker.Parts.s3 }}
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject"
+                  ],
+                  "Resource": "arn:{{.Region.Partition}}:s3:::{{ $.UserDataWorker.Parts.s3.Asset.S3Prefix }}*"
+                },
+                {{- end }}
+                {{if .CloudWatchLogging.Enabled}}
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": [
+                    { "Ref": "CloudWatchLogGroupARN" },
+                    { "Fn::Join" : [ "", [{ "Ref": "CloudWatchLogGroupARN" }, ":log-stream:*"]] }
+                  ]
+                },
+                {{ end }}
+                {{ if .KubeResourcesAutosave.Enabled }}
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:PutObject"
+                  ],
+                  "Resource": "arn:{{.Region.Partition}}:s3:::{{ .KubeResourcesAutosave.S3Path }}/*"
+                },
+                {{end}}
+                {{if .Kube2IamSupport.Enabled }}
+                {
+                  "Action": "sts:AssumeRole",
+                  "Effect":"Allow",
+                  "Resource":"*"
+                },
+                {{end}}
+                {{if .AssetsEncryptionEnabled }}
+                {
+                  "Action" : "kms:Decrypt",
+                  "Effect" : "Allow",
+                  "Resource" : "{{.KMSKeyARN}}"
+                },
+                {{end}}
+                {{if .WaitSignal.Enabled}}
+                {
+                  "Action": "cloudformation:SignalResource",
+                  "Effect": "Allow",
+                  "Resource":
+                    { "Fn::Join": [ "", [
+                      "arn:{{.Region.Partition}}:cloudformation:",
+                      { "Ref": "AWS::Region" },
+                      ":",
+                      { "Ref": "AWS::AccountId" },
+                      ":stack/",
+                      { "Ref": "AWS::StackName" },
+                      "/*" ]
+                    ] }
+                },
+                {{end}}
+                {{if .AwsNodeLabels.Enabled}}
+                {
+                  "Action": "autoscaling:Describe*",
+                  "Effect": "Allow",
+                  "Resource": [ "*" ]
+                },
+                {{end}}
+                {{if .Addons.ClusterAutoscaler.Enabled}}
+                {
+                  "Action": [
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:DescribeAutoScalingInstances",
+                    "autoscaling:DescribeTags",
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {
+                  "Action": [
+                    "autoscaling:SetDesiredCapacity",
+                    "autoscaling:TerminateInstanceInAutoScalingGroup"
+                  ],
+                  "Condition": {
+                    "Null": { "autoscaling:ResourceTag/kubernetes.io/cluster/{{.ClusterName}}": "false" }
+                  },
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {{end}}
+                {{if .SpotFleet.Enabled}}
+                {
+                  "Action": "ec2:CreateTags",
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {{end}}
+                {{if or .LoadBalancer.Enabled  .TargetGroup.Enabled}}
+                {
+                  "Action": "elasticloadbalancing:*",
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {{end}}
+                {{if .NodeDrainer.Enabled }}
+                {
+                  "Action": [
+                    "autoscaling:DescribeAutoScalingInstances",
+                    "autoscaling:DescribeLifecycleHooks"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {
+                  "Action": [
+                    "autoscaling:CompleteLifecycleAction"
+                  ],
+                  "Effect": "Allow",
+                  "Condition": {
+                    "Null": { "autoscaling:ResourceTag/kubernetes.io/cluster/{{.ClusterName}}": "false" }
+                  },
+                  "Resource": "*"
+                },
+                {{end}}
+                {
+                  "Action": [
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchCheckLayerAvailability",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:GetRepositoryPolicy",
+                    "ecr:DescribeRepositories",
+                    "ecr:ListImages",
+                    "ecr:BatchGetImage"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                }
+            ]
+        }
+      }
+    },
+    "IAMRoleWorker": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.{{.Region.PublicDomainName}}"
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "Path": "/",
+        {{if .IAMConfig.Role.Name }}
+        "RoleName":  {"Fn::Join": ["",[{"Ref": "AWS::Region"},"-","{{.IAMConfig.Role.Name}}"]]},
+        {{end}}
+        "ManagedPolicyArns": [ 
+          {{range $policyIndex, $policyArn := .IAMConfig.Role.ManagedPolicies }}
+            "{{$policyArn.Arn}}",
+          {{end}}
+          {"Ref": "IAMManagedPolicyWorker"}
+        ]
+      },
+      "Type": "AWS::IAM::Role"
     }
 {{end}}
 {
@@ -233,7 +486,22 @@
     "ControlPlaneStackName": {
       "Type": "String",
       "Description": "The name of a control-plane stack used to import values into this stack"
+    },
+    "NotificationTargetARN": {
+      "Type": "String",
+      "Description": "ASG LifecycleHook notification target ARN"
+    },
+    "NotificationRoleARN": {
+      "Type": "String",
+      "Description": "Role to be used by ASG LifecycleHook to publish notification"
     }
+    {{if .CloudWatchLogging.Enabled}}
+    ,
+    "CloudWatchLogGroupARN": {
+      "Type": "String",
+      "Description": "CloudWatch LogGroup to send journald logs to"
+    }
+    {{ end }}
   },
   "Resources": {
     {{if .SpotFleet.Enabled}}
@@ -241,5 +509,21 @@
     {{else}}
     {{template "AutoScaling" .}}
     {{end}}
+    {{if not .IAMConfig.InstanceProfile.Arn}}
+    {{template "IAMRole" .}}
+    {{end}}
+  },
+  "Outputs": {
+    {{if not .IAMConfig.InstanceProfile.Arn }}
+    "WorkerIAMRoleArn": {
+      "Description": "The ARN of the IAM role for this Node Pool",
+      "Value": { "Fn::GetAtt": ["IAMRoleWorker", "Arn"] },
+      "Export": { "Name": { "Fn::Sub": "${AWS::StackName}-WorkerIAMRoleArn" } }
+    },
+    {{end}}
+    "StackName": {
+      "Description": "The name of this stack",
+      "Value": { "Ref": "AWS::StackName" }
+    }
   }
 }
