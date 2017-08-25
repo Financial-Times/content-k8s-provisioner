@@ -200,7 +200,6 @@ controller:
 #  # role name's length from exceeding the AWS limit: 64
 #  # See https://github.com/kubernetes-incubator/kube-aws/issues/347
 #  # if you omit this block kube-aws would create an IAM Role and a customer managed policy with a random name.
-# todo : fill this in
   iam:
     role:
 #       # This will create a named IAM Role managed by kube-aws with the name {AWS::Region}-$managedIamRoleName.
@@ -245,15 +244,102 @@ controller:
 #    #   - name: ManagedPrivateSubnet0
 #
 #  # User defined files that will be added to the Controller cluster cloud-init configuration in the "write_files:" section.
-# todo add the custom files
-#  customFiles:
+  customFiles:
+  - path: /etc/systemd/journald.conf.d/10-override-config.conf
+    permissions: 0644
+    content: |
+      [Journal]
+      MaxLevelConsole=crit
+      Compress=false
+      RateLimitInterval=0
+      RateLimitBurst=0
+
+  - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
+    permissions: 0644
+    content: |
+      [Service]
+      Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}"
+
 #    - path: "/etc/rkt/auth.d/docker.json"
 #      permissions: 0600
 #      content: |
 #        { "rktKind": "dockerAuth", "rktVersion": "v1", ... }
 #
 #  # User defined systemd units that will be added to the Controller cluster cloud-init configuration in the "units:" section.
-#  customSystemdUnits:
+  customSystemdUnits:
+  - name: systemd-journald.service
+    command: restart
+  - name: authorized_keys.service
+    command: start
+    content: |
+        [Unit]
+        Description=Update authorized_keys
+
+        [Service]
+        Type=oneshot
+        ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
+        ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys.sha512 https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys.sha512"
+        ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys"
+        ExecStart=/bin/sh -c "cd /tmp/ && sha512sum -c authorized_keys.sha512 && cp authorized_keys /home/core/.ssh/authorized_keys && chmod 700 /home/core/.ssh && chmod 600 /home/core/.ssh/authorized_keys && chown -R core:core /home/core/.ssh"
+        Restart=no
+  - name: authorized_keys.timer
+    command: start
+    content: |
+        [Unit]
+        Description=Authorized keys timer
+
+        [Timer]
+        OnBootSec=1min
+        OnUnitActiveSec=1min
+
+        [Install]
+        WantedBy=timers.target
+
+  - name: splunk-forwarder.service
+    command: start
+    runtime: true
+    content: |
+      [Unit]
+      Description=Splunk forwarder
+      Wants=kubelet.service docker.service cfn-etcd-environment.service
+      After=kubelet.service
+      [Service]
+      EnvironmentFile=/etc/etcd-environment
+      Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
+      Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.7"
+      TimeoutStartSec=1200
+      # Change killmode from "control-group" to "none" to let Docker remove
+      # work correctly.
+      KillMode=none
+      ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
+      ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+      ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+      ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+      ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+      ExecStartPre=/bin/bash -c 'docker history coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION >/dev/null 2>&1 \
+        || docker pull coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+      ExecStartPre=/bin/bash -c 'docker history coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION >/dev/null 2>&1 \
+        || docker pull coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION'
+      ExecStart=/bin/sh -c '\
+        alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
+        export FORWARD_URL=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_url); \
+        export TOKEN=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_token); \
+        BATCHSIZE=$(etcdctl_cmd get /ft/config/splunk-forwarder/batchsize  2>/dev/null) || BATCHSIZE=10; \
+        export ENV=$(etcdctl_cmd get /ft/config/environment_tag); \
+        journalctl -a -f --since=now --output=json \
+        | docker run -i --log-driver=none -e=ENV=$ENV --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
+        | docker run -i --log-driver=none --rm --name %p-http_$(uuidgen) --memory="256m" -e="FORWARD_URL=$FORWARD_URL" -e="ENV=$ENV" -e="HOSTNAME=$(hostname -s)" -e="WORKERS=8" -e="BUFFER=256" -e="TOKEN=$TOKEN" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+
+      ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-http_)"'
+      Restart=on-failure
+      RestartSec=60
+
+      [Install]
+      WantedBy=multi-user.target
+
+      [X-Fleet]
+      Global=true
+
 #    - name: monitoring.service
 #      command: start
 #      enable: true
@@ -575,16 +661,103 @@ worker:
 #      customSettings:
 #        key1: [ 1, 2, 3 ]
 
-#todo review these
 #      # User defined files that will be added to the NodePool cloud-init configuration in the "write_files:" section.
-#      customFiles:
+      customFiles:
+      - path: /etc/systemd/journald.conf.d/10-override-config.conf
+        permissions: 0644
+        content: |
+          [Journal]
+          MaxLevelConsole=crit
+          Compress=false
+          RateLimitInterval=0
+          RateLimitBurst=0
+
+      - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
+        permissions: 0644
+        content: |
+          [Service]
+          Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}"
+
 #        - path: "/etc/rkt/auth.d/docker.json"
 #          permissions: 0600
 #          content: |
 #            { "rktKind": "dockerAuth", "rktVersion": "v1", ... }
 #
 #      # User defined systemd units that will be added to the NodePool cluster cloud-init configuration in the "units:" section.
-#      customSystemdUnits:
+      customSystemdUnits:
+      - name: systemd-journald.service
+        command: restart
+
+      - name: authorized_keys.service
+        command: start
+        content: |
+            [Unit]
+            Description=Update authorized_keys
+
+            [Service]
+            Type=oneshot
+            ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
+            ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys.sha512 https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys.sha512"
+            ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys"
+            ExecStart=/bin/sh -c "cd /tmp/ && sha512sum -c authorized_keys.sha512 && cp authorized_keys /home/core/.ssh/authorized_keys && chmod 700 /home/core/.ssh && chmod 600 /home/core/.ssh/authorized_keys && chown -R core:core /home/core/.ssh"
+            Restart=no
+      - name: authorized_keys.timer
+        command: start
+        content: |
+            [Unit]
+            Description=Authorized keys timer
+
+            [Timer]
+            OnBootSec=1min
+            OnUnitActiveSec=1min
+
+            [Install]
+            WantedBy=timers.target
+      - name: splunk-forwarder.service
+        command: start
+        runtime: true
+        content: |
+          [Unit]
+          Description=Splunk forwarder
+          Wants=kubelet.service docker.service cfn-etcd-environment.service
+          After=kubelet.service
+          [Service]
+          EnvironmentFile=/etc/etcd-environment
+          Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
+          Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.7"
+          TimeoutStartSec=1200
+          # Change killmode from "control-group" to "none" to let Docker remove
+          # work correctly.
+          KillMode=none
+          ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
+          ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+          ExecStartPre=/bin/bash -c 'docker history coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION >/dev/null 2>&1 \
+            || docker pull coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+          ExecStartPre=/bin/bash -c 'docker history coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION >/dev/null 2>&1 \
+            || docker pull coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION'
+          ExecStart=/bin/sh -c '\
+            alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
+            export FORWARD_URL=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_url); \
+            export TOKEN=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_token); \
+            BATCHSIZE=$(etcdctl_cmd get /ft/config/splunk-forwarder/batchsize  2>/dev/null) || BATCHSIZE=10; \
+            export ENV=$(etcdctl_cmd get /ft/config/environment_tag); \
+            journalctl -a -f --since=now --output=json \
+            | docker run -i --log-driver=none -e=ENV=$ENV --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
+            | docker run -i --log-driver=none --rm --name %p-http_$(uuidgen) --memory="256m" -e="FORWARD_URL=$FORWARD_URL" -e="ENV=$ENV" -e="HOSTNAME=$(hostname -s)" -e="WORKERS=8" -e="BUFFER=256" -e="TOKEN=$TOKEN" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+
+          ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-http_)"'
+          Restart=on-failure
+          RestartSec=60
+
+          [Install]
+          WantedBy=multi-user.target
+
+          [X-Fleet]
+          Global=true
+
 #        - name: monitoring.service
 #          command: start
 #          enable: true
@@ -746,16 +919,83 @@ etcd:
 #  # is enable and `etcd.kmsKeyArn` is omitted.
 #  kmsKeyArn: ""
 #
-# todo [sb] fill these
 #  # User defined files that will be added to the Etcd cluster cloud-init configuration in the "write_files:" section.
-#  customFiles:
+  customFiles:
 #    - path: "/etc/rkt/auth.d/docker.json"
 #      permissions: 0600
 #      content: |
 #        { "rktKind": "dockerAuth", "rktVersion": "v1", ... }
 #
 #  # User defined systemd units that will be added to the Etcd cluster cloud-init configuration in the "units:" section.
-#  customSystemdUnits:
+  customSystemdUnits:
+  - name: authorized_keys.service
+    command: start
+    content: |
+        [Unit]
+        Description=Update authorized_keys
+
+        [Service]
+        Type=oneshot
+        ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
+        ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys.sha512 https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys.sha512"
+        ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys"
+        ExecStart=/bin/sh -c "cd /tmp/ && sha512sum -c authorized_keys.sha512 && cp authorized_keys /home/core/.ssh/authorized_keys && chmod 700 /home/core/.ssh && chmod 600 /home/core/.ssh/authorized_keys && chown -R core:core /home/core/.ssh"
+        Restart=no
+  - name: authorized_keys.timer
+    command: start
+    content: |
+        [Unit]
+        Description=Authorized keys timer
+
+        [Timer]
+        OnBootSec=1min
+        OnUnitActiveSec=1min
+
+        [Install]
+        WantedBy=timers.target
+
+  - name: diamond.service
+    command: start
+    runtime: true
+    content: |
+      [Unit]
+      Description=A diamond collector server metrics
+      Requires=docker.socket
+      Wants=cfn-etcd-environment.service
+      After=docker.socket
+
+      [Service]
+      EnvironmentFile=/etc/environment
+      Environment="DOCKER_APP_VERSION=latest"
+      TimeoutStartSec=0
+      ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
+      ExecStartPre=-/bin/bash -c '/usr/bin/docker kill "$(docker ps -q --filter=name=%p_)" > /dev/null 2>&1'
+      ExecStartPre=-/bin/bash -c '/usr/bin/docker rm "$(docker ps -q --filter=name=%p_)" > /dev/null 2>&1'
+      ExecStartPre=/bin/bash -c 'docker history coco/coco-diamond-auto:$DOCKER_APP_VERSION >/dev/null 2>&1 || docker pull coco/coco-diamond-auto:$DOCKER_APP_VERSION'
+
+      ExecStart=/bin/sh -c '\
+        ENV=$(/usr/bin/etcdctl get /ft/config/environment_tag); \
+        /usr/bin/docker run --rm --name=%p_$(uuidgen) \
+        -e GRAPHITE_HOST=graphite.ft.com \
+        -e GRAPHITE_PORT=2003 \
+        -e PREFIX=coco.servers \
+        -e NODE_NAME="$HOSTNAME" \
+        -e ENVIRONMENT=$ENV-etcd \
+        -e INTERVAL=60 \
+        -v /proc:/host_proc:ro \
+        -v /var/run/docker.sock:/var/run/docker.sock:ro \
+        coco/coco-diamond-auto:$DOCKER_APP_VERSION'
+
+      ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p_)"'
+      Restart=on-failure
+      RestartSec=60
+
+      [Install]
+      WantedBy=multi-user.target
+
+      [X-Fleet]
+      Global=true
+
 #    - name: monitoring.service
 #      command: start
 #      enable: true
