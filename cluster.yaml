@@ -522,7 +522,7 @@ worker:
       autoScalingGroup:
         minSize: 1
         maxSize: 2
-        rollingUpdateMinInstancesInService: 2
+        rollingUpdateMinInstancesInService: 1
 #
 #      #
 #      # Spot fleet config for worker nodes
@@ -639,10 +639,10 @@ worker:
         kube-aws.coreos.com/role: worker
 #
 #      # Kubernetes node taints to be added to worker nodes
-      taints:
-        - key: dedicated
-          value: search
-          effect: NoSchedule
+#      taints:
+#        - key: dedicated
+#          value: search
+#          effect: NoSchedule
 #
 #      # Other less common customizations per node pool
 #      # All these settings default to the top-level ones
