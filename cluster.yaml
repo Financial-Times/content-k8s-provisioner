@@ -1,7 +1,7 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: test-new-kube-aws-1
+clusterName: test-new-kube-aws-2
 
 # CAUTION: Deprecated and will be removed in v0.9.7. Please use apiEndpoints[].dnsName instead
 #externalDNSName:
@@ -98,20 +98,19 @@ apiEndpoints:
 #    # Network ranges of sources you'd like Kubernetes API accesses to be allowed from, in CIDR notation. Defaults to ["0.0.0.0/0"] which allows any sources.
 #    # Explicitly set to an empty array to completely disable it.
 #    # If you do that, probably you would like to set securityGroupIds to provide this load balancer an existing SG with a Kubernetes API access allowed from specific ranges.
-#    apiAccessAllowedSourceCIDRs:
+    apiAccessAllowedSourceCIDRs:
 #    - 54.194.189.228
-#    # OSB + LDNWebPerf
-#    - 82.136.1.214/32
-#    # Park Royal
-#    - 213.216.148.1/32
-#    # XP - Cluj Office
-#    - 194.117.242.0/23
-#     # EU VPN Client
-#    - 62.25.64.1/32
-#    # US VPN Client
-#    - 64.210.200.1/32
-#    #- 0.0.0.0/0
-# todo - fill this part in to limit access to K8S api
+    # OSB + LDNWebPerf
+    - 82.136.1.214/32
+    # Park Royal
+    - 213.216.148.1/32
+    # XP - Cluj Office
+    - 194.117.242.0/23
+     # EU VPN Client
+    - 62.25.64.1/32
+    # US VPN Client
+    - 64.210.200.1/32
+#    - 0.0.0.0/0
 #    # Existing security groups attached to this load balancer which are typically used to
 #    # allow Kubernetes API accesses from admins and/or CD systems when `apiAccessAllowedSourceCIDRs` are explicitly set to an empty array
 #    securityGroupIds:
@@ -189,7 +188,7 @@ controller:
 #  # Auto Scaling Group definition for controllers. If only `controllerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
   autoScalingGroup:
     minSize: 1
-    maxSize: 1
+    maxSize: 2
     rollingUpdateMinInstancesInService: 1
 #  # If you specify managedIamRoleName the role created for controller nodes will not suffix the random id at the end
 #  # Role will be created with "Ref": {"AWS::StackName"}-{"AWS::Region"}-yourManagedRole
