@@ -1,7 +1,7 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: test-new-kube-aws
+clusterName: test-new-kube-aws-1
 
 # CAUTION: Deprecated and will be removed in v0.9.7. Please use apiEndpoints[].dnsName instead
 #externalDNSName:
@@ -142,7 +142,7 @@ apiEndpoints:
 
 # Name of the SSH keypair already loaded into the AWS
 # account being used to deploy this cluster.
-keyName: jpd-test
+keyName: sorin-test
 
 # Additional keys to preload on the coreos account (keep this to a minimum)
 #sshAuthorizedKeys:
@@ -201,7 +201,7 @@ controller:
 #  # See https://github.com/kubernetes-incubator/kube-aws/issues/347
 #  # if you omit this block kube-aws would create an IAM Role and a customer managed policy with a random name.
   iam:
-    role:
+#    role:
 #       # This will create a named IAM Role managed by kube-aws with the name {AWS::Region}-$managedIamRoleName.
 #       # It will have attached a customer Managed Policy that you can modify afterwards if you need more permissions for your cluster.
 #       # Be careful with the Statements you modify because an update could overwrite your own.
@@ -216,8 +216,8 @@ controller:
 #       # if you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the configured instanceProfile.
 #       # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
-      instanceProfile:
-        arn: "arn:aws:iam::070529446553:instance-profile/pac-k8s-iam-instance-profile-roles-eu-west-1-controller-role"
+    instanceProfile:
+      arn: "arn:aws:iam::070529446553:instance-profile/upp-k8s-iam-instance-profile-roles-eu-west-1-controller-role"
 
 #  # If omitted, public subnets are created by kube-aws and used for controller nodes
   subnets:
@@ -428,7 +428,7 @@ worker:
 #       # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
         instanceProfile:
-          arn: "arn:aws:iam::070529446553:instance-profile/pac-k8s-iam-instance-profile-roles-eu-west-1-worker-role"
+          arn: "arn:aws:iam::070529446553:instance-profile/upp-k8s-iam-instance-profile-roles-eu-west-1-worker-role"
 #      # Configuration for external managed ALBs Target Groups for worker nodes
 #      targetGroup:
 #        enabled: true
@@ -920,7 +920,7 @@ etcd:
 #  kmsKeyArn: ""
 #
 #  # User defined files that will be added to the Etcd cluster cloud-init configuration in the "write_files:" section.
-  customFiles:
+#  customFiles:
 #    - path: "/etc/rkt/auth.d/docker.json"
 #      permissions: 0600
 #      content: |
