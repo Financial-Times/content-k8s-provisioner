@@ -154,7 +154,7 @@ region: eu-west-1
 #availabilityZone: eu-west-1a
 
 # ARN of the KMS key used to encrypt TLS assets.
-kmsKeyArn: "arn:aws:kms:eu-west-1:070529446553:key/878a085e-d08a-4c0b-893a-37302e12e1da"
+kmsKeyArn: "arn:aws:kms:eu-west-1:070529446553:key/870f9ef6-96c1-409b-874f-b4e83f7232e6"
 
 # CAUTION: Deprecated and will be removed in v0.9.7. Please use controller.count instead
 #controllerCount: 1
