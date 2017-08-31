@@ -1,7 +1,7 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: test-new-kube-aws-2
+clusterName: test-sync-k8s
 
 # CAUTION: Deprecated and will be removed in v0.9.7. Please use apiEndpoints[].dnsName instead
 #externalDNSName:
@@ -31,17 +31,6 @@ clusterName: test-new-kube-aws-2
 # Explicitly set to an empty array to completely disable it.
 # If you do that, probably you would like to set securityGroupIds to provide this worker node pool an existing SG with a SSH access allowed from specific ranges.
 sshAccessAllowedSourceCIDRs:
-#- 0.0.0.0/0
-# OSB + LDNWebPerf
-- 82.136.1.214/32
-# Park Royal
-- 213.216.148.1/32
-# XP - Cluj Office
-- 194.117.242.0/23
- # EU VPN Client
-- 62.25.64.1/32
-# US VPN Client
-- 64.210.200.1/32
 
 # The name of one of API endpoints defined in `apiEndpoints` below to be written in kubeconfig and then used by admins
 # to access k8s API from their laptops, CI servers, or etc.
@@ -60,7 +49,7 @@ apiEndpoints:
   # from worker nodes and external clients. Configure the options
   # below if you'd like kube-aws to create a Route53 record sets/hosted zones
   # for you.  Otherwise the deployer is responsible for making this name routable
-  dnsName: test-new-kube-aws.ft.com
+  dnsName: test-sync-k8s-api.ft.com
 
   # Configuration for an ELB serving this endpoint
   # Omit all the settings when you want kube-aws not to provision an ELB for you
@@ -185,8 +174,9 @@ controller:
 #  # Existing security groups attached to controller nodes which are typically used to
 #  # (1) allow access from controller nodes to services running on an existing infrastructure
 #  # (2) allow ssh accesses from bastions when `sshAccessAllowedSourceCIDRs` are explicitly set to an empty array
-#  securityGroupIds:
-#    - sg-1234abcd
+  securityGroupIds:
+    # allow SSH from internal VPC machines
+    - sg-9a7630e2
 #    - sg-5678efab
 #
 #  # Auto Scaling Group definition for controllers. If only `controllerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
@@ -394,8 +384,9 @@ worker:
 #
 #      # Existing "glue" security groups attached to worker nodes which are typically used to allow
 #      # access from worker nodes to services running on an existing infrastructure
-#      securityGroupIds:
-#        - sg-1234abcd
+      securityGroupIds:
+        # Allow ssh from internal VPC
+        - sg-9a7630e2
 #        - sg-5678efab
 #
 #      # Configuration for external managed ELBs for worker nodes
@@ -808,7 +799,7 @@ etcd:
 #  # (Set to an odd number >= 3 for HA control plane)
 #  # WARNING: You can't add etcd nodes after the first creation by modifying this and running `kube-aws update`
 #  # See https://github.com/kubernetes-incubator/kube-aws/issues/631 for more information
-  count: 1
+  count: 3
 #
 #  # Instance type for etcd node
   instanceType: t2.medium
@@ -850,8 +841,9 @@ etcd:
 #
 #  # Existing security groups attached to etcd nodes which are typically used to
 #  # allow ssh accesses from bastions when `sshAccessAllowedSourceCIDRs` are explicitly set to an empty array
-#  securityGroupIds:
-#    - sg-1234abcd
+  securityGroupIds:
+    # Allow SSH from internal VPC ips
+    - sg-9a7630e2
 #    - sg-5678efab
 #
 #  # The version of etcd to be used. Set to e.g. "3.1.3" to use etcd3
