@@ -88,26 +88,17 @@ apiEndpoints:
 #    # Explicitly set to an empty array to completely disable it.
 #    # If you do that, probably you would like to set securityGroupIds to provide this load balancer an existing SG with a Kubernetes API access allowed from specific ranges.
     apiAccessAllowedSourceCIDRs:
-#    - 54.194.189.228
-    # OSB + LDNWebPerf
-    - 82.136.1.214/32
-    # Park Royal
-    - 213.216.148.1/32
-    # XP - Cluj Office
-    - 194.117.242.0/23
-     # EU VPN Client
-    - 62.25.64.1/32
-    # US VPN Client
-    - 64.210.200.1/32
     # private subnets NAT gateway
     - 52.212.63.130/32
     - 52.30.225.182/32
     - 52.215.87.156/32
+    # Current Jenkins NAT gateway
+    - 54.194.189.228/32
 
 #    # Existing security groups attached to this load balancer which are typically used to
 #    # allow Kubernetes API accesses from admins and/or CD systems when `apiAccessAllowedSourceCIDRs` are explicitly set to an empty array
-#    securityGroupIds:
-#    - sg-1234567
+    securityGroupIds:
+    - sg-53531d2b
 #
 #  #
 #  # Common configuration #1: Unversioned, internet-facing API endpoint
@@ -799,7 +790,7 @@ etcd:
 #  # (Set to an odd number >= 3 for HA control plane)
 #  # WARNING: You can't add etcd nodes after the first creation by modifying this and running `kube-aws update`
 #  # See https://github.com/kubernetes-incubator/kube-aws/issues/631 for more information
-  count: 3
+  count: 1
 #
 #  # Instance type for etcd node
   instanceType: t2.medium
