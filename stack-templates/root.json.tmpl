@@ -2,11 +2,7 @@
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "kube-aws Kubernetes cluster {{.ClusterName}}",
   "Resources": {
-    {{/* This queue is currently not used; for now, the only reason it exist is because we cannot create ASG Lifecycle Hooks without one of these. */}}
-    "ASGNotificationTarget": {
-      "Type": "AWS::SQS::Queue"
-    },
-      {{if .CloudWatchLogging.Enabled}}
+    {{if .CloudWatchLogging.Enabled}}
       "CloudWatchLogGroup": {
       "Type" : "AWS::Logs::LogGroup",
       "Properties" : {
@@ -18,10 +14,7 @@
       "Type" : "AWS::CloudFormation::Stack",
       "Properties" : {
         "Parameters": {
-          "NotificationTargetARN": { "Fn::GetAtt": [ "ASGNotificationTarget", "Arn" ] },
-          "NotificationRoleARN": "arn:aws:iam::070529446553:role/upp-k8s-iam-instance-profile-roles-eu-west-1-asgn-role"
           {{if .CloudWatchLogging.Enabled}}
-          ,
           "CloudWatchLogGroupARN": { "Fn::GetAtt": [ "CloudWatchLogGroup", "Arn" ] }
           {{ end }}
         },
@@ -42,9 +35,7 @@
       "Type" : "AWS::CloudFormation::Stack",
       "Properties" : {
         "Parameters": {
-          "ControlPlaneStackName": {"Fn::GetAtt" : [ "{{$.ControlPlane.Name}}" , "Outputs.StackName" ]},
-          "NotificationTargetARN": { "Fn::GetAtt": [ "ASGNotificationTarget", "Arn" ] },
-          "NotificationRoleARN": "arn:aws:iam::070529446553:role/upp-k8s-iam-instance-profile-roles-eu-west-1-asgn-role"
+          "ControlPlaneStackName": {"Fn::GetAtt" : [ "{{$.ControlPlane.Name}}" , "Outputs.StackName" ]}
           {{if .CloudWatchLogging.Enabled}}
           ,
           "CloudWatchLogGroupARN": { "Fn::GetAtt": [ "CloudWatchLogGroup", "Arn" ] }
@@ -66,8 +57,17 @@
         "{{$.ControlPlane.Name}}"
       ]
     }{{end}}
+    {{range $n, $r := .ExtraCfnResources}}
+    ,
+    {{quote $n}}: {{toJSON $r}}
+    {{end}}
   },
   "Outputs": {
+    "KubeAwsVersion": {
+      "Description": "The version number of kube-aws which was used to create this cluster",
+      "Value": "{{$.KubeAwsVersion}}",
+      "Export": { "Name": { "Fn::Sub": "${AWS::StackName}-KubeAwsVersion" } }
+    },
     {{ if $.ControlPlane.NeedToExportIAMroles }}
     "ControllerIAMRoleArn": {
       "Description": "The IAM Role ARN for controller nodes",
