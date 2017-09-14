@@ -75,6 +75,7 @@ apiEndpoints:
 #    # Explicitly set to an empty array to completely disable it.
 #    # If you do that, probably you would like to set securityGroupIds to provide this load balancer an existing SG with a Kubernetes API access allowed from specific ranges.
     apiAccessAllowedSourceCIDRs:
+    # todo [customize] per account & region
     # private subnets NAT gateway
     - 52.212.63.130/32
     - 52.30.225.182/32
@@ -84,6 +85,8 @@ apiEndpoints:
 
 #    # Existing security groups attached to this load balancer which are typically used to
 #    # allow Kubernetes API accesses from admins and/or CD systems when `apiAccessAllowedSourceCIDRs` are explicitly set to an empty array
+    # todo [customize] per account & region
+    # The group id of aws-composer-custom-k8s-api-internal-access-sg*
     securityGroupIds:
     - sg-53531d2b
 #
@@ -112,19 +115,21 @@ apiEndpoints:
 
 # Name of the SSH keypair already loaded into the AWS
 # account being used to deploy this cluster.
-keyName: sorin-test
+keyName: upp-k8s-provisioning-debug
 
 # Additional keys to preload on the coreos account (keep this to a minimum)
 #sshAuthorizedKeys:
 # - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDPZPLtRvmeD8ZR/cm3SQ2GXc/tpDGPwP0slQDq3OV9R8+QiArvvfaGPpALM4xf3Y+DQxkG5W+PzPpYGUy4B17HVB9dywSZEjroqvf5/3LZp+X8dVQ/NPnOcox31zkmKhh8zODeWgcOv+tmf6hG82oGlMZci/6NMajpUT2RZYJfhN/aX+zeKkVZr1rckhuva7p0k3mcbtom9dMK0+W9rs2TjRTCrKo0l4jl9hhlc0omfRyQhvFmji/pgKoUoST9GFP7vS21QIAYR6K5PcIjYwn+p/jPKATHCD5PKHDilu+wt7GUaf3VyXljKavJsSAOydso+qsYivj/uwWhYfxppMTR sorin.buliarca@ft.com"
 
 # Region to provision Kubernetes cluster
+# todo [customize] per region
 region: eu-west-1
 
 # Availability Zone to provision Kubernetes cluster when placing nodes in a single availability zone (not highly-available) Comment out for multi availability zone setting and use the below `subnets` section instead.
 #availabilityZone: eu-west-1a
 
 # ARN of the KMS key used to encrypt TLS assets.
+# todo [customize] per account & region
 kmsKeyArn: "arn:aws:kms:eu-west-1:070529446553:key/870f9ef6-96c1-409b-874f-b4e83f7232e6"
 
 controller:
@@ -150,7 +155,8 @@ controller:
 #  # (1) allow access from controller nodes to services running on an existing infrastructure
 #  # (2) allow ssh accesses from bastions when `sshAccessAllowedSourceCIDRs` are explicitly set to an empty array
   securityGroupIds:
-    # allow SSH from internal VPC machines
+    # allow SSH from internal VPC machines. Group name "Internal SSH security group"
+    # todo [customize] per account & region
     - sg-9a7630e2
 #    - sg-5678efab
 #
@@ -185,6 +191,7 @@ controller:
 #       # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
     instanceProfile:
+      # todo [customize] per account & region
       arn: "arn:aws:iam::070529446553:instance-profile/upp-k8s-iam-instance-profile-roles-eu-west-1-controller-role"
 
 #  # If omitted, public subnets are created by kube-aws and used for controller nodes
@@ -333,7 +340,8 @@ worker:
 #      # Existing "glue" security groups attached to worker nodes which are typically used to allow
 #      # access from worker nodes to services running on an existing infrastructure
       securityGroupIds:
-        # Allow ssh from internal VPC
+        # Allow ssh from internal VPC. Group name: "Internal SSH security group"
+        # todo [customize] per account & region
         - sg-9a7630e2
 #        - sg-5678efab
 #
@@ -370,6 +378,7 @@ worker:
 #       # if you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the configured instanceProfile.
 #       # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
+        # todo [customize] per account & region
         instanceProfile:
           arn: "arn:aws:iam::070529446553:instance-profile/upp-k8s-iam-instance-profile-roles-eu-west-1-worker-role"
 #      # Configuration for external managed ALBs Target Groups for worker nodes
@@ -776,7 +785,8 @@ etcd:
 #  # Existing security groups attached to etcd nodes which are typically used to
 #  # allow ssh accesses from bastions when `sshAccessAllowedSourceCIDRs` are explicitly set to an empty array
   securityGroupIds:
-    # Allow SSH from internal VPC ips
+    # Allow SSH from internal VPC ips. Group name: "Internal SSH security group"
+    # todo [customize] per account & region
     - sg-9a7630e2
 #    - sg-5678efab
 #
@@ -791,6 +801,7 @@ etcd:
 #    # If you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the existing instance profile.
 #    # CAUTION: you must ensure that the IAM role linked to the existing instance profile has enough permissions to ensure etcd nodes to run.
 #    # If you dont know which permissions are required, it is recommended to go ahead with a managed instance profile.
+    # todo [customize] per account & region
     instanceProfile:
       arn: "arn:aws:iam::070529446553:instance-profile/upp-k8s-iam-instance-profile-roles-eu-west-1-etcd-role"
 #
@@ -956,6 +967,7 @@ etcd:
 
 vpc:
 #  # ID of existing VPC to create subnet in. Leave blank to create a new VPC
+  # todo [customize] per account & region
   id: vpc-f75fb790
 #  # Exported output's name from another stack
 #  # Only specify either id or idFromStackOutput but not both
@@ -988,6 +1000,7 @@ vpc:
 # routeTableId: rtb-xxxxxxxx
 
 # CIDR for Kubernetes VPC. If vpcId is specified, must match the CIDR of existing vpc.
+# todo [customize] per account & region
 vpcCIDR: "10.172.32.0/21"
 
 # CIDR for Kubernetes subnet when placing nodes in a single availability zone (not highly-available) Leave commented out for multi availability zone setting and use the below `subnets` section instead.
@@ -1025,6 +1038,7 @@ subnets:
      availabilityZone: eu-west-1a
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
+     # todo [customize] per account & region
      id: "subnet-161eea71"
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
@@ -1035,6 +1049,7 @@ subnets:
      availabilityZone: eu-west-1b
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
+    # todo [customize] per account & region
      id: "subnet-6bb44522"
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
@@ -1044,16 +1059,20 @@ subnets:
      availabilityZone: eu-west-1c
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
+     # todo [customize] per account & region
      id: "subnet-8f2a1ad7"
 
    - name: ExistingPrivateSubnet1
      availabilityZone: eu-west-1a
+     # todo [customize] per account & region
      id: "subnet-2a1de94d"
    - name: ExistingPrivateSubnet2
      availabilityZone: eu-west-1b
+     # todo [customize] per account & region
      id: "subnet-c1b94888"
    - name: ExistingPrivateSubnet3
      availabilityZone: eu-west-1c
+     # todo [customize] per account & region
      id: "subnet-932717cb"
 
 #     # Exported output's name from another stack
@@ -1506,6 +1525,7 @@ experimental:
 stackTags:
   coco-environment-tag: "k8s-kube-aws-test"
   stopSchedule: "nostop"
+  # todo [customize] per environment & stack
   systemCode: "upp"
   environment: "t"
   ipCode: "P196"
