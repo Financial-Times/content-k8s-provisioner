@@ -572,7 +572,7 @@ worker:
 #      # as in https://kubernetes.io/docs/concepts/cluster-administration/kubelet-garbage-collection/
 #      # Anything from https://kubernetes.io/docs/admin/kubelet/ can be used as a value
 #
-#      kubeletOpts: --image-gc-low-threshold=50 --image-gc-high-threshold=65
+      kubeletOpts: --image-gc-low-threshold=65 --image-gc-high-threshold=75
 #
 #      # Kubernetes node labels to be added to worker nodes
       nodeLabels:
