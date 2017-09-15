@@ -1,7 +1,7 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: upp-delivery-test-eu
+clusterName: $CLUSTER_NAME
 
 # CoreOS release channel to use. Currently supported options: alpha, beta, stable
 # See coreos.com/releases for more information
@@ -36,7 +36,7 @@ apiEndpoints:
   # from worker nodes and external clients. Configure the options
   # below if you'd like kube-aws to create a Route53 record sets/hosted zones
   # for you.  Otherwise the deployer is responsible for making this name routable
-  dnsName: upp-delivery-content-test-eu.ft.com
+  dnsName: $API_DNS_NAME
 
   # Configuration for an ELB serving this endpoint
   # Omit all the settings when you want kube-aws not to provision an ELB for you
@@ -77,18 +77,18 @@ apiEndpoints:
     apiAccessAllowedSourceCIDRs:
     # todo [customize] per account & region
     # private subnets NAT gateway
-    - 52.212.63.130/32
-    - 52.30.225.182/32
-    - 52.215.87.156/32
+    - $NAT_GW_1_IP/32
+    - $NAT_GW_2_IP/32
+    - $NAT_GW_3_IP/32
     # Current Jenkins NAT gateway
-    - 54.194.189.228/32
+    - $JENKINS_NAT_GW_IP/32
 
 #    # Existing security groups attached to this load balancer which are typically used to
 #    # allow Kubernetes API accesses from admins and/or CD systems when `apiAccessAllowedSourceCIDRs` are explicitly set to an empty array
     # todo [customize] per account & region
     # The group id of aws-composer-custom-k8s-api-internal-access-sg*
     securityGroupIds:
-    - sg-53531d2b
+    - $API_PRIVATE_ACCESS_SG
 #
 #  #
 #  # Common configuration #1: Unversioned, internet-facing API endpoint
@@ -116,7 +116,7 @@ apiEndpoints:
 # Name of the SSH keypair already loaded into the AWS
 # account being used to deploy this cluster.
 # todo [customize] per stack
-keyName: upp-k8s-provisioning-debug
+keyName: $DEBUG_KEY_NAME
 
 # Additional keys to preload on the coreos account (keep this to a minimum)
 #sshAuthorizedKeys:
@@ -124,25 +124,25 @@ keyName: upp-k8s-provisioning-debug
 
 # Region to provision Kubernetes cluster
 # todo [customize] per region
-region: eu-west-1
+region: $REGION
 
 # Availability Zone to provision Kubernetes cluster when placing nodes in a single availability zone (not highly-available) Comment out for multi availability zone setting and use the below `subnets` section instead.
 #availabilityZone: eu-west-1a
 
 # ARN of the KMS key used to encrypt TLS assets.
 # todo [customize] per account & region
-kmsKeyArn: "arn:aws:kms:eu-west-1:070529446553:key/870f9ef6-96c1-409b-874f-b4e83f7232e6"
+kmsKeyArn: "$KMS_KEY_ARN"
 
 controller:
 #  # Number of controller nodes to create, for more control use `controller.autoScalingGroup` and do not use this setting
-  count: 1
+  count: $CONTROLLER_COUNT
 #
 #  # Maximum time to wait for controller creation
 #  createTimeout: PT15M
 #
 #  # Instance type for controller node.
 #  # CAUTION: Don't use t2.micro or the cluster won't work. See https://github.com/kubernetes/kubernetes/issues/18975
-  instanceType: t2.medium
+  instanceType: $CONTROLLER_INSTANCE_TYPE
 #
 #  rootVolume:
 #    # Disk size (GiB) for controller node
@@ -158,7 +158,7 @@ controller:
   securityGroupIds:
     # allow SSH from internal VPC machines. Group name "Internal SSH security group"
     # todo [customize] per account & region
-    - sg-9a7630e2
+    - $VPC_INTERNAL_SSH_SG
 #
 #  # Auto Scaling Group definition for controllers. If only `controllerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
 #  autoScalingGroup:
@@ -192,7 +192,7 @@ controller:
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
     instanceProfile:
       # todo [customize] per account & region
-      arn: "arn:aws:iam::070529446553:instance-profile/upp-k8s-iam-instance-profile-roles-eu-west-1-controller-role"
+      arn: "$CONTROLLER_IAM_ROLE"
 
 #  # If omitted, public subnets are created by kube-aws and used for controller nodes
   subnets:
@@ -342,7 +342,7 @@ worker:
       securityGroupIds:
         # Allow ssh from internal VPC. Group name: "Internal SSH security group"
         # todo [customize] per account & region
-        - sg-9a7630e2
+        - $VPC_INTERNAL_SSH_SG
 #        - sg-5678efab
 #
 #      # Configuration for external managed ELBs for worker nodes
@@ -380,7 +380,7 @@ worker:
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
         # todo [customize] per account & region
         instanceProfile:
-          arn: "arn:aws:iam::070529446553:instance-profile/upp-k8s-iam-instance-profile-roles-eu-west-1-worker-role"
+          arn: $WORKER_IAM_ROLE
 #      # Configuration for external managed ALBs Target Groups for worker nodes
 #      targetGroup:
 #        enabled: true
@@ -418,11 +418,11 @@ worker:
 #      #
 #
 #      # Number of worker nodes to create for an autoscaling group based pool
-      count: 1
+      count: $WORKER_COUNT
 #
 #      # Instance type for worker nodes
 #      # CAUTION: Don't use t2.micro or the cluster won't work. See https://github.com/kubernetes/kubernetes/issues/16122
-      instanceType: t2.medium
+      instanceType: $WORKER_INSTANCE_TYPE
 #
 #      rootVolume:
 #        # Disk size (GiB) for worker nodes
@@ -742,10 +742,10 @@ etcd:
 #  # (Set to an odd number >= 3 for HA control plane)
 #  # WARNING: You can't add etcd nodes after the first creation by modifying this and running `kube-aws update`
 #  # See https://github.com/kubernetes-incubator/kube-aws/issues/631 for more information
-  count: 1
+  count: $ETCD_COUNT
 #
 #  # Instance type for etcd node
-  instanceType: t2.medium
+  instanceType: $ETCD_INSTANCE_TYPE
 #
 #  rootVolume:
 #    # Root volume size (GiB) for etcd node
@@ -787,7 +787,7 @@ etcd:
   securityGroupIds:
     # Allow SSH from internal VPC ips. Group name: "Internal SSH security group"
     # todo [customize] per account & region
-    - sg-9a7630e2
+    - $VPC_INTERNAL_SSH_SG
 #    - sg-5678efab
 #
 #  # If you omit this block kube-aws would create an IAM Role and a managed policy for etcd nodes with a random name.
@@ -803,7 +803,7 @@ etcd:
 #    # If you dont know which permissions are required, it is recommended to go ahead with a managed instance profile.
     # todo [customize] per account & region
     instanceProfile:
-      arn: "arn:aws:iam::070529446553:instance-profile/upp-k8s-iam-instance-profile-roles-eu-west-1-etcd-role"
+      arn: $ETCD_IAM_ROLE
 #
 #  # The version of etcd to be used. Set to e.g. "3.2.1" to use etcd3
   version: 3.2.6
@@ -968,7 +968,7 @@ etcd:
 vpc:
 #  # ID of existing VPC to create subnet in. Leave blank to create a new VPC
   # todo [customize] per account & region
-  id: vpc-f75fb790
+  id: $VPC_ID
 #  # Exported output's name from another stack
 #  # Only specify either id or idFromStackOutput but not both
 #  idFromStackOutput: VpcId
@@ -1001,7 +1001,7 @@ vpc:
 
 # CIDR for Kubernetes VPC. If vpcId is specified, must match the CIDR of existing vpc.
 # todo [customize] per account & region
-vpcCIDR: "10.172.32.0/21"
+vpcCIDR: "$VPC_CIDR"
 
 # CIDR for Kubernetes subnet when placing nodes in a single availability zone (not highly-available) Leave commented out for multi availability zone setting and use the below `subnets` section instead.
 # instanceCIDR: "10.0.0.0/24"
@@ -1035,45 +1035,45 @@ subnets:
 #   #
    - name: ExistingPublicSubnet1
 #     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
-     availabilityZone: eu-west-1a
+     availabilityZone: $REGIONa
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
      # todo [customize] per account & region
-     id: "subnet-161eea71"
+     id: "$PUB_SUBNET_ZONE_A"
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
 #     #idFromStackOutput: myinfra-PublicSubnet1
 
    - name: ExistingPublicSubnet2
 #     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
-     availabilityZone: eu-west-1b
+     availabilityZone: $REGIONb
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
     # todo [customize] per account & region
-     id: "subnet-6bb44522"
+     id: "$PUB_SUBNET_ZONE_B"
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
 #     #idFromStackOutput: myinfra-PublicSubnet1
    - name: ExistingPublicSubnet3
 #     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
-     availabilityZone: eu-west-1c
+     availabilityZone: $REGIONc
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
      # todo [customize] per account & region
-     id: "subnet-8f2a1ad7"
+     id: "$PUB_SUBNET_ZONE_C"
 
    - name: ExistingPrivateSubnet1
-     availabilityZone: eu-west-1a
+     availabilityZone: $REGIONa
      # todo [customize] per account & region
-     id: "subnet-2a1de94d"
+     id: "$PRIV_SUBNET_ZONE_A"
    - name: ExistingPrivateSubnet2
-     availabilityZone: eu-west-1b
+     availabilityZone: $REGIONb
      # todo [customize] per account & region
-     id: "subnet-c1b94888"
+     id: "$PRIV_SUBNET_ZONE_B"
    - name: ExistingPrivateSubnet3
-     availabilityZone: eu-west-1c
+     availabilityZone: $REGIONc
      # todo [customize] per account & region
-     id: "subnet-932717cb"
+     id: "$PRIV_SUBNET_ZONE_C"
 
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
@@ -1525,14 +1525,14 @@ experimental:
 stackTags:
   stopSchedule: "nostop"
   # todo [customize] per environment & stack
-  systemCode: "upp"
-  environment: "t"
-  ipCode: "P196"
-  teamDL: "universal.publishing.platform@ft.com"
-  coco-environment-tag: upp-delivery-test-eu
-  
-  
-  
+  systemCode: "$TAGS.systemCode"
+  environment: "$TAGS.environment"
+  ipCode: "$TAGS.ipCode"
+  teamDL: "$TAGS.teamDL"
+  $ADDITIONAL_TAG1
+  $ADDITIONAL_TAG2
+  $ADDITIONAL_TAG3
+  $ADDITIONAL_TAG4
 
 
 # User-provided YAML map available in control-plane's stack-template.json
