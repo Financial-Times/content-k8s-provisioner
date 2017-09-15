@@ -327,7 +327,7 @@ worker:
 #
   nodePools:
     - # Name of this node pool. Must be unique among all the node pools in this cluster
-      name: work1
+      name: w1
 #      # If omitted, public subnets are created by kube-aws and used for worker nodes
       subnets:
 #      - # References subnets defined under the top-level `subnets` key by their names

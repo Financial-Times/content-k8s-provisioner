@@ -1,7 +1,7 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: upp-delivery-test-eu
+clusterName: UppK8sDeliveryTestEu
 
 # CoreOS release channel to use. Currently supported options: alpha, beta, stable
 # See coreos.com/releases for more information
@@ -36,7 +36,7 @@ apiEndpoints:
   # from worker nodes and external clients. Configure the options
   # below if you'd like kube-aws to create a Route53 record sets/hosted zones
   # for you.  Otherwise the deployer is responsible for making this name routable
-  dnsName: upp-delivery-content-test-eu.ft.com
+  dnsName: upp-k8s-delivery-test-eu-api.ft.com
 
   # Configuration for an ELB serving this endpoint
   # Omit all the settings when you want kube-aws not to provision an ELB for you
@@ -327,7 +327,7 @@ worker:
 #
   nodePools:
     - # Name of this node pool. Must be unique among all the node pools in this cluster
-      name: work1
+      name: w1
 #      # If omitted, public subnets are created by kube-aws and used for worker nodes
       subnets:
 #      - # References subnets defined under the top-level `subnets` key by their names
