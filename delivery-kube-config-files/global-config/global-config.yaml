@@ -13,6 +13,7 @@ data:
   aws.content.elasticsearch.endpoint: http://search-upp-sapi-v1-xp-afjbasayjoobnwypyptxf2dqiq.eu-west-1.es.amazonaws.com
   aws.region: eu-west-1
   cache-max-age: "10"
+  cluster.id: "277bcdde"
   methode.api_uri: https://methodeapi-test.ft.com/eom-file/
   methode.health_uri: https://methodeapi-test.ft.com/build-info
   environment: "k8s-delivery-upp-eu"
