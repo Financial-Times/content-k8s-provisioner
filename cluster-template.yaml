@@ -192,7 +192,7 @@ controller:
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
     instanceProfile:
       # todo [customize] per account & region
-      arn: "$CONTROLLER_IAM_ROLE"
+      arn: $CONTROLLER_IAM_ROLE
 
 #  # If omitted, public subnets are created by kube-aws and used for controller nodes
   subnets:
