@@ -12,6 +12,7 @@ data:
   graphite.address: "graphite.ft.com:2003"
   graphite.host: graphite.ft.com
   graphite.port: "2003"
+  kafka.url : "kafka:9092"
   kafka.host : kafka
   kafka.port : "9092"
   kafka.proxy.url : kafka:8082
