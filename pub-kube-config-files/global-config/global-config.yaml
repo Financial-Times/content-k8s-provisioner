@@ -19,4 +19,5 @@ data:
   kafka.proxy.url.with.protocol: http://kafka:8082
   zookeeper.host : kafka
   zookeeper.port : "2181"
+  zookeeper.url: kafka:2181
   tme.url: https://tme.ft.com
