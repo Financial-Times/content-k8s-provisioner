@@ -35,4 +35,4 @@ data:
   zookeeper.host: kafka
   zookeeper.port: "2181"
   upp_gateway.url: upp-uk-gateway-test.in.ft.com:443
-  
+  generic-rw-s3.bucket: com.ft.universalpublishing.v2-suggestions-cache.k8s.test
