@@ -35,4 +35,4 @@ data:
   zookeeper.host: kafka
   zookeeper.port: "2181"
   upp_gateway.url: upp-uk-gateway-test.in.ft.com:443
-  
+  kafka-lagcheck.whitelisted-envs: ""
