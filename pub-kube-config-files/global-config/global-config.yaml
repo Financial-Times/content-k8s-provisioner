@@ -21,4 +21,5 @@ data:
   zookeeper.port : "2181"
   zookeeper.url: kafka:2181
   tme.url: https://tme.ft.com
+  kafka-lagcheck.whitelisted-envs: "prod-uk,prod-us"
   concepts-rw-s3.bucket: upp-concept-normalised-store-k8s-eu
