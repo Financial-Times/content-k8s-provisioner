@@ -6,8 +6,8 @@ This repository contains the files needed to run the delivery cluster
 using Kubernetes on AWS.
 
 It uses [kube-aws](https://coreos.com/kubernetes/docs/latest/kubernetes-on-aws.html) for provisioning the cluster on AWS.
-## Prerequisites for provisioning
-1. Install the [latest kube-aws](https://github.com/coreos/kube-aws/releases) 
+##  Provisioning a new cluster
+Follow the steps in [here](https://docs.google.com/document/d/1TTih1gcj-Vsqjp1aCAzsP4lpt6ivR8jDIXaZtBxNaUU/edit?pli=1#heading=h.idonu4gksr10) 
 
 ## Prerequisites for development
 1. [Install kubectl version](https://kubernetes.io/docs/user-guide/prereqs/) > 1.5.1 (latest should do), since we're using Kubernetes 1.5.1. 
