@@ -37,6 +37,8 @@ exec /usr/bin/coreos-cloudinit --from-file /var/run/coreos/$USERDATA_FILE
 coreos:
   update:
     reboot-strategy: "off"
+    group: upp-k8s-eu-west-1-prod-etcd
+    server: https://coreupdate-eu-prod.memb.ft.com/v1/update/
   units:
 {{- range $u := .Etcd.CustomSystemdUnits}}
     - name: {{$u.Name}}

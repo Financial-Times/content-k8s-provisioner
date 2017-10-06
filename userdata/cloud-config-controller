@@ -20,6 +20,8 @@ exec /usr/bin/coreos-cloudinit --from-file /var/run/coreos/$USERDATA_FILE
 coreos:
   update:
     reboot-strategy: "off"
+    group: upp-k8s-eu-west-1-prod-controller
+    server: https://coreupdate-eu-prod.memb.ft.com/v1/update/
   flannel:
     interface: $private_ipv4
     etcd_cafile: /etc/kubernetes/ssl/ca.pem
