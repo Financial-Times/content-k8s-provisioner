@@ -23,3 +23,5 @@ data:
   tme.url: https://tme.ft.com
   kafka-lagcheck.whitelisted-envs: "prod-uk,prod-us"
   concepts-rw-s3.bucket: upp-concept-normalised-store-k8s-eu
+  publish_monitor.read_environments: "upp-k8s-delivery-test-eu:https://upp-k8s-publishing-test-eu.ft.com/"
+
