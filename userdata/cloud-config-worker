@@ -37,7 +37,7 @@ exec /usr/bin/coreos-cloudinit --from-file /var/run/coreos/$USERDATA_FILE
 coreos:
   update:
     reboot-strategy: "off"
-    group: {{.ClusterName}}-controller
+    group: {{.ClusterName}}
     server: https://coreupdate-eu-prod.memb.ft.com/v1/update/
   flannel:
     interface: $private_ipv4
