@@ -1,3 +1,5 @@
+# USE https://github.com/Financial-Times/upp-global-configs FOR GLOBAL CONFIGS
+
 # Delivery cluster on Kubernetes POC
 
 
