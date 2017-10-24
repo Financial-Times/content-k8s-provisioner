@@ -27,7 +27,6 @@ docker build -t k8s-provisioner:local .
 
 docker run \
     -v $(pwd)/credentials:/provisioner-configs/credentials \
-    -v $(pwd)/cluster.yaml:/provisioner-configs/cluster.yaml.bak \
     -e "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" \
     -e "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" \
     -e "CLUSTER=$CLUSTER" \
