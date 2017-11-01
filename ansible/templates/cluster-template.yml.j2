@@ -1,0 +1,4 @@
+securityGroupIds: 
+{% for securitygroups in nat_gw_ips %}
+    - {{ securitygroups.ip_address }}
+{% endfor %}
