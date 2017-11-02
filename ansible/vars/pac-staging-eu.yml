@@ -38,14 +38,17 @@ nat_gw_ips:
   - {ip_address: 54.194.189.228}
 
 worker_security_groups:
-  - {aurora_access_sg: sg-17f58d6e}
-  - {vpc_internal_ssh_sg: sg-9e99c1e6}
+  - {sgs: sg-17f58d6e}
+  - {sgs: sg-9e99c1e6}
 
 tags:
-  - {tag: systemCode, value: pac}
-  - {tag: environment, value: t}
-  - {tag: ipCode, value: P196}
-  - {tag: teamDL, value: universal.publishing.platform@ft.com}
-  - {tag: stopSchedule, value: nostop}
-  - {tag: oco-environment-tag, value: pac-staging-eu}
-  - {tag: name, value: pac-staging-eu}
+  - {name: systemCode, value: pac}
+  - {name: environment, value: t}
+  - {name: ipCode, value: P196}
+  - {name: teamDL, value: universal.publishing.platform@ft.com}
+  - {name: stopSchedule, value: nostop}
+  - {name: oco-environment-tag, value: pac-staging-eu}
+  - {name: name, value: pac-staging-eu}
+
+
+
