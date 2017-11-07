@@ -36,6 +36,42 @@ docker run \
     k8s-provisioner:local /bin/sh provision.sh
 ```
 
+##  Updating a cluster
+
+```
+## Set the environments variables to provision a cluster. The variables are stored in LastPass
+## For PAC Cluster
+## LastPass: pac-content-provisioner env variables
+## For UPP Cluster
+## LastPass: infraprod-coco-aws-provisioning-keys
+
+docker run \
+    -e "AWS_REGION=$AWS_REGION" \
+    -e "CLUSTER_NAME=$CLUSTER_NAME" \
+    -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
+    -e "PLATFORM=$PLATFORM" \
+    -e "VAULT_PASS=$VAULT_PASS" \
+    k8s-provisioner:local /bin/sh update.sh
+```
+
+##  Decommissioning a cluster
+
+```
+## Set the environments variables to provision a cluster. The variables are stored in LastPass
+## For PAC Cluster
+## LastPass: pac-content-provisioner env variables
+## For UPP Cluster
+## LastPass: infraprod-coco-aws-provisioning-keys
+
+docker run \
+    -e "AWS_REGION=$AWS_REGION" \
+    -e "CLUSTER_NAME=$CLUSTER_NAME" \
+    -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
+    -e "PLATFORM=$PLATFORM" \
+    -e "VAULT_PASS=$VAULT_PASS" \
+    k8s-provisioner:local /bin/sh decom.sh
+```
+
 Follow the steps in [here](https://docs.google.com/document/d/1TTih1gcj-Vsqjp1aCAzsP4lpt6ivR8jDIXaZtBxNaUU/edit?pli=1#heading=h.idonu4gksr10) 
 
 ## Prerequisites for development
