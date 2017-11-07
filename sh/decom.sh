@@ -4,9 +4,8 @@
 echo ${VAULT_PASS} > /ansible/vault.pass
 cd /ansible
 
-ansible-playbook --vault-password-file=vault.pass provision.yaml --extra-vars "\
+ansible-playbook --vault-password-file=vault.pass decom.yaml --extra-vars "\
 aws_region=${AWS_REGION} \
 cluster_name=${CLUSTER_NAME} \
-generate_cluster_credentials=${GENERATE_CLUSTER_CREDENTIALS} \
 platform=${PLATFORM} \
 environment_type=${ENVIRONMENT_TYPE} "

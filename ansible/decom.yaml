@@ -1,0 +1,20 @@
+---
+- name: Decommision the k8s stack
+  hosts: localhost
+  connection: local
+  
+  vars_files:
+    - vars/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
+    - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
+
+  tasks:
+    - name: Generate the cluster config
+      template:
+        src: templates/cluster-template.yaml.j2
+        dest: /ansible/cluster.yaml
+
+    - name: Decom a cluster
+      command: kube-aws destroy
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"

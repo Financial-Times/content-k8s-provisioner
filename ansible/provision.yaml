@@ -1,0 +1,40 @@
+---
+- name: Provision a k8s stack
+  hosts: localhost
+  connection: local
+  
+  vars_files:
+    - vars/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
+    - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
+
+  tasks:
+    - name: Generate the cluster config
+      template:
+        src: templates/cluster-template.yaml.j2
+        dest: /ansible/cluster.yaml
+
+    - name: Generate cluster credentials if necessary
+      command: "{{ item }}"
+      with_items:
+        - rm -rf credentials/*
+        - kube-aws render credentials --generate-ca
+      when: (generate_cluster_credentials | lower == "y")
+    
+    - name: Set the provisioner bucket
+      set_fact:
+        provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
+
+    - name: Validate the cluster config
+      command: kube-aws validate --s3-uri s3://{{ provisioner_bucket }}
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+
+    - name: Provision a cluster
+      command: kube-aws up --s3-uri s3://{{ provisioner_bucket }}
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+
+    - name: Delete the content of the credentials folder
+      command: rm -rf credentials/*

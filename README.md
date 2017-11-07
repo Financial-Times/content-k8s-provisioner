@@ -26,11 +26,13 @@ docker build -t k8s-provisioner:local .
 ## LastPass: infraprod-coco-aws-provisioning-keys
 
 docker run \
-    -v $(pwd)/credentials:/provisioner-configs/credentials \
-    -e "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" \
-    -e "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" \
-    -e "CLUSTER=$CLUSTER" \
-    -e "KONSTRUCTOR_API_KEY=$KONSTRUCTOR_API_KEY" \
+    -v $(pwd)/credentials:/ansible/credentials \
+    -e "AWS_REGION=$AWS_REGION" \
+    -e "CLUSTER_NAME=$CLUSTER_NAME" \
+    -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
+    -e "GENERATE_CLUSTER_CREDENTIALS=$GENERATE_CLUSTER_CREDENTIALS" \
+    -e "PLATFORM=$PLATFORM" \
+    -e "VAULT_PASS=$VAULT_PASS" \
     k8s-provisioner:local /bin/sh provision.sh
 ```
 

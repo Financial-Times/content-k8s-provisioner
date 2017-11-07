@@ -1,0 +1,49 @@
+region: us-east-1
+kms_key_arn: arn:aws:kms:us-east-1:469211898354:key/b1bcda88-92e0-49ff-a866-a5da03821aa3
+debug_key_name: pac-provisioner-us
+
+# Controller Instance Properties
+controller_instance_type: t2.medium
+controller_count: 2
+controller_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-controller-role
+
+# ETCD Instance Properties
+etcd_instance_type: t2.medium
+etcd_count: 2
+etcd_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-etcd-role
+
+# Worker Instance Properties
+worker_pools: 
+  - {instance_type: t2.large, count: 2, role: worker}
+
+worker_security_groups:
+  - sg-f1ec2b82
+  - sg-24e79e5a
+
+worker_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role
+
+vpc_id: vpc-4bc03f32
+vpc_cidr: 10.174.32.0/21
+
+public_subnet_zone_a: subnet-f8fcc99d
+public_subnet_zone_b: subnet-ecc00fc0
+public_subnet_zone_c: subnet-9c3f87d4
+
+private_subnet_zone_a: subnet-f9fcc99c
+private_subnet_zone_b: subnet-a8dc1384
+private_subnet_zone_c: subnet-d63d859e
+
+k8s_version: v1.7.7_coreos.0
+vpc_internal_ssh_sg: sg-f1ec2b82
+api_private_access_sg: sg-71f03702
+
+nat_gw_ips:
+  - 52.21.82.191
+  - 34.192.49.175
+  - 34.224.153.249
+  - 54.194.189.228
+
+tags:
+  - {name: ipCode, value: P196}
+  - {name: teamDL, value: universal.publishing.platform@ft.com}
+  - {name: stopSchedule, value: nostop}

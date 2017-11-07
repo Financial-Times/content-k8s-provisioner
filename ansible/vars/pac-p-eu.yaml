@@ -1,20 +1,26 @@
-cluster_name: pac-staging-eu
 region: eu-west-1
-api_dns_name: pac-staging-eu-api.ft.com
 kms_key_arn: arn:aws:kms:eu-west-1:469211898354:key/84c26c96-8ed3-49e2-a7f4-46bcb6263159
 debug_key_name: pac-provisioner-eu
 
+# Controller Instance Properties
 controller_instance_type: t2.medium
 controller_count: 2
 controller_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-controller-role
 
-worker_instance_type: t2.large
-worker_count: 2
-worker_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role
-
+# ETCD Instance Properties
 etcd_instance_type: t2.medium
 etcd_count: 2
 etcd_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-etcd-role
+
+# Worker Instance Properties
+worker_pools: 
+  - {instance_type: t2.large, count: 2, role: worker, subnets: 3}
+
+worker_security_groups:
+  - sg-17f58d6e
+  - sg-9e99c1e6
+
+worker_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role
 
 vpc_id: vpc-ee57bf89
 vpc_cidr: 10.172.40.0/21
@@ -27,28 +33,17 @@ private_subnet_zone_a: subnet-901020c8
 private_subnet_zone_b: subnet-5f00f438
 private_subnet_zone_c: subnet-8cbe4fc5
 
-k8s_version: v1.7.4_coreos.0
+k8s_version: v1.7.7_coreos.0
 vpc_internal_ssh_sg: sg-9e99c1e6
 api_private_access_sg: sg-16663e6e
 
 nat_gw_ips:
-  - {ip_address: 34.253.41.229}
-  - {ip_address: 34.248.139.58}
-  - {ip_address: 54.76.127.119}
-  - {ip_address: 54.194.189.228}
-
-worker_security_groups:
-  - {sgs: sg-17f58d6e}
-  - {sgs: sg-9e99c1e6}
+  - 34.253.41.229
+  - 34.248.139.58
+  - 54.76.127.119
+  - 54.194.189.228
 
 tags:
-  - {name: systemCode, value: pac}
-  - {name: environment, value: t}
   - {name: ipCode, value: P196}
   - {name: teamDL, value: universal.publishing.platform@ft.com}
   - {name: stopSchedule, value: nostop}
-  - {name: oco-environment-tag, value: pac-staging-eu}
-  - {name: name, value: pac-staging-eu}
-
-
-

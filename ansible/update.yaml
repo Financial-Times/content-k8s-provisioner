@@ -1,0 +1,53 @@
+---
+- name: Update the k8s stack
+  hosts: localhost
+  connection: local
+
+  vars_files:
+    - vars/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
+    - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
+
+  tasks:
+    - name: Generate the cluster config
+      template:
+        src: templates/cluster-template.yaml.j2
+        dest: /ansible/cluster.yaml
+    
+    - name: Get the number of pem files in the credentials directory
+      find:
+        paths: /ansible/credentials
+        patterns: '*.pem'
+      register: pem_files
+
+    - name: Check if the credentials folder is empty
+      fail: msg="The credentials folder is empty. Add the cluster credentials in the /ansible/credentials folder"
+      when: pem_files.examined|int == 0
+
+    - name: Delete the .env and .fingerprint files
+      file: 
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - credentials/*.enc
+        - credentials/*.fingerprint
+
+    - name: Set the provisioner bucket
+      set_fact:
+        provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
+
+    - name: Validate the cluster config
+      command: kube-aws validate --s3-uri s3://{{ provisioner_bucket }}
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+
+    - name: Update the cluster
+      command: kube-aws update --s3-uri s3://{{ provisioner_bucket }}
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+
+    - name: Delete the content of the credentials folder
+      file:
+        path: credentials/
+        state: absent
