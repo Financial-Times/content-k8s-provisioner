@@ -7,5 +7,5 @@ RUN apk --update add python py-pip ansible \
 
 # Get the files for the provisioner
 COPY ansible /ansible
-COPY credentials/* /ansible/credentials/
+COPY credentials/ /ansible/credentials/
 COPY sh/* /

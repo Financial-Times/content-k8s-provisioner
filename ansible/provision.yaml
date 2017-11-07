@@ -8,6 +8,10 @@
     - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
 
   tasks:
+    - name: Log vars
+      debug:
+        msg: "cluster_name: '{{ platform }}-{{ cluster_name }}-{{ aws_region }}'"
+
     - name: Generate the cluster config
       template:
         src: templates/cluster-template.yaml.j2
@@ -36,5 +40,33 @@
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
 
+    - name: Tag the public subnets with the clusterid
+      script: /bin/sh /tag_subnet.sh "{{ public_subnet_zone_a }}" "{{ public_subnet_zone_b }}" "{{ public_subnet_zone_c }}"
+      environment: 
+        AWS_REGION: "{{ region }}"
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        CLUSTER_NAME: "{{ platform }}-{{ cluster_name }}-{{ aws_region }}"
+    
+    - name: Retrieve the Cluster API server ELB
+      script: /bin/sh /elb.sh
+      environment:
+        AWS_REGION: "{{ region }}"
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        CLUSTER_NAME: "{{ platform }}-{{ cluster_name }}-{{ aws_region }}"
+      register: api_server_elb
+
+    - name: API Server ELB
+      debug:
+        msg: "API Server ELB: '{{ api_server_elb.stdout }}'"
+
+    - include: tasks/create_cname.yaml
+      vars:
+        dns_cname: "{{ platform }}-{{ cluster_name }}-{{ aws_region }}-api"
+        hostname: "{{ api_server_elb.stdout }}"
+
     - name: Delete the content of the credentials folder
-      command: rm -rf credentials/*
+      file:
+        path: credentials/
+        state: absent

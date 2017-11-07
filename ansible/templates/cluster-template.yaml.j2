@@ -1,7 +1,7 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: {{ cluster_name }}
+clusterName: {{ platform }}-{{ cluster_name }}-{{ aws_region }}
 
 # CoreOS release channel to use. Currently supported options: alpha, beta, stable
 # See coreos.com/releases for more information
@@ -36,7 +36,7 @@ apiEndpoints:
   # from worker nodes and external clients. Configure the options
   # below if you'd like kube-aws to create a Route53 record sets/hosted zones
   # for you.  Otherwise the deployer is responsible for making this name routable
-  dnsName: {{ platform }}-{{ cluster_name }}-{{ region }}-api.ft.com
+  dnsName: {{ platform }}-{{ cluster_name }}-{{ aws_region }}-api.ft.com
 
   # Configuration for an ELB serving this endpoint
   # Omit all the settings when you want kube-aws not to provision an ELB for you
@@ -1295,8 +1295,8 @@ experimental:
 stackTags:
   systemCode: {{ platform }}
   environment: {{ environment_type }}
-  coco-environment-tag: {{ cluster_name }}
-  name: {{ cluster_name }}
+  coco-environment-tag: {{ platform }}-{{ cluster_name }}-{{ aws_region }}
+  name: {{ platform }}-{{ cluster_name }}-{{ aws_region }}
 {% for tag in tags %}
   {{ tag.name }}: {{ tag.value }}
 {% endfor %}
