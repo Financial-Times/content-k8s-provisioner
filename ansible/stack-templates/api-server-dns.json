@@ -1,7 +1,0 @@
-{
-  "zone": "ft.com",
-  "name": "API_DNS",
-  "rdata": "ELB_NAME",
-  "ttl": "300",
-  "emailAddress": "universal.publishing.platform@ft.com"
-}
