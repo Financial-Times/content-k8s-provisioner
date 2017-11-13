@@ -12,6 +12,7 @@
       - {subnet_id: "{{ private_subnet_zone_b }}", security_groups: [ "{{ efs_access_sg }}" ]}
       - {subnet_id: "{{ private_subnet_zone_c }}", security_groups: [ "{{ efs_access_sg }}" ]}
     tags:
+      name: "{{ stack_name }}-transformers-cache"
       environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
@@ -19,9 +20,9 @@
 
 - name: EFS instance details
   debug:
-    msg: "EFS details: '{{ efs_instance_trans_cache.file_system_id }}'"
+    msg: "EFS details: '{{ efs_instance_trans_cache.efs.file_system_id }}'"
 
-# Provision a EFS instance for factset reader
+#Provision a EFS instance for factset reader
 - name: EFS instance for factset uploader
   efs:
     state: present
@@ -34,6 +35,7 @@
       - {subnet_id: "{{ public_subnet_zone_b }}", security_groups: [ "{{ efs_access_sg }}" ]}
       - {subnet_id: "{{ public_subnet_zone_c }}", security_groups: [ "{{ efs_access_sg }}" ]}
     tags:
+          name: "{{ stack_name }}-factset-uploader"
       environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
@@ -41,7 +43,7 @@
 
 - name: EFS instance details
   debug:
-    msg: "EFS details: '{{ efs_instance_factset_uploader.file_system_id }}'"
+    msg: "EFS details: '{{ efs_instance_factset_uploader.efs.file_system_id }}'"
 
 - name: Provision a persistent volume
   ec2_vol:

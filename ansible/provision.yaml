@@ -19,7 +19,6 @@
   tasks:
     - include: tasks/set_stack_name.yaml
 
-    # Create the cluster.yaml file for provisioning
     - name: Generate the cluster config
       template:
         src: templates/cluster-template.yaml.j2
@@ -41,19 +40,16 @@
         - kube-aws render credentials --generate-ca
       when: (share_cluster_credentials | lower != "y")
     
-    # Set the S3 bucket where the stack config is going to be stored
     - name: Set the provisioner bucket
       set_fact:
         provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
 
-    # Validate the cluster template
     - name: Validate the cluster config
       command: kube-aws validate --s3-uri s3://{{ provisioner_bucket }}
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
 
-    # Provision the cluster
     - name: Provision a cluster
       command: kube-aws up --s3-uri s3://{{ provisioner_bucket }}
       environment:
