@@ -7,7 +7,7 @@
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_key }}"
     region: "{{ region }}"
-    targets:
+    targets: 
       - {subnet_id: "{{ private_subnet_zone_a }}", security_groups: [ "{{ efs_access_sg }}" ]}
       - {subnet_id: "{{ private_subnet_zone_b }}", security_groups: [ "{{ efs_access_sg }}" ]}
       - {subnet_id: "{{ private_subnet_zone_c }}", security_groups: [ "{{ efs_access_sg }}" ]}
@@ -45,11 +45,12 @@
   debug:
     msg: "EFS details: '{{ efs_instance_factset_uploader.efs.file_system_id }}'"
 
-- name: Provision a persistent volume
+- name: Provision a persistent volume for kafka
   ec2_vol:
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_key }}"
     region: "{{ region }}"
+    zone: "{{ region }}a"
     name: "{{ stack_name }}-kafka"
     volume_size: 10
     volume_type: gp2
@@ -63,7 +64,7 @@
   debug:
     msg: "EBS Volume ID for publishing: '{{ ec2_vol_pub_kafka.volume_id }}'"
 
-- name: Provision a persistent volume
+- name: Provision a persistent volume for mongo
   ec2_vol:
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_key }}"
