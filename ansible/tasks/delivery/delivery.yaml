@@ -9,7 +9,7 @@
     volume_size: 10
     volume_type: gp2
     tags:
-      environent: "{{ environment_type }}"
+      environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
   register: ec2_vol_del_kafka
@@ -28,7 +28,7 @@
     volume_size: 50
     volume_type: gp2
     tags:
-      environent: "{{ environment_type }}"
+      environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
   with_items: 
@@ -53,7 +53,7 @@
     name: "{{ stack_name }}-imagepublish"
     state: present
     tags:
-      environent: "{{ environment_type }}"
+      environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
 
@@ -78,7 +78,7 @@
     policy: "{{ lookup('file','templates/generic-rw-s3.json') }}"
     state: present
     tags:
-      environent: "{{ environment_type }}"
+      environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
 

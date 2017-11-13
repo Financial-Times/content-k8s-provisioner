@@ -12,7 +12,7 @@
       - {subnet_id: "{{ private_subnet_zone_b }}", security_groups: [ "{{ efs_access_sg }}" ]}
       - {subnet_id: "{{ private_subnet_zone_c }}", security_groups: [ "{{ efs_access_sg }}" ]}
     tags:
-      environent: "{{ environment_type }}"
+      environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
   register: efs_instance_trans_cache
@@ -34,7 +34,7 @@
       - {subnet_id: "{{ public_subnet_zone_b }}", security_groups: [ "{{ efs_access_sg }}" ]}
       - {subnet_id: "{{ public_subnet_zone_c }}", security_groups: [ "{{ efs_access_sg }}" ]}
     tags:
-      environent: "{{ environment_type }}"
+      environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
   register: efs_instance_factset_uploader
@@ -52,7 +52,7 @@
     volume_size: 10
     volume_type: gp2
     tags:
-      environent: "{{ environment_type }}"
+      environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
   register: ec2_vol_pub_kafka
@@ -71,7 +71,7 @@
     volume_size: 50
     volume_type: gp2
     tags:
-      environent: "{{ environment_type }}"
+      environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
   with_items: 
