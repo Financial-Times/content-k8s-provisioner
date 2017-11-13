@@ -1,20 +1,21 @@
-debug_key_name: pac-provisioner-eu
+debug_key_name: upp-k8s-provisioning-debug
 
 # Controller Instance Properties
-controller_instance_type: t2.medium
+controller_instance_type: c4.large
 controller_count: 2
 
 # ETCD Instance Properties
 etcd_instance_type: t2.medium
-etcd_count: 2
+etcd_count: 3
 
 # Worker Instance Properties
 worker_pools: 
-  - {id: 1, instance_type: t2.large, count: 2, role: worker, subnets: 3}
+  - {id: 1, instance_type: m4.xlarge, count: 3, role: worker, subnets: 3}
+  - {id: 2, instance_type: t2.medium, count: 3, role: mongo-worker, subnets: 3}
+  - {id: 3, instance_type: m4.large, count: 1, role: kafka-worker, subnets: 1}
 
 worker_security_groups:
-  - sg-17f58d6e
-  - sg-9e99c1e6
+  - sg-f1ec2b82
 
 k8s_version: v1.7.7_coreos.0
 tags:

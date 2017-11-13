@@ -1,0 +1,83 @@
+---
+# Provision an EFS instance for transformers cache
+- name: EFS instance for transformers cache
+  efs:
+    state: present
+    name: "{{ stack_name }}-transformers-cache"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ region }}"
+    targets:
+      - {subnet_id: "{{ private_subnet_zone_a }}", security_groups: [ "{{ efs_access_sg }}" ]}
+      - {subnet_id: "{{ private_subnet_zone_b }}", security_groups: [ "{{ efs_access_sg }}" ]}
+      - {subnet_id: "{{ private_subnet_zone_c }}", security_groups: [ "{{ efs_access_sg }}" ]}
+    tags:
+      environent: "{{ environment_type }}"
+      teamDL: "universal.publishing.platform@ft.com"
+      systemCode: "{{ platform }}"
+  register: efs_instance_trans_cache
+
+- name: EFS instance details
+  debug:
+    msg: "EFS details: '{{ efs_instance_trans_cache }}'"
+
+# Provision a EFS instance for factset reader
+- name: EFS instance for factset reader
+  efs:
+    state: present
+    name: "{{ stack_name }}-factset-reader"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ region }}"
+    targets:
+      - {subnet_id: "{{ public_subnet_zone_a }}", security_groups: [ "{{ efs_access_sg }}" ]}
+      - {subnet_id: "{{ public_subnet_zone_b }}", security_groups: [ "{{ efs_access_sg }}" ]}
+      - {subnet_id: "{{ public_subnet_zone_c }}", security_groups: [ "{{ efs_access_sg }}" ]}
+    tags:
+      environent: "{{ environment_type }}"
+      teamDL: "universal.publishing.platform@ft.com"
+      systemCode: "{{ platform }}"
+  register: efs_instance_factset_reader
+
+- name: EFS instance details
+  debug:
+    msg: "EFS details: '{{ efs_instance_factset_reader }}'"
+
+- name: Provision a persistent volume
+  ec2_vol:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ region }}"
+    name: "{{ stack_name }}-kafka"
+    volume_size: 10
+    volume_type: gp2
+    tags:
+      environent: "{{ environment_type }}"
+      teamDL: "universal.publishing.platform@ft.com"
+      systemCode: "{{ platform }}"
+  register: ec2_vol_pub_kafka
+
+- name: EBS volume details
+  debug:
+    msg: "EBS Volume ID for publishing: '{{ ec2_vol_pub_kafka.volume_id }}'"
+
+- name: Provision a persistent volume
+  ec2_vol:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ region }}"
+    zone: "{{ item }}"
+    name: "{{ stack_name }}-mongo-{{ item }}"
+    volume_size: 50
+    volume_type: gp2
+    tags:
+      environent: "{{ environment_type }}"
+      teamDL: "universal.publishing.platform@ft.com"
+      systemCode: "{{ platform }}"
+  with_items: 
+    - "{{ region }}a"
+    - "{{ region }}b"
+    - "{{ region }}c"
+  register: ec2_vol_pub_mongo
+
+- debug: var=ec2_vol_pub_mongo

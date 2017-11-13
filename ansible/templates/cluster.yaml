@@ -1,8 +1,7 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-
-clusterName: {{ stack_name }}
+clusterName: upp-jpd-test1-del-eu
 
 # CoreOS release channel to use. Currently supported options: alpha, beta, stable
 # See coreos.com/releases for more information
@@ -37,8 +36,7 @@ apiEndpoints:
   # from worker nodes and external clients. Configure the options
   # below if you'd like kube-aws to create a Route53 record sets/hosted zones
   # for you.  Otherwise the deployer is responsible for making this name routable
-
-  dnsName: {{ stack_name }}-api.ft.com
+  dnsName: upp-jpd-test1-del-eu-api.ft.com
 
   # Configuration for an ELB serving this endpoint
   # Omit all the settings when you want kube-aws not to provision an ELB for you
@@ -79,16 +77,17 @@ apiEndpoints:
     apiAccessAllowedSourceCIDRs:
     # todo [customize] per account & region
     # private subnets NAT gateway
-{% for nat_gw in nat_gw_ips %}
-    - {{ nat_gw }}/32
-{% endfor %}
+    - 34.253.41.229/32
+    - 34.248.139.58/32
+    - 54.76.127.119/32
+    - 54.194.189.228/32
 
 #    # Existing security groups attached to this load balancer which are typically used to
 #    # allow Kubernetes API accesses from admins and/or CD systems when `apiAccessAllowedSourceCIDRs` are explicitly set to an empty array
     # todo [customize] per account & region
     # The group id of aws-composer-custom-k8s-api-internal-access-sg*
     securityGroupIds:
-    - {{ api_private_access_sg }}
+    - sg-16663e6e
 #
 #  #
 #  # Common configuration #1: Unversioned, internet-facing API endpoint
@@ -116,7 +115,7 @@ apiEndpoints:
 # Name of the SSH keypair already loaded into the AWS
 # account being used to deploy this cluster.
 # todo [customize] per stack
-keyName: {{ debug_key_name }}
+keyName: upp-k8s-provisioning-debug
 
 # Additional keys to preload on the coreos account (keep this to a minimum)
 #sshAuthorizedKeys:
@@ -124,25 +123,25 @@ keyName: {{ debug_key_name }}
 
 # Region to provision Kubernetes cluster
 # todo [customize] per region
-region: {{ region }}
+region: eu-west-1
 
 # Availability Zone to provision Kubernetes cluster when placing nodes in a single availability zone (not highly-available) Comment out for multi availability zone setting and use the below `subnets` section instead.
 #availabilityZone: eu-west-1a
 
 # ARN of the KMS key used to encrypt TLS assets.
 # todo [customize] per account & region
-kmsKeyArn: "{{ kms_key_arn }}"
+kmsKeyArn: "arn:aws:kms:eu-west-1:469211898354:key/84c26c96-8ed3-49e2-a7f4-46bcb6263159"
 
 controller:
 #  # Number of controller nodes to create, for more control use `controller.autoScalingGroup` and do not use this setting
-  count: {{ controller_count }}
+  count: 2
 #
 #  # Maximum time to wait for controller creation
 #  createTimeout: PT15M
 #
 #  # Instance type for controller node.
 #  # CAUTION: Don't use t2.micro or the cluster won't work. See https://github.com/kubernetes/kubernetes/issues/18975
-  instanceType: {{ controller_instance_type }}
+  instanceType: c4.large
 #
 #  rootVolume:
 #    # Disk size (GiB) for controller node
@@ -158,7 +157,7 @@ controller:
   securityGroupIds:
     # allow SSH from internal VPC machines. Group name "Internal SSH security group"
     # todo [customize] per account & region
-    - {{ vpc_internal_ssh_sg }}
+    - sg-9e99c1e6
 #
 #  # Auto Scaling Group definition for controllers. If only `controllerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
 #  autoScalingGroup:
@@ -192,7 +191,7 @@ controller:
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
     instanceProfile:
       # todo [customize] per account & region
-      arn: "{{ controller_iam_role }}"
+      arn: "arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-controller-role"
 
 #  # If omitted, public subnets are created by kube-aws and used for controller nodes
   subnets:
@@ -220,7 +219,7 @@ controller:
     permissions: 0644
     content: |
       [Service]
-      Environment="{% raw %}DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}{% endraw %}"
+      Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}"
 #    - path: "/etc/rkt/auth.d/docker.json"
 #      permissions: 0600
 #      content: |
@@ -317,16 +316,14 @@ worker:
 #  apiEndpointName: versionedPublic
 #
   nodePools:
-{% for worker in worker_pools %}
     - # Name of this node pool. Must be unique among all the node pools in this cluster
-      name: w{{ worker.id }}
+      name: w1
 #      # If omitted, public subnets are created by kube-aws and used for worker nodes
       subnets:
 #      - # References subnets defined under the top-level `subnets` key by their names
-{% set subnet_count = worker.subnets | int %}
-{% for n in range(1, subnet_count+1) %}
-       - name: ExistingPrivateSubnet{{ n }}
-{% endfor %}
+       - name: ExistingPrivateSubnet1
+       - name: ExistingPrivateSubnet2
+       - name: ExistingPrivateSubnet3
 #        name: ManagedPublicSubnet1
 #
 #      # Existing "glue" security groups attached to worker nodes which are typically used to allow
@@ -334,9 +331,7 @@ worker:
       securityGroupIds:
         # Allow ssh from internal VPC. Group name: "Internal SSH security group"
         # todo [customize] per account & region
-{% for sg in worker_security_groups %}
-        - {{ sg }}
-{% endfor %}
+        - sg-9e99c1e6
 #
 #      # Configuration for external managed ELBs for worker nodes
 #      # Use this with k8s load balancers with type=NodePort. See https://kubernetes.io/docs/user-guide/services/#type-nodeport
@@ -373,11 +368,11 @@ worker:
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
         # todo [customize] per account & region
         instanceProfile:
-          arn: "{{ worker_iam_role }}"
+          arn: "arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role"
 
 #      # Number of worker nodes to create for an autoscaling group based pool
-      count: {{ worker.count }}
-      instanceType: {{ worker.instance_type }}
+      count: 3
+      instanceType: m4.xlarge
 #      # Autoscaling by adding/removing nodes according to resource usage
       autoscaling:
 #        # Make this node pool an autoscaling-target of k8s cluster-autoscaler
@@ -398,18 +393,7 @@ worker:
 
 #      # Kubernetes node labels to be added to worker nodes
       nodeLabels:
-        kube-aws.coreos.com/role: {{ worker.role }}
-{% if 'mongo-worker' == worker.role %}
-      taints:
-        - key: dedicated
-          value: mongo
-          effect: NoSchedule
-{% elif 'kafka-worker' == worker.role %}
-      taints:
-        - key: dedicated
-          value: kafka
-          effect: NoSchedule
-{% endif %}
+        kube-aws.coreos.com/role: worker
 
 #      # User defined files that will be added to the NodePool cloud-init configuration in the "write_files:" section.
       customFiles:
@@ -426,7 +410,7 @@ worker:
         permissions: 0644
         content: |
           [Service]
-          Environment="{% raw %}DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}{% endraw %}"
+          Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}"
 
 #        - path: "/etc/rkt/auth.d/docker.json"
 #          permissions: 0600
@@ -509,7 +493,366 @@ worker:
           [X-Fleet]
           Global=true
 
-{% endfor %}
+    - # Name of this node pool. Must be unique among all the node pools in this cluster
+      name: w2
+#      # If omitted, public subnets are created by kube-aws and used for worker nodes
+      subnets:
+#      - # References subnets defined under the top-level `subnets` key by their names
+       - name: ExistingPrivateSubnet1
+       - name: ExistingPrivateSubnet2
+       - name: ExistingPrivateSubnet3
+#        name: ManagedPublicSubnet1
+#
+#      # Existing "glue" security groups attached to worker nodes which are typically used to allow
+#      # access from worker nodes to services running on an existing infrastructure
+      securityGroupIds:
+        # Allow ssh from internal VPC. Group name: "Internal SSH security group"
+        # todo [customize] per account & region
+        - sg-9e99c1e6
+#
+#      # Configuration for external managed ELBs for worker nodes
+#      # Use this with k8s load balancers with type=NodePort. See https://kubernetes.io/docs/user-guide/services/#type-nodeport
+#      #
+#      # NOTICE: This is generally recommended over k8s managed load-balancers with type=LoadBalancer because it allows
+#      # a manual but no-downtime rotation of kube-aws clusters
+#      loadBalancer:
+#        enabled: true
+#        # Names of ELBs attached to worker nodes
+#        names: [ "manuallymanagedelb" ]
+#        # IDs of "glue" security groups attached to worker nodes to allow the ELBs to communicate with worker nodes
+#        securityGroupIds: [ "sg-87654321" ]
+#
+#      # The name of the API endpoint defined in the top level `apiEndpoints` that this worker node pool will use to access the k8s API
+#      # If not specified, defaults to `worker.apiEndpointName`
+#      apiEndpointName: versionedPublic
+#
+#     # if you omit this block kube-aws would create an IAM Role and a customer managed policy with a random name.
+      iam:
+#        role:
+#       # This will create a named IAM Role managed by kube-aws with the name {AWS::Region}-$managedIamRoleName.
+#       # It will have attached a customer Managed Policy that you can modify afterwards if you need more permissions for your cluster.
+#       # Be careful with the Statements you modify because an update could overwrite your own.
+#       # the Statements included in the ManagedPolicy are the minimun ones required for the Controllers to run.
+#       #   name: "yourManagedRole"
+#       # if you set managedPolicies here it will be attached in addition to the created managedPolicy in kube-aws for the cluster.
+#       # CAUTION: if you attach a more restrictive policy in some resources (i.e ec2:* Deny) you can make kube-aws fail.
+#       #   managedPolicies:
+#       #     - arn: "arn:aws:iam::aws:policy/AdministratorAccess"
+#       #     - arn: "arn:aws:iam::YOURACCOUNTID:policy/YOURPOLICYNAME"
+
+#       # if you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the configured instanceProfile.
+#       # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
+#       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
+        # todo [customize] per account & region
+        instanceProfile:
+          arn: "arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role"
+
+#      # Number of worker nodes to create for an autoscaling group based pool
+      count: 3
+      instanceType: t2.medium
+#      # Autoscaling by adding/removing nodes according to resource usage
+      autoscaling:
+#        # Make this node pool an autoscaling-target of k8s cluster-autoscaler
+#        #
+#        # Beware that making this an autoscaing-target doesn't automatically deploy cluster-autoscaler itself -
+#        # turn on `addons.clusterAutoscaler.enabled` to deploy it on controller nodes.
+        clusterAutoscaler:
+          enabled: true
+#      # Add predefined set of labels to the nodes
+#      # The set includes names of launch configurations and autoscaling groups
+      awsNodeLabels:
+        enabled: true
+#      # Will provision worker nodes with IAM permissions to run cluster-autoscaler and add node labels so that
+#      # cluster-autoscaler pods are scheduled to nodes in this node pool
+      clusterAutoscalerSupport:
+        enabled: true
+      kubeletOpts: --image-gc-low-threshold=65 --image-gc-high-threshold=75
+
+#      # Kubernetes node labels to be added to worker nodes
+      nodeLabels:
+        kube-aws.coreos.com/role: mongo-worker
+      taints:
+        - key: dedicated
+          value: mongo
+          effect: NoSchedule
+
+#      # User defined files that will be added to the NodePool cloud-init configuration in the "write_files:" section.
+      customFiles:
+      - path: /etc/systemd/journald.conf.d/10-override-config.conf
+        permissions: 0644
+        content: |
+          [Journal]
+          MaxLevelConsole=crit
+          Compress=false
+          RateLimitInterval=0
+          RateLimitBurst=0
+
+      - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
+        permissions: 0644
+        content: |
+          [Service]
+          Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}"
+
+#        - path: "/etc/rkt/auth.d/docker.json"
+#          permissions: 0600
+#          content: |
+#            { "rktKind": "dockerAuth", "rktVersion": "v1", ... }
+#
+#      # User defined systemd units that will be added to the NodePool cluster cloud-init configuration in the "units:" section.
+      customSystemdUnits:
+      - name: systemd-journald.service
+        command: restart
+
+      - name: authorized_keys.service
+        command: start
+        content: |
+            [Unit]
+            Description=Update authorized_keys
+
+            [Service]
+            Type=oneshot
+            ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
+            ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys.sha512 https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys.sha512"
+            ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys"
+            ExecStart=/bin/sh -c "cd /tmp/ && sha512sum -c authorized_keys.sha512 && cp authorized_keys /home/core/.ssh/authorized_keys && chmod 700 /home/core/.ssh && chmod 600 /home/core/.ssh/authorized_keys && chown -R core:core /home/core/.ssh"
+            Restart=no
+      - name: authorized_keys.timer
+        command: start
+        content: |
+            [Unit]
+            Description=Authorized keys timer
+
+            [Timer]
+            OnBootSec=1min
+            OnUnitActiveSec=1min
+
+            [Install]
+            WantedBy=timers.target
+      - name: splunk-forwarder.service
+        command: start
+        runtime: true
+        content: |
+          [Unit]
+          Description=Splunk forwarder
+          Wants=kubelet.service docker.service cfn-etcd-environment.service
+          After=kubelet.service
+          [Service]
+          EnvironmentFile=/etc/etcd-environment
+          Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
+          Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.7"
+          TimeoutStartSec=1200
+          # Change killmode from "control-group" to "none" to let Docker remove
+          # work correctly.
+          KillMode=none
+          ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
+          ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+          ExecStartPre=/bin/bash -c 'docker history coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION >/dev/null 2>&1 \
+            || docker pull coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+          ExecStartPre=/bin/bash -c 'docker history coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION >/dev/null 2>&1 \
+            || docker pull coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION'
+          ExecStart=/bin/sh -c '\
+            set -e; \
+            alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
+            export FORWARD_URL=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_url); \
+            export TOKEN=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_token); \
+            BATCHSIZE=$(etcdctl_cmd get /ft/config/splunk-forwarder/batchsize  2>/dev/null) || BATCHSIZE=10; \
+            export ENV=$(etcdctl_cmd get /ft/config/environment_tag); \
+            journalctl -a -f --since=now --output=json \
+            | docker run -i --log-driver=none -e=ENV=$ENV --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
+            | docker run -i --log-driver=none --rm --name %p-http_$(uuidgen) --memory="256m" -e="FORWARD_URL=$FORWARD_URL" -e="ENV=$ENV" -e="HOSTNAME=$(hostname -s)" -e="WORKERS=8" -e="BUFFER=256" -e="TOKEN=$TOKEN" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+
+          ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-http_)"'
+          Restart=always
+          RestartSec=60
+
+          [Install]
+          WantedBy=multi-user.target
+
+          [X-Fleet]
+          Global=true
+
+    - # Name of this node pool. Must be unique among all the node pools in this cluster
+      name: w3
+#      # If omitted, public subnets are created by kube-aws and used for worker nodes
+      subnets:
+#      - # References subnets defined under the top-level `subnets` key by their names
+       - name: ExistingPrivateSubnet1
+#        name: ManagedPublicSubnet1
+#
+#      # Existing "glue" security groups attached to worker nodes which are typically used to allow
+#      # access from worker nodes to services running on an existing infrastructure
+      securityGroupIds:
+        # Allow ssh from internal VPC. Group name: "Internal SSH security group"
+        # todo [customize] per account & region
+        - sg-9e99c1e6
+#
+#      # Configuration for external managed ELBs for worker nodes
+#      # Use this with k8s load balancers with type=NodePort. See https://kubernetes.io/docs/user-guide/services/#type-nodeport
+#      #
+#      # NOTICE: This is generally recommended over k8s managed load-balancers with type=LoadBalancer because it allows
+#      # a manual but no-downtime rotation of kube-aws clusters
+#      loadBalancer:
+#        enabled: true
+#        # Names of ELBs attached to worker nodes
+#        names: [ "manuallymanagedelb" ]
+#        # IDs of "glue" security groups attached to worker nodes to allow the ELBs to communicate with worker nodes
+#        securityGroupIds: [ "sg-87654321" ]
+#
+#      # The name of the API endpoint defined in the top level `apiEndpoints` that this worker node pool will use to access the k8s API
+#      # If not specified, defaults to `worker.apiEndpointName`
+#      apiEndpointName: versionedPublic
+#
+#     # if you omit this block kube-aws would create an IAM Role and a customer managed policy with a random name.
+      iam:
+#        role:
+#       # This will create a named IAM Role managed by kube-aws with the name {AWS::Region}-$managedIamRoleName.
+#       # It will have attached a customer Managed Policy that you can modify afterwards if you need more permissions for your cluster.
+#       # Be careful with the Statements you modify because an update could overwrite your own.
+#       # the Statements included in the ManagedPolicy are the minimun ones required for the Controllers to run.
+#       #   name: "yourManagedRole"
+#       # if you set managedPolicies here it will be attached in addition to the created managedPolicy in kube-aws for the cluster.
+#       # CAUTION: if you attach a more restrictive policy in some resources (i.e ec2:* Deny) you can make kube-aws fail.
+#       #   managedPolicies:
+#       #     - arn: "arn:aws:iam::aws:policy/AdministratorAccess"
+#       #     - arn: "arn:aws:iam::YOURACCOUNTID:policy/YOURPOLICYNAME"
+
+#       # if you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the configured instanceProfile.
+#       # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
+#       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
+        # todo [customize] per account & region
+        instanceProfile:
+          arn: "arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role"
+
+#      # Number of worker nodes to create for an autoscaling group based pool
+      count: 1
+      instanceType: m4.large
+#      # Autoscaling by adding/removing nodes according to resource usage
+      autoscaling:
+#        # Make this node pool an autoscaling-target of k8s cluster-autoscaler
+#        #
+#        # Beware that making this an autoscaing-target doesn't automatically deploy cluster-autoscaler itself -
+#        # turn on `addons.clusterAutoscaler.enabled` to deploy it on controller nodes.
+        clusterAutoscaler:
+          enabled: true
+#      # Add predefined set of labels to the nodes
+#      # The set includes names of launch configurations and autoscaling groups
+      awsNodeLabels:
+        enabled: true
+#      # Will provision worker nodes with IAM permissions to run cluster-autoscaler and add node labels so that
+#      # cluster-autoscaler pods are scheduled to nodes in this node pool
+      clusterAutoscalerSupport:
+        enabled: true
+      kubeletOpts: --image-gc-low-threshold=65 --image-gc-high-threshold=75
+
+#      # Kubernetes node labels to be added to worker nodes
+      nodeLabels:
+        kube-aws.coreos.com/role: kafka-worker
+      taints:
+        - key: dedicated
+          value: kafka
+          effect: NoSchedule
+
+#      # User defined files that will be added to the NodePool cloud-init configuration in the "write_files:" section.
+      customFiles:
+      - path: /etc/systemd/journald.conf.d/10-override-config.conf
+        permissions: 0644
+        content: |
+          [Journal]
+          MaxLevelConsole=crit
+          Compress=false
+          RateLimitInterval=0
+          RateLimitBurst=0
+
+      - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
+        permissions: 0644
+        content: |
+          [Service]
+          Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}"
+
+#        - path: "/etc/rkt/auth.d/docker.json"
+#          permissions: 0600
+#          content: |
+#            { "rktKind": "dockerAuth", "rktVersion": "v1", ... }
+#
+#      # User defined systemd units that will be added to the NodePool cluster cloud-init configuration in the "units:" section.
+      customSystemdUnits:
+      - name: systemd-journald.service
+        command: restart
+
+      - name: authorized_keys.service
+        command: start
+        content: |
+            [Unit]
+            Description=Update authorized_keys
+
+            [Service]
+            Type=oneshot
+            ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
+            ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys.sha512 https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys.sha512"
+            ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys"
+            ExecStart=/bin/sh -c "cd /tmp/ && sha512sum -c authorized_keys.sha512 && cp authorized_keys /home/core/.ssh/authorized_keys && chmod 700 /home/core/.ssh && chmod 600 /home/core/.ssh/authorized_keys && chown -R core:core /home/core/.ssh"
+            Restart=no
+      - name: authorized_keys.timer
+        command: start
+        content: |
+            [Unit]
+            Description=Authorized keys timer
+
+            [Timer]
+            OnBootSec=1min
+            OnUnitActiveSec=1min
+
+            [Install]
+            WantedBy=timers.target
+      - name: splunk-forwarder.service
+        command: start
+        runtime: true
+        content: |
+          [Unit]
+          Description=Splunk forwarder
+          Wants=kubelet.service docker.service cfn-etcd-environment.service
+          After=kubelet.service
+          [Service]
+          EnvironmentFile=/etc/etcd-environment
+          Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
+          Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.7"
+          TimeoutStartSec=1200
+          # Change killmode from "control-group" to "none" to let Docker remove
+          # work correctly.
+          KillMode=none
+          ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
+          ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+          ExecStartPre=/bin/bash -c 'docker history coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION >/dev/null 2>&1 \
+            || docker pull coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+          ExecStartPre=/bin/bash -c 'docker history coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION >/dev/null 2>&1 \
+            || docker pull coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION'
+          ExecStart=/bin/sh -c '\
+            set -e; \
+            alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
+            export FORWARD_URL=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_url); \
+            export TOKEN=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_token); \
+            BATCHSIZE=$(etcdctl_cmd get /ft/config/splunk-forwarder/batchsize  2>/dev/null) || BATCHSIZE=10; \
+            export ENV=$(etcdctl_cmd get /ft/config/environment_tag); \
+            journalctl -a -f --since=now --output=json \
+            | docker run -i --log-driver=none -e=ENV=$ENV --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
+            | docker run -i --log-driver=none --rm --name %p-http_$(uuidgen) --memory="256m" -e="FORWARD_URL=$FORWARD_URL" -e="ENV=$ENV" -e="HOSTNAME=$(hostname -s)" -e="WORKERS=8" -e="BUFFER=256" -e="TOKEN=$TOKEN" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+
+          ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-http_)"'
+          Restart=always
+          RestartSec=60
+
+          [Install]
+          WantedBy=multi-user.target
+
+          [X-Fleet]
+          Global=true
+
 
 
 ## Etcd Cluster config
@@ -522,10 +865,10 @@ etcd:
 #  # (Set to an odd number >= 3 for HA control plane)
 #  # WARNING: You can't add etcd nodes after the first creation by modifying this and running `kube-aws update`
 #  # See https://github.com/kubernetes-incubator/kube-aws/issues/631 for more information
-  count: {{ etcd_count }}
+  count: 3
 #
 #  # Instance type for etcd node
-  instanceType: {{ etcd_instance_type }}
+  instanceType: t2.medium
 #
 #  rootVolume:
 #    # Root volume size (GiB) for etcd node
@@ -567,7 +910,7 @@ etcd:
   securityGroupIds:
     # Allow SSH from internal VPC ips. Group name: "Internal SSH security group"
     # todo [customize] per account & region
-    - {{ vpc_internal_ssh_sg }}
+    - sg-9e99c1e6
 #    - sg-5678efab
 #
 #  # If you omit this block kube-aws would create an IAM Role and a managed policy for etcd nodes with a random name.
@@ -583,7 +926,7 @@ etcd:
 #    # If you dont know which permissions are required, it is recommended to go ahead with a managed instance profile.
     # todo [customize] per account & region
     instanceProfile:
-      arn: "{{ etcd_iam_role }}"
+      arn: "arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-etcd-role"
 #
 #  # The version of etcd to be used. Set to e.g. "3.2.1" to use etcd3
   version: 3.2.6
@@ -738,7 +1081,7 @@ etcd:
 vpc:
 #  # ID of existing VPC to create subnet in. Leave blank to create a new VPC
   # todo [customize] per account & region
-  id: {{ vpc_id }}
+  id: vpc-ee57bf89
 #  # Exported output's name from another stack
 #  # Only specify either id or idFromStackOutput but not both
 #  idFromStackOutput: VpcId
@@ -771,7 +1114,7 @@ vpc:
 
 # CIDR for Kubernetes VPC. If vpcId is specified, must match the CIDR of existing vpc.
 # todo [customize] per account & region
-vpcCIDR: "{{ vpc_cidr }}"
+vpcCIDR: "10.172.40.0/21"
 
 # CIDR for Kubernetes subnet when placing nodes in a single availability zone (not highly-available) Leave commented out for multi availability zone setting and use the below `subnets` section instead.
 # instanceCIDR: "10.0.0.0/24"
@@ -806,45 +1149,45 @@ subnets:
 
    - name: ExistingPublicSubnet1
 #     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
-     availabilityZone: {{ region }}a
+     availabilityZone: eu-west-1a
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
      # todo [customize] per account & region
-     id: "{{ public_subnet_zone_a }}"
+     id: "subnet-122e1e4a"
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
 #     #idFromStackOutput: myinfra-PublicSubnet1
 
    - name: ExistingPublicSubnet2
 #     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
-     availabilityZone: {{ region }}b
+     availabilityZone: eu-west-1b
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
     # todo [customize] per account & region
-     id: "{{ public_subnet_zone_b }}"
+     id: "subnet-5e00f439"
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
 #     #idFromStackOutput: myinfra-PublicSubnet1
    - name: ExistingPublicSubnet3
 #     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
-     availabilityZone: {{ region }}c
+     availabilityZone: eu-west-1c
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
      # todo [customize] per account & region
-     id: "{{ public_subnet_zone_c }}"
+     id: "subnet-02be4f4b"
 
    - name: ExistingPrivateSubnet1
-     availabilityZone: {{ region }}a
+     availabilityZone: eu-west-1a
      # todo [customize] per account & region
-     id: "{{ private_subnet_zone_a }}"
+     id: "subnet-901020c8"
    - name: ExistingPrivateSubnet2
-     availabilityZone: {{ region }}b
+     availabilityZone: eu-west-1b
      # todo [customize] per account & region
-     id: "{{ private_subnet_zone_b }}"
+     id: "subnet-5f00f438"
    - name: ExistingPrivateSubnet3
-     availabilityZone: {{ region }}c
+     availabilityZone: eu-west-1c
      # todo [customize] per account & region
-     id: "{{ private_subnet_zone_c }}"
+     id: "subnet-8cbe4fc5"
 
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
@@ -990,7 +1333,7 @@ subnets:
 # and pulling from quay or dockerhub is slow and you get many timeouts.
 
 # Version of hyperkube image to use. This is the tag for the hyperkube image repository.
-kubernetesVersion: {{ k8s_version }}
+kubernetesVersion: v1.7.7_coreos.0
 
 # Hyperkube image repository to use.
 # hyperkubeImage:
@@ -1293,13 +1636,13 @@ experimental:
 
 # AWS Tags for cloudformation stack resources
 stackTags:
-  systemCode: {{ platform }}
-  environment: {{ environment_type }}
-  coco-environment-tag: {{ stack_name }}
-  name: {{ stack_name }}
-{% for tag in tags %}
-  {{ tag.name }}: {{ tag.value }}
-{% endfor %}
+  systemCode: upp
+  environment: p
+  coco-environment-tag: upp-jpd-test1-del-eu
+  name: upp-jpd-test1-del-eu
+  ipCode: P196
+  teamDL: universal.publishing.platform@ft.com
+  stopSchedule: nostop
 
 # User-provided YAML map available in control-plane's stack-template.json
 #customSettings:

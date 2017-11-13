@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Retrieves the API Server DNS name
 
 # Set AWS credentials

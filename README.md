@@ -2,7 +2,6 @@
 
 # Delivery cluster on Kubernetes POC
 
-
 ## Description
 This repository contains the files needed to run the delivery cluster
 using Kubernetes on AWS.
@@ -21,19 +20,20 @@ docker build -t k8s-provisioner:local .
 ```
 ## Set the environments variables to provision a cluster. The variables are stored in LastPass
 ## For PAC Cluster
-## LastPass: pac-content-provisioner env variables
+## LastPass: PAC - k8s Cluster Provisioning env variables
 ## For UPP Cluster
-## LastPass: infraprod-coco-aws-provisioning-keys
+## LastPass: UPP - k8s Cluster Provisioning env variables
 
 docker run \
     -v $(pwd)/credentials:/ansible/credentials \
     -e "AWS_REGION=$AWS_REGION" \
     -e "CLUSTER_NAME=$CLUSTER_NAME" \
+    -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
     -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
-    -e "GENERATE_CLUSTER_CREDENTIALS=$GENERATE_CLUSTER_CREDENTIALS" \
+    -e "SHARE_CLUSTER_CREDENTIALS=$SHARE_CLUSTER_CREDENTIALS" \
     -e "PLATFORM=$PLATFORM" \
     -e "VAULT_PASS=$VAULT_PASS" \
-    k8s-provisioner:local /bin/sh provision.sh
+    k8s-provisioner:local /bin/bash provision.sh
 ```
 
 ##  Updating a cluster
@@ -41,9 +41,9 @@ docker run \
 ```
 ## Set the environments variables to provision a cluster. The variables are stored in LastPass
 ## For PAC Cluster
-## LastPass: pac-content-provisioner env variables
+## LastPass: PAC - k8s Cluster Provisioning env variables
 ## For UPP Cluster
-## LastPass: infraprod-coco-aws-provisioning-keys
+## LastPass: UPP - k8s Cluster Provisioning env variables
 
 docker run \
     -e "AWS_REGION=$AWS_REGION" \
@@ -51,7 +51,7 @@ docker run \
     -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
     -e "PLATFORM=$PLATFORM" \
     -e "VAULT_PASS=$VAULT_PASS" \
-    k8s-provisioner:local /bin/sh update.sh
+    k8s-provisioner:local /bin/bash update.sh
 ```
 
 ##  Decommissioning a cluster
@@ -59,17 +59,18 @@ docker run \
 ```
 ## Set the environments variables to provision a cluster. The variables are stored in LastPass
 ## For PAC Cluster
-## LastPass: pac-content-provisioner env variables
+## LastPass: PAC - k8s Cluster Provisioning env variables
 ## For UPP Cluster
-## LastPass: infraprod-coco-aws-provisioning-keys
+## LastPass: UPP - k8s Cluster Provisioning env variables
 
 docker run \
     -e "AWS_REGION=$AWS_REGION" \
     -e "CLUSTER_NAME=$CLUSTER_NAME" \
+    -e "ENVIRONMENT=$ENVIRONMENT" \
     -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
     -e "PLATFORM=$PLATFORM" \
     -e "VAULT_PASS=$VAULT_PASS" \
-    k8s-provisioner:local /bin/sh decom.sh
+    k8s-provisioner:local /bin/bash decom.sh
 ```
 
 Follow the steps in [here](https://docs.google.com/document/d/1TTih1gcj-Vsqjp1aCAzsP4lpt6ivR8jDIXaZtBxNaUU/edit?pli=1#heading=h.idonu4gksr10) 

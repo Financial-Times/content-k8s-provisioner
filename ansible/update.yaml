@@ -3,16 +3,36 @@
   hosts: localhost
   connection: local
 
+  # Include the aws account specific cluster variables
   vars_files:
-    - vars/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
+    - vars/{{ environment_type }}-{{ aws_region }}.yaml
     - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
 
+  # Include the environment specific cluster variables
+  pre_tasks:
+    - include_vars: vars/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
+      when: (cluster_environment == "")
+
+    - include_vars: vars/{{ platform }}-{{ environment_type }}-{{ cluster_environment }}-{{ aws_region }}.yaml
+      when: (cluster_environment != "")
+
   tasks:
+    - name: Set the stack name when cluster_environment variable is set
+      set_fact: stack_name='{{ platform }}-{{ cluster_name }}-{{ cluster_environment }}-{{ aws_region }}'
+      when: (cluster_environment != "")
+
+    - name: Set the stack name when cluster_environment variable is not set
+      set_fact: stack_name='{{ platform }}-{{ cluster_name }}-{{ aws_region }}'
+      when: (cluster_environment == "")
+
+    # Generate the cluster.yaml template
     - name: Generate the cluster config
       template:
         src: templates/cluster-template.yaml.j2
         dest: /ansible/cluster.yaml
     
+    # Check if the credentials folder is empty
+    # If it is, abort the execution of the playbook
     - name: Get the number of pem files in the credentials directory
       find:
         paths: /ansible/credentials
@@ -22,14 +42,6 @@
     - name: Check if the credentials folder is empty
       fail: msg="The credentials folder is empty. Add the cluster credentials in the /ansible/credentials folder"
       when: pem_files.examined|int == 0
-
-    - name: Delete the .env and .fingerprint files
-      file: 
-        path: "{{ item }}"
-        state: absent
-      with_items:
-        - credentials/*.enc
-        - credentials/*.fingerprint
 
     - name: Set the provisioner bucket
       set_fact:
@@ -46,8 +58,3 @@
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
-
-    - name: Delete the content of the credentials folder
-      file:
-        path: credentials/
-        state: absent
