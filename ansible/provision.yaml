@@ -17,17 +17,7 @@
       when: (cluster_environment != "")
 
   tasks:
-    - name: Set the stack name when cluster_environment variable is set
-      set_fact: stack_name='{{ platform }}-{{ cluster_name }}-{{ cluster_environment }}-{{ aws_region }}'
-      when: (cluster_environment != "")
-
-    - name: Set the stack name when cluster_environment variable is not set
-      set_fact: stack_name='{{ platform }}-{{ cluster_name }}-{{ aws_region }}'
-      when: (cluster_environment == "")
-
-    - name: Log vars
-      debug:
-        msg: "Stack Name: '{{ stack_name }}'"
+    - include: tasks/set_stack_name.yaml
 
     # Create the cluster.yaml file for provisioning
     - name: Generate the cluster config
@@ -101,10 +91,10 @@
         dns_cname: "{{ stack_name }}-api"
         hostname: "{{ api_server_elb.stdout }}"
         
-    - include: delivery.yaml
+    - include: tasks/delivery/delivery.yaml
       when: (cluster_environment | lower == "delivery")
 
-    - include: publishing.yaml
+    - include: tasks/publishing/publishing.yaml
       when: (cluster_environment | lower == "publish")
 
     - name: Create an S3 bucket for Splunk logs

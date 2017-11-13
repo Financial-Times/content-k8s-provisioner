@@ -19,13 +19,13 @@
 
 - name: EFS instance details
   debug:
-    msg: "EFS details: '{{ efs_instance_trans_cache }}'"
+    msg: "EFS details: '{{ efs_instance_trans_cache.file_system_id }}'"
 
 # Provision a EFS instance for factset reader
-- name: EFS instance for factset reader
+- name: EFS instance for factset uploader
   efs:
     state: present
-    name: "{{ stack_name }}-factset-reader"
+    name: "{{ stack_name }}-factset-uploader"
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_key }}"
     region: "{{ region }}"
@@ -37,11 +37,11 @@
       environent: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
-  register: efs_instance_factset_reader
+  register: efs_instance_factset_uploader
 
 - name: EFS instance details
   debug:
-    msg: "EFS details: '{{ efs_instance_factset_reader }}'"
+    msg: "EFS details: '{{ efs_instance_factset_uploader.file_system_id }}'"
 
 - name: Provision a persistent volume
   ec2_vol:

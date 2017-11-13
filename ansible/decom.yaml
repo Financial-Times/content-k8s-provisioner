@@ -17,13 +17,7 @@
       when: (cluster_environment != "")
 
   tasks:
-    - name: Set the stack name when cluster_environment variable is set
-      set_fact: stack_name='{{ platform }}-{{ cluster_name }}-{{ cluster_environment }}-{{ aws_region }}'
-      when: (cluster_environment != "")
-
-    - name: Set the stack name when cluster_environment variable is not set
-      set_fact: stack_name='{{ platform }}-{{ cluster_name }}-{{ aws_region }}'
-      when: (cluster_environment == "")
+    - include: tasks/set_stack_name.yaml
 
     - name: Generate the cluster config
       template:
