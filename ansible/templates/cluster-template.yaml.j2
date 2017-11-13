@@ -399,15 +399,10 @@ worker:
 #      # Kubernetes node labels to be added to worker nodes
       nodeLabels:
         kube-aws.coreos.com/role: {{ worker.role }}
-{% if 'mongo-worker' == worker.role %}
+{% if worker.dedicated-taint %}
       taints:
         - key: dedicated
-          value: mongo
-          effect: NoSchedule
-{% elif 'kafka-worker' == worker.role %}
-      taints:
-        - key: dedicated
-          value: kafka
+          value: {{ worker.dedicated-taint }}
           effect: NoSchedule
 {% endif %}
 

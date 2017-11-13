@@ -87,10 +87,10 @@
         dns_cname: "{{ stack_name }}-api"
         hostname: "{{ api_server_elb.stdout }}"
         
-    - include: tasks/delivery/delivery.yaml
+    - include: tasks/provision/delivery.yaml
       when: (cluster_environment | lower == "delivery")
 
-    - include: tasks/publishing/publishing.yaml
+    - include: tasks/provision/publishing.yaml
       when: (cluster_environment | lower == "publish")
 
     - name: Create an S3 bucket for Splunk logs

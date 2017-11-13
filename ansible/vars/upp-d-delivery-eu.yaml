@@ -11,8 +11,8 @@ etcd_count: 3
 # Worker Instance Properties
 worker_pools: 
   - {id: 1, instance_type: m4.xlarge, count: 3, role: worker, subnets: 3}
-  - {id: 2, instance_type: t2.medium, count: 3, role: mongo-worker, subnets: 3}
-  - {id: 3, instance_type: m4.large, count: 1, role: kafka-worker, subnets: 1}
+  - {id: 2, instance_type: t2.medium, count: 3, role: mongo-worker, subnets: 3, dedicated-taint: mongo}
+  - {id: 3, instance_type: m4.large, count: 1, role: kafka-worker, subnets: 1, dedicated-taint: kafka}
 
 worker_security_groups:
   - sg-9a7630e2
