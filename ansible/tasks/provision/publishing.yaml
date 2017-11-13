@@ -35,7 +35,7 @@
       - {subnet_id: "{{ public_subnet_zone_b }}", security_groups: [ "{{ efs_access_sg }}" ]}
       - {subnet_id: "{{ public_subnet_zone_c }}", security_groups: [ "{{ efs_access_sg }}" ]}
     tags:
-          name: "{{ stack_name }}-factset-uploader"
+      name: "{{ stack_name }}-factset-uploader"
       environment: "{{ environment_type }}"
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"

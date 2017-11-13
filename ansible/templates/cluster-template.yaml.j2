@@ -399,10 +399,10 @@ worker:
 #      # Kubernetes node labels to be added to worker nodes
       nodeLabels:
         kube-aws.coreos.com/role: {{ worker.role }}
-{% if worker.dedicated-taint %}
+{% if worker.dedicatedtaint is defined %}
       taints:
         - key: dedicated
-          value: {{ worker.dedicated-taint }}
+          value: {{ worker.dedicatedtaint }}
           effect: NoSchedule
 {% endif %}
 
