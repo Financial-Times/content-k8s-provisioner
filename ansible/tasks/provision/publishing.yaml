@@ -18,10 +18,6 @@
       systemCode: "{{ platform }}"
   register: efs_instance_trans_cache
 
-- name: EFS instance details
-  debug:
-    msg: "EFS details: '{{ efs_instance_trans_cache.efs.file_system_id }}'"
-
 #Provision a EFS instance for factset reader
 - name: EFS instance for factset uploader
   efs:
@@ -41,10 +37,6 @@
       systemCode: "{{ platform }}"
   register: efs_instance_factset_uploader
 
-- name: EFS instance details
-  debug:
-    msg: "EFS details: '{{ efs_instance_factset_uploader.efs.file_system_id }}'"
-
 - name: Provision a persistent volume for kafka
   ec2_vol:
     aws_access_key: "{{ aws_access_key }}"
@@ -59,10 +51,6 @@
       teamDL: "universal.publishing.platform@ft.com"
       systemCode: "{{ platform }}"
   register: ec2_vol_pub_kafka
-
-- name: EBS volume details for kafka
-  debug:
-    msg: "EBS Volume ID for publishing: '{{ ec2_vol_pub_kafka.volume_id }}'"
 
 - name: Provision a persistent volume for mongo
   ec2_vol:
@@ -83,6 +71,19 @@
     - "{{ region }}c"
   register: ec2_vol_pub_mongo
 
+# File System  and Volume ID's for Kafka and Mongo which needs to be added in the global config
+- name: EFS File System ID for Transformers Cache
+  debug:
+    msg: "EFS File System ID: '{{ efs_instance_trans_cache.efs.file_system_id }}'"
+
+- name: EFS File System ID for Factset Uploader
+  debug:
+    msg: "EFS File System ID: '{{ efs_instance_factset_uploader.efs.file_system_id }}'"
+
+- name: EBS volume details for kafka
+  debug:
+    msg: "EBS Volume ID for Kafka: '{{ ec2_vol_pub_kafka.volume_id }}'"
+
 - name: EBS volume details for mongo
   debug:
-    msg: "EBS Volume ID for publishing: '{{ ec2_vol_pub_mongo.volume_id }}'"
+    msg: "EBS Volume ID for Mongo: '{{ ec2_vol_pub_mongo.volume_id }}'"
