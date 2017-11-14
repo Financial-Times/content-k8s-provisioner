@@ -60,7 +60,7 @@
       systemCode: "{{ platform }}"
   register: ec2_vol_pub_kafka
 
-- name: EBS volume details
+- name: EBS volume details for kafka
   debug:
     msg: "EBS Volume ID for publishing: '{{ ec2_vol_pub_kafka.volume_id }}'"
 
@@ -83,4 +83,6 @@
     - "{{ region }}c"
   register: ec2_vol_pub_mongo
 
-- debug: var=ec2_vol_pub_mongo
+- name: EBS volume details for mongo
+  debug:
+    msg: "EBS Volume ID for publishing: '{{ ec2_vol_pub_mongo.volume_id }}'"

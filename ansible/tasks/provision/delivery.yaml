@@ -14,9 +14,9 @@
       systemCode: "{{ platform }}"
   register: ec2_vol_del_kafka
 
-- name: EBS volume details
+- name: EBS volume details for Kafka
   debug:
-    msg: "EBS Volume ID for delivery: '{{ ec2_vol_del_kafka.volume_id }}'"
+    msg: "EBS Volume ID for delivery Kafka: '{{ ec2_vol_del_kafka.volume_id }}'"
 
 - name: Provision a persistent volume for Mongo
   ec2_vol:
@@ -37,8 +37,9 @@
     - "{{ region }}c"
   register: ec2_vol_del_mongo
 
-
-- debug: var=ec2_vol_del_mongo
+- name: EBS volume details for Mongo
+  debug:
+    msg: "EBS Volume ID for delivery Mongo: '{{ ec2_vol_del_mongo.volume_id }}'"
 
 - name: Generate the S3 bucket policy for Image Publish
   template:
