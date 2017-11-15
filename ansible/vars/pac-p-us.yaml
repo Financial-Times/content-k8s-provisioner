@@ -1,0 +1,23 @@
+debug_key_name: pac-provisioner-us
+
+# Controller Instance Properties
+controller_instance_type: t2.medium
+controller_count: 2
+
+# ETCD Instance Properties
+etcd_instance_type: t2.medium
+etcd_count: 2
+
+# Worker Instance Properties
+worker_pools: 
+  - {id: 1, instance_type: t2.large, count: 2, role: worker}
+
+worker_security_groups:
+  - sg-f1ec2b82
+  - sg-24e79e5a
+
+k8s_version: v1.7.7_coreos.0
+tags:
+  - {name: ipCode, value: P196}
+  - {name: teamDL, value: universal.publishing.platform@ft.com}
+  - {name: stopSchedule, value: nostop}

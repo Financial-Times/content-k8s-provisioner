@@ -1,0 +1,95 @@
+---
+- name: Decommision the k8s stack
+  hosts: localhost
+  connection: local
+  
+  # Include the aws account specific cluster variables
+  vars_files:
+    - vars/{{ environment_type }}-{{ aws_region }}.yaml
+    - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
+
+  # Include the environment specific cluster variables
+  pre_tasks:
+    - include_vars: vars/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
+      when: (cluster_environment == "")
+
+    - include_vars: vars/{{ platform }}-{{ environment_type }}-{{ cluster_environment }}-{{ aws_region }}.yaml
+      when: (cluster_environment != "")
+
+  tasks:
+    - include: tasks/set_stack_name.yaml
+
+    - name: Generate the cluster config
+      template:
+        src: templates/cluster-template.yaml.j2
+        dest: /ansible/cluster.yaml
+
+    - name: Decom a cluster
+      command: kube-aws destroy
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+ 
+    - name: Untag the public subnets with the clusterid
+      command: aws ec2 delete-tags --resources {{ item }} --tags Key=kubernetes.io/cluster/{{ stack_name }},Value=true --region={{ region }}
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+      with_items:
+        - "{{ public_subnet_zone_a }}"
+        - "{{ public_subnet_zone_b }}"
+        - "{{ public_subnet_zone_c }}"
+
+    - include: tasks/delete_cname.yaml
+      vars:
+        dns_cname: "{{ stack_name }}-api"
+
+    - name: Decom an EFS instances (Transformers cache and Factset reader)
+      efs:
+        state: absent
+        name: "{{ item }}"
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        region: "{{ region }}"
+      with_items:
+        - "{{ stack_name }}-transformers-cache"
+        - "{{ stack_name }}-factset-reader"
+      when: (cluster_environment | lower == "publish")
+
+    - name: Delete persistent volume for kafka
+      script: /bin/bash /delete_volumes.sh
+      environment:
+        AWS_REGION: "{{ region }}"
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        VOLUME_NAME: "{{ stack_name }}-kafka"
+      when: (cluster_environment | lower == "publish" or cluster_environment | lower == "delivery")
+
+    - name: Delete persistent volume for mongo
+      script: /bin/bash /delete_volumes.sh
+      environment:
+        AWS_REGION: "{{ region }}"
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        VOLUME_NAME: "{{ stack_name }}-mongo"
+      when: (cluster_environment | lower == "publish" or cluster_environment | lower == "delivery")
+
+    - name: Delete the S3 bucket for Image Publish and generic RW
+      s3_bucket:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        region: "{{ region }}"
+        name: "{{ item }}"
+        state: absent
+      with_items:
+        - "{{ stack_name }}-imagepublish"
+        - "{{ stack_name }}-genericrw"
+      when: (cluster_environment | lower == "delivery")
+
+    - name: Delete the S3 bucket for Splunk 
+      s3_bucket:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        region: "{{ region }}"
+        name: "splunklogs-{{ stack_name }}"
+        state: absent 

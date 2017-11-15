@@ -1,0 +1,25 @@
+{
+    "Version": "2008-10-17",
+    "Statement": [
+        {
+            "Sid": "ContentImagepublish.k8s.testACL",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::{{ aws_account_number }}:user/content-containers-apps"
+            },
+            "Action": [
+                "s3:DeleteObject",
+                "s3:GetObject",
+                "s3:PutObject"
+            ],
+            "Resource": "arn:aws:s3:::{{ stack_name }}-imagepublish/*"
+        },
+        {
+            "Sid": "AllowPublicRead",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::{{ stack_name }}-imagepublish/*"
+        }
+    ]
+}

@@ -1,0 +1,29 @@
+aws_account_number: 070529446553
+region: eu-west-1
+kms_key_arn: arn:aws:kms:eu-west-1:070529446553:key/99f50826-0102-44d5-a9dc-cd800dd204d1
+releaseChannel: stable 
+
+vpc_id: vpc-f75fb790
+vpc_cidr: 10.172.32.0/21
+
+public_subnet_zone_a: subnet-161eea71
+public_subnet_zone_b: subnet-6bb44522
+public_subnet_zone_c: subnet-8f2a1ad7
+
+private_subnet_zone_a: subnet-2a1de94d
+private_subnet_zone_b: subnet-c1b94888
+private_subnet_zone_c: subnet-932717cb
+
+controller_iam_role: arn:aws:iam::070529446553:instance-profile/k8s-iam-instance-profile-roles-controller-role
+etcd_iam_role: arn:aws:iam::070529446553:instance-profile/k8s-iam-instance-profile-roles-etcd-role
+worker_iam_role: arn:aws:iam::070529446553:instance-profile/k8s-iam-instance-profile-roles-worker-role
+
+vpc_internal_ssh_sg: sg-9a7630e2
+api_private_access_sg: sg-53531d2b
+efs_access_sg: sg-c76f91bc
+
+nat_gw_ips:
+  - 52.212.63.130
+  - 52.30.225.182
+  - 52.215.87.156
+  - 54.194.189.228

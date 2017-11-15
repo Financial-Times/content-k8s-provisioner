@@ -1,7 +1,7 @@
 # Unique name of Kubernetes cluster. In order to deploy
 # more than one cluster into the same AWS account, this
 # name must not conflict with an existing cluster.
-clusterName: $CLUSTER_NAME
+clusterName: upp-jpd-test1-del-eu
 
 # CoreOS release channel to use. Currently supported options: alpha, beta, stable
 # See coreos.com/releases for more information
@@ -36,7 +36,7 @@ apiEndpoints:
   # from worker nodes and external clients. Configure the options
   # below if you'd like kube-aws to create a Route53 record sets/hosted zones
   # for you.  Otherwise the deployer is responsible for making this name routable
-  dnsName: $API_DNS_NAME
+  dnsName: upp-jpd-test1-del-eu-api.ft.com
 
   # Configuration for an ELB serving this endpoint
   # Omit all the settings when you want kube-aws not to provision an ELB for you
@@ -77,18 +77,17 @@ apiEndpoints:
     apiAccessAllowedSourceCIDRs:
     # todo [customize] per account & region
     # private subnets NAT gateway
-    - $NAT_GW_1_IP/32
-    - $NAT_GW_2_IP/32
-    - $NAT_GW_3_IP/32
-    # Current Jenkins NAT gateway
-    - $JENKINS_NAT_GW_IP/32
+    - 34.253.41.229/32
+    - 34.248.139.58/32
+    - 54.76.127.119/32
+    - 54.194.189.228/32
 
 #    # Existing security groups attached to this load balancer which are typically used to
 #    # allow Kubernetes API accesses from admins and/or CD systems when `apiAccessAllowedSourceCIDRs` are explicitly set to an empty array
     # todo [customize] per account & region
     # The group id of aws-composer-custom-k8s-api-internal-access-sg*
     securityGroupIds:
-    - $API_PRIVATE_ACCESS_SG
+    - sg-16663e6e
 #
 #  #
 #  # Common configuration #1: Unversioned, internet-facing API endpoint
@@ -116,7 +115,7 @@ apiEndpoints:
 # Name of the SSH keypair already loaded into the AWS
 # account being used to deploy this cluster.
 # todo [customize] per stack
-keyName: $DEBUG_KEY_NAME
+keyName: upp-k8s-provisioning-debug
 
 # Additional keys to preload on the coreos account (keep this to a minimum)
 #sshAuthorizedKeys:
@@ -124,25 +123,25 @@ keyName: $DEBUG_KEY_NAME
 
 # Region to provision Kubernetes cluster
 # todo [customize] per region
-region: $REGION
+region: eu-west-1
 
 # Availability Zone to provision Kubernetes cluster when placing nodes in a single availability zone (not highly-available) Comment out for multi availability zone setting and use the below `subnets` section instead.
 #availabilityZone: eu-west-1a
 
 # ARN of the KMS key used to encrypt TLS assets.
 # todo [customize] per account & region
-kmsKeyArn: "$KMS_KEY_ARN"
+kmsKeyArn: "arn:aws:kms:eu-west-1:469211898354:key/84c26c96-8ed3-49e2-a7f4-46bcb6263159"
 
 controller:
 #  # Number of controller nodes to create, for more control use `controller.autoScalingGroup` and do not use this setting
-  count: $CONTROLLER_COUNT
+  count: 2
 #
 #  # Maximum time to wait for controller creation
 #  createTimeout: PT15M
 #
 #  # Instance type for controller node.
 #  # CAUTION: Don't use t2.micro or the cluster won't work. See https://github.com/kubernetes/kubernetes/issues/18975
-  instanceType: $CONTROLLER_INSTANCE_TYPE
+  instanceType: c4.large
 #
 #  rootVolume:
 #    # Disk size (GiB) for controller node
@@ -158,7 +157,7 @@ controller:
   securityGroupIds:
     # allow SSH from internal VPC machines. Group name "Internal SSH security group"
     # todo [customize] per account & region
-    - $VPC_INTERNAL_SSH_SG
+    - sg-9e99c1e6
 #
 #  # Auto Scaling Group definition for controllers. If only `controllerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
 #  autoScalingGroup:
@@ -192,7 +191,7 @@ controller:
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
     instanceProfile:
       # todo [customize] per account & region
-      arn: $CONTROLLER_IAM_ROLE
+      arn: "arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-controller-role"
 
 #  # If omitted, public subnets are created by kube-aws and used for controller nodes
   subnets:
@@ -216,13 +215,11 @@ controller:
       Compress=false
       RateLimitInterval=0
       RateLimitBurst=0
-
   - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
     permissions: 0644
     content: |
       [Service]
       Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}"
-
 #    - path: "/etc/rkt/auth.d/docker.json"
 #      permissions: 0600
 #      content: |
@@ -237,7 +234,6 @@ controller:
     content: |
         [Unit]
         Description=Update authorized_keys
-
         [Service]
         Type=oneshot
         ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
@@ -250,14 +246,11 @@ controller:
     content: |
         [Unit]
         Description=Authorized keys timer
-
         [Timer]
         OnBootSec=1min
         OnUnitActiveSec=1min
-
         [Install]
         WantedBy=timers.target
-
   - name: splunk-forwarder.service
     command: start
     runtime: true
@@ -293,17 +286,13 @@ controller:
         journalctl -a -f --since=now --output=json \
         | docker run -i --log-driver=none -e=ENV=$ENV --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
         | docker run -i --log-driver=none --rm --name %p-http_$(uuidgen) --memory="256m" -e="FORWARD_URL=$FORWARD_URL" -e="ENV=$ENV" -e="HOSTNAME=$(hostname -s)" -e="WORKERS=8" -e="BUFFER=256" -e="TOKEN=$TOKEN" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
-
       ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-http_)"'
       Restart=always
       RestartSec=60
-
       [Install]
       WantedBy=multi-user.target
-
       [X-Fleet]
       Global=true
-
 #    - name: monitoring.service
 #      command: start
 #      enable: true
@@ -312,6 +301,7 @@ controller:
 #        Description=Example Custom Service
 #        [Service]
 #        ExecStart=/bin/rkt run --set-env TAGS=Controller ...
+
 
 # Default number of worker nodes per node pool to create, for more control use `worker.nodePools[].count` and/or `worker.autoScalingGroup` and do not use this setting
 #workerCount: 4
@@ -334,7 +324,6 @@ worker:
        - name: ExistingPrivateSubnet1
        - name: ExistingPrivateSubnet2
        - name: ExistingPrivateSubnet3
-
 #        name: ManagedPublicSubnet1
 #
 #      # Existing "glue" security groups attached to worker nodes which are typically used to allow
@@ -342,8 +331,7 @@ worker:
       securityGroupIds:
         # Allow ssh from internal VPC. Group name: "Internal SSH security group"
         # todo [customize] per account & region
-        - $VPC_INTERNAL_SSH_SG
-#        - sg-5678efab
+        - sg-9e99c1e6
 #
 #      # Configuration for external managed ELBs for worker nodes
 #      # Use this with k8s load balancers with type=NodePort. See https://kubernetes.io/docs/user-guide/services/#type-nodeport
@@ -380,150 +368,11 @@ worker:
 #       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
         # todo [customize] per account & region
         instanceProfile:
-          arn: $WORKER_IAM_ROLE
-#      # Configuration for external managed ALBs Target Groups for worker nodes
-#      targetGroup:
-#        enabled: true
-#        # ARNs of ALBs Target Groups attached to worker nodes
-#        arns:
-#        - arn:aws:elasticloadbalancing:eu-west-1:xxxxxxxxxxxx:targetgroup/manuallymanagedetg/xxxxxxxxxxxxxxxx
-#        # IDs of "glue" security groups attached to worker nodes to allow the ALBs Target Groups to communicate with worker nodes
-#        securityGroupIds: [ "sg-87654321" ]
-#
-#      # If you specify managedIamRoleName the role created for worker nodes will not suffix the random id at the end
-#      # Role will be created with "Ref": {"AWS::StackName"}-{"AWS::Region"}-yourManagedRole
-#      # to follow the recommendation in AWS documentation  http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
-#      # This is also intended to be used in combination with kube2IamSupport. See #297 for more information.
-#      #
-#      # ATTENTION: Consider limiting number of characters in clusterName, nodePools[].name and managedIamRoleName to
-#      # avoid the resulting IAM role name's length from exceeding the AWS limit: 64
-#      # See https://github.com/kubernetes-incubator/kube-aws/issues/347
-#      managedIamRoleName: "yourManagedRole"
-#
-#      # Additional EBS volumes mounted on the worker
-#      # No additional EBS volumes by default. All parameter values do not default - they must be explicitly defined
-#      volumeMounts:
-#      - type: "gp2"
-#        iops: 0
-#        size: 30
-#        # Follow the aws convention of '/dev/xvd*' where '*' is a single letter from 'f' to 'z'
-#        device: "/dev/xvdf"
-#        path: "/ebs"
-#
-#      # Specifies how often kubelet posts node status to master. Note: be cautious when changing the constant, it must work with nodeMonitorGracePeriod in nodecontroller.
-#      # nodeStatusUpdateFrequency: "10s"
-#
-#      #
-#      # Settings only for ASG-based node pools
-#      #
-#
+          arn: "arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role"
+
 #      # Number of worker nodes to create for an autoscaling group based pool
-      count: $WORKER_COUNT
-#
-#      # Instance type for worker nodes
-#      # CAUTION: Don't use t2.micro or the cluster won't work. See https://github.com/kubernetes/kubernetes/issues/16122
-      instanceType: $WORKER_INSTANCE_TYPE
-#
-#      rootVolume:
-#        # Disk size (GiB) for worker nodes
-#        size: 30
-#        # Disk type for worker node (one of standard, io1, or gp2)
-#        type: gp2
-#        # Number of I/O operations per second (IOPS) that the worker node disk supports. Leave blank if workerRootVolumeType is not io1
-#        iops: 0
-#
-#      # Maximum time to wait for worker creation
-#      createTimeout: PT15M
-#
-#      # Tenancy of the worker nodes. Options are "default" and "dedicated"
-#      # Documentation: http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/dedicated-instance.html
-#      tenancy: default
-#
-#      # (Experimental) GPU Driver installation support
-#      # Currently, only Nvidia driver is supported.
-#      # This setting takes effect only when configured instance type is GPU enabled (p2 or g2).
-#      # Make sure to choose 'docker' as container runtime when enabled this feature.
-#      # Ensure that automatic Container Linux is disabled(it is disabled by default btw).
-#      # Otherwise the installed driver may stop working when an OS update resulted in an updated kernel
-#      gpu:
-#        nvidia:
-#          enabled: true
-#          version: "375.66"
-#
-#      # Price (Dollars) to bid for spot instances. Omit for on-demand instances.
-#      spotPrice: "0.05"
-#
-#      # When enabled, autoscaling groups managing worker nodes wait for nodes to be up and running.
-#      # This is enabled by default.
-#      waitSignal:
-#        enabled: true
-#        # Max number of nodes concurrently updated
-#        maxBatchSize: 1
-#
-#      # Auto Scaling Group definition for workers. If only `workerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
-#      autoScalingGroup:
-#        minSize: 1
-#        maxSize: 2
-#        rollingUpdateMinInstancesInService: 1
-#
-#      #
-#      # Spot fleet config for worker nodes
-#      #
-#      spotFleet:
-#        # Total desired number of units to maintain
-#        # An unit is chosen by you and can be a vCPU, specific amount of memory, size of instance store, etc., according to your requirement.
-#        # Omit or put zero to disable the spot fleet support and use an autoscaling group to manage nodes.
-#        targetCapacity: 10
-#
-#        # IAM role to grant the Spot fleet permission to bid on, launch, and terminate instances on your behalf
-#        # See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#spot-fleet-prerequisites
-#        #
-#        # Defaults to "arn:aws:iam::youraccountid:role/aws-ec2-spot-fleet-role" assuming you've arrived "Spot Requests" in EC2 Dashboard
-#        # hence the role is automatically created for you
-#        iamFleetRoleArn: "arn:aws:iam::youraccountid:role/kube-aws-doesnt-create-this-for-you"
-#
-#        # Price per unit hour = Price per instance hour / num of weighted capacity for the instance
-#        # Defaults to "0.06"
-#        spotPrice: 0.06
-#
-#        # Disk size (GiB) per unit
-#        # Disk size for each launch specification defaults to unitRootVolumeSize * weightedCapacity
-#        unitRootVolumeSize: 30
-#
-#        # Disk type for worker node (one of standard, io1, or gp2)
-#        # Can be overridden in each launch specification
-#        rootVolumeType: gp2
-#
-#        # Number of I/O operations per second (IOPS) per unit. Leave blank if rootVolumeType is not io1
-#        # IOPS for each launch specification defaults to unitRootVolumeIOPS * weightedCapacity
-#        unitRootVolumeIOPS: 0
-#
-#        launchSpecifications:
-#        - # Number of units provided by an EC2 instance of the instanceType.
-#          weightedCapacity: 1
-#          instanceType: c4.large
-#
-#          # Price per instance hour
-#          # Defaults to worker.spotFleet.spotPrice * weightedCapacity if omitted
-#          #spotPrice:
-#
-#          rootVolume:
-#            # Defaults to worker.spotFleet.rootVolumeType if omitted
-#            type:
-#            # Defaults to worker.spotFleet.unitRootVolumeSize * weightedCapacity if omitted
-#            size:
-#            # Number of provisioned IOPS when rootVlumeType is io1
-#            # Must be within the range between 100 and 2000
-#            # Defaults to worker.spotFleet.unitRootVolumeIOPS * weightedCapacity if omitted
-#            iops:
-#
-#        - weightedCapacity: 2
-#          instanceType: c4.xlarge
-#
-#      #
-#      # Optional settings for both ASG-based and SpotFleet-based node pools
-#      #
-#
+      count: 3
+      instanceType: m4.xlarge
 #      # Autoscaling by adding/removing nodes according to resource usage
       autoscaling:
 #        # Make this node pool an autoscaling-target of k8s cluster-autoscaler
@@ -532,75 +381,19 @@ worker:
 #        # turn on `addons.clusterAutoscaler.enabled` to deploy it on controller nodes.
         clusterAutoscaler:
           enabled: true
-#
-#      # Used to provide `/etc/environment` env vars with values from arbitrary CloudFormation refs
-#      awsEnvironment:
-#        enabled: true
-#        environment:
-#          CFNSTACK: '{ "Ref" : "AWS::StackId" }'
-#
 #      # Add predefined set of labels to the nodes
 #      # The set includes names of launch configurations and autoscaling groups
       awsNodeLabels:
         enabled: true
-#
 #      # Will provision worker nodes with IAM permissions to run cluster-autoscaler and add node labels so that
 #      # cluster-autoscaler pods are scheduled to nodes in this node pool
       clusterAutoscalerSupport:
         enabled: true
-#
-#      # Mount an EFS only to a specific node pool.
-#      # This is a NFS share that will be available across a node pool through a hostPath volume on the "/efs" mountpoint
-#      #
-#      # If you'd like to configure an EFS mounted to every node, use the top-level `elasticFileSystemId` instead
-#      #
-#      # Beware that currently it doesn't work for a node pool in subnets managed by kube-aws.
-#      # In other words, this node pool must be in existing subnets managed by you by specifying subnets[].id to make this work.
-#      elasticFileSystemId: fs-47a2c22e
-#
-#      # This option has not yet been tested with rkt as container runtime
-#      ephemeralImageStorage:
-#        enabled: true
-#
-#      # When enabled it will grant sts:assumeRole permission to the IAM roles for worker nodes.
-#      # This is intended to be used in combination with managedIamRoleName. See #297 for more information.
-#      kube2IamSupport:
-#        enabled: true
-#
-#      # Propagate custom CLI options to kubelet
-#      # Provided example overrides default docker image garbage collection limits
-#      # as in https://kubernetes.io/docs/concepts/cluster-administration/kubelet-garbage-collection/
-#      # Anything from https://kubernetes.io/docs/admin/kubelet/ can be used as a value
-#
       kubeletOpts: --image-gc-low-threshold=65 --image-gc-high-threshold=75
-#
+
 #      # Kubernetes node labels to be added to worker nodes
       nodeLabels:
         kube-aws.coreos.com/role: worker
-#
-#      # Kubernetes node taints to be added to worker nodes
-#      taints:
-#        - key: dedicated
-#          value: search
-#          effect: NoSchedule
-#
-#      # Other less common customizations per node pool
-#      # All these settings default to the top-level ones
-#      keyName:
-#      releaseChannel: alpha
-#      amiId:
-#      kubernetesVersion: 1.6.0-alpha.1
-#
-#      # Images are taken from controlplane by default, but you can override values for node pools here. E.g.:
-#      AwsCliImage:
-#        repo: quay.io/coreos/awscli
-#        tag: edge
-#        rktPullDocker: false
-#
-#      sshAuthorizedKeys:
-#      # User-provided YAML map available in control-plane's stack-template.json
-#      customSettings:
-#        key1: [ 1, 2, 3 ]
 
 #      # User defined files that will be added to the NodePool cloud-init configuration in the "write_files:" section.
       customFiles:
@@ -700,37 +493,367 @@ worker:
           [X-Fleet]
           Global=true
 
-#        - name: monitoring.service
-#          command: start
-#          enable: true
+    - # Name of this node pool. Must be unique among all the node pools in this cluster
+      name: w2
+#      # If omitted, public subnets are created by kube-aws and used for worker nodes
+      subnets:
+#      - # References subnets defined under the top-level `subnets` key by their names
+       - name: ExistingPrivateSubnet1
+       - name: ExistingPrivateSubnet2
+       - name: ExistingPrivateSubnet3
+#        name: ManagedPublicSubnet1
+#
+#      # Existing "glue" security groups attached to worker nodes which are typically used to allow
+#      # access from worker nodes to services running on an existing infrastructure
+      securityGroupIds:
+        # Allow ssh from internal VPC. Group name: "Internal SSH security group"
+        # todo [customize] per account & region
+        - sg-9e99c1e6
+#
+#      # Configuration for external managed ELBs for worker nodes
+#      # Use this with k8s load balancers with type=NodePort. See https://kubernetes.io/docs/user-guide/services/#type-nodeport
+#      #
+#      # NOTICE: This is generally recommended over k8s managed load-balancers with type=LoadBalancer because it allows
+#      # a manual but no-downtime rotation of kube-aws clusters
+#      loadBalancer:
+#        enabled: true
+#        # Names of ELBs attached to worker nodes
+#        names: [ "manuallymanagedelb" ]
+#        # IDs of "glue" security groups attached to worker nodes to allow the ELBs to communicate with worker nodes
+#        securityGroupIds: [ "sg-87654321" ]
+#
+#      # The name of the API endpoint defined in the top level `apiEndpoints` that this worker node pool will use to access the k8s API
+#      # If not specified, defaults to `worker.apiEndpointName`
+#      apiEndpointName: versionedPublic
+#
+#     # if you omit this block kube-aws would create an IAM Role and a customer managed policy with a random name.
+      iam:
+#        role:
+#       # This will create a named IAM Role managed by kube-aws with the name {AWS::Region}-$managedIamRoleName.
+#       # It will have attached a customer Managed Policy that you can modify afterwards if you need more permissions for your cluster.
+#       # Be careful with the Statements you modify because an update could overwrite your own.
+#       # the Statements included in the ManagedPolicy are the minimun ones required for the Controllers to run.
+#       #   name: "yourManagedRole"
+#       # if you set managedPolicies here it will be attached in addition to the created managedPolicy in kube-aws for the cluster.
+#       # CAUTION: if you attach a more restrictive policy in some resources (i.e ec2:* Deny) you can make kube-aws fail.
+#       #   managedPolicies:
+#       #     - arn: "arn:aws:iam::aws:policy/AdministratorAccess"
+#       #     - arn: "arn:aws:iam::YOURACCOUNTID:policy/YOURPOLICYNAME"
+
+#       # if you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the configured instanceProfile.
+#       # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
+#       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
+        # todo [customize] per account & region
+        instanceProfile:
+          arn: "arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role"
+
+#      # Number of worker nodes to create for an autoscaling group based pool
+      count: 3
+      instanceType: t2.medium
+#      # Autoscaling by adding/removing nodes according to resource usage
+      autoscaling:
+#        # Make this node pool an autoscaling-target of k8s cluster-autoscaler
+#        #
+#        # Beware that making this an autoscaing-target doesn't automatically deploy cluster-autoscaler itself -
+#        # turn on `addons.clusterAutoscaler.enabled` to deploy it on controller nodes.
+        clusterAutoscaler:
+          enabled: true
+#      # Add predefined set of labels to the nodes
+#      # The set includes names of launch configurations and autoscaling groups
+      awsNodeLabels:
+        enabled: true
+#      # Will provision worker nodes with IAM permissions to run cluster-autoscaler and add node labels so that
+#      # cluster-autoscaler pods are scheduled to nodes in this node pool
+      clusterAutoscalerSupport:
+        enabled: true
+      kubeletOpts: --image-gc-low-threshold=65 --image-gc-high-threshold=75
+
+#      # Kubernetes node labels to be added to worker nodes
+      nodeLabels:
+        kube-aws.coreos.com/role: mongo-worker
+      taints:
+        - key: dedicated
+          value: mongo
+          effect: NoSchedule
+
+#      # User defined files that will be added to the NodePool cloud-init configuration in the "write_files:" section.
+      customFiles:
+      - path: /etc/systemd/journald.conf.d/10-override-config.conf
+        permissions: 0644
+        content: |
+          [Journal]
+          MaxLevelConsole=crit
+          Compress=false
+          RateLimitInterval=0
+          RateLimitBurst=0
+
+      - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
+        permissions: 0644
+        content: |
+          [Service]
+          Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}"
+
+#        - path: "/etc/rkt/auth.d/docker.json"
+#          permissions: 0600
 #          content: |
-#            [Unit]
-#            Description=Example Custom Service
-#            [Service]
-#            ExecStart=/bin/rkt run --set-env TAGS=Controller ...
+#            { "rktKind": "dockerAuth", "rktVersion": "v1", ... }
+#
+#      # User defined systemd units that will be added to the NodePool cluster cloud-init configuration in the "units:" section.
+      customSystemdUnits:
+      - name: systemd-journald.service
+        command: restart
 
-# Maximum time to wait for worker creation
-#workerCreateTimeout: PT15M
+      - name: authorized_keys.service
+        command: start
+        content: |
+            [Unit]
+            Description=Update authorized_keys
 
-# Instance type for worker nodes
-# CAUTION: Don't use t2.micro or the cluster won't work. See https://github.com/kubernetes/kubernetes/issues/16122
-# workerInstanceType: m4.large
+            [Service]
+            Type=oneshot
+            ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
+            ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys.sha512 https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys.sha512"
+            ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys"
+            ExecStart=/bin/sh -c "cd /tmp/ && sha512sum -c authorized_keys.sha512 && cp authorized_keys /home/core/.ssh/authorized_keys && chmod 700 /home/core/.ssh && chmod 600 /home/core/.ssh/authorized_keys && chown -R core:core /home/core/.ssh"
+            Restart=no
+      - name: authorized_keys.timer
+        command: start
+        content: |
+            [Unit]
+            Description=Authorized keys timer
 
-# Disk size (GiB) for worker nodes
-#workerRootVolumeSize: 30
+            [Timer]
+            OnBootSec=1min
+            OnUnitActiveSec=1min
 
-# Disk type for worker node (one of standard, io1, or gp2)
-#workerRootVolumeType: gp2
+            [Install]
+            WantedBy=timers.target
+      - name: splunk-forwarder.service
+        command: start
+        runtime: true
+        content: |
+          [Unit]
+          Description=Splunk forwarder
+          Wants=kubelet.service docker.service cfn-etcd-environment.service
+          After=kubelet.service
+          [Service]
+          EnvironmentFile=/etc/etcd-environment
+          Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
+          Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.7"
+          TimeoutStartSec=1200
+          # Change killmode from "control-group" to "none" to let Docker remove
+          # work correctly.
+          KillMode=none
+          ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
+          ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+          ExecStartPre=/bin/bash -c 'docker history coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION >/dev/null 2>&1 \
+            || docker pull coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+          ExecStartPre=/bin/bash -c 'docker history coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION >/dev/null 2>&1 \
+            || docker pull coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION'
+          ExecStart=/bin/sh -c '\
+            set -e; \
+            alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
+            export FORWARD_URL=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_url); \
+            export TOKEN=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_token); \
+            BATCHSIZE=$(etcdctl_cmd get /ft/config/splunk-forwarder/batchsize  2>/dev/null) || BATCHSIZE=10; \
+            export ENV=$(etcdctl_cmd get /ft/config/environment_tag); \
+            journalctl -a -f --since=now --output=json \
+            | docker run -i --log-driver=none -e=ENV=$ENV --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
+            | docker run -i --log-driver=none --rm --name %p-http_$(uuidgen) --memory="256m" -e="FORWARD_URL=$FORWARD_URL" -e="ENV=$ENV" -e="HOSTNAME=$(hostname -s)" -e="WORKERS=8" -e="BUFFER=256" -e="TOKEN=$TOKEN" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
 
-# Number of I/O operations per second (IOPS) that the worker node disk supports. Leave blank if workerRootVolumeType is not io1
-#workerRootVolumeIOPS: 0
+          ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-http_)"'
+          Restart=always
+          RestartSec=60
 
-# Tenancy of the worker nodes. Options are "default" and "dedicated"
-# Documentation: http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/dedicated-instance.html
-# workerTenancy: default
+          [Install]
+          WantedBy=multi-user.target
 
-# Price (Dollars) to bid for spot instances. Omit for on-demand instances.
-# workerSpotPrice: "0.05"
+          [X-Fleet]
+          Global=true
+
+    - # Name of this node pool. Must be unique among all the node pools in this cluster
+      name: w3
+#      # If omitted, public subnets are created by kube-aws and used for worker nodes
+      subnets:
+#      - # References subnets defined under the top-level `subnets` key by their names
+       - name: ExistingPrivateSubnet1
+#        name: ManagedPublicSubnet1
+#
+#      # Existing "glue" security groups attached to worker nodes which are typically used to allow
+#      # access from worker nodes to services running on an existing infrastructure
+      securityGroupIds:
+        # Allow ssh from internal VPC. Group name: "Internal SSH security group"
+        # todo [customize] per account & region
+        - sg-9e99c1e6
+#
+#      # Configuration for external managed ELBs for worker nodes
+#      # Use this with k8s load balancers with type=NodePort. See https://kubernetes.io/docs/user-guide/services/#type-nodeport
+#      #
+#      # NOTICE: This is generally recommended over k8s managed load-balancers with type=LoadBalancer because it allows
+#      # a manual but no-downtime rotation of kube-aws clusters
+#      loadBalancer:
+#        enabled: true
+#        # Names of ELBs attached to worker nodes
+#        names: [ "manuallymanagedelb" ]
+#        # IDs of "glue" security groups attached to worker nodes to allow the ELBs to communicate with worker nodes
+#        securityGroupIds: [ "sg-87654321" ]
+#
+#      # The name of the API endpoint defined in the top level `apiEndpoints` that this worker node pool will use to access the k8s API
+#      # If not specified, defaults to `worker.apiEndpointName`
+#      apiEndpointName: versionedPublic
+#
+#     # if you omit this block kube-aws would create an IAM Role and a customer managed policy with a random name.
+      iam:
+#        role:
+#       # This will create a named IAM Role managed by kube-aws with the name {AWS::Region}-$managedIamRoleName.
+#       # It will have attached a customer Managed Policy that you can modify afterwards if you need more permissions for your cluster.
+#       # Be careful with the Statements you modify because an update could overwrite your own.
+#       # the Statements included in the ManagedPolicy are the minimun ones required for the Controllers to run.
+#       #   name: "yourManagedRole"
+#       # if you set managedPolicies here it will be attached in addition to the created managedPolicy in kube-aws for the cluster.
+#       # CAUTION: if you attach a more restrictive policy in some resources (i.e ec2:* Deny) you can make kube-aws fail.
+#       #   managedPolicies:
+#       #     - arn: "arn:aws:iam::aws:policy/AdministratorAccess"
+#       #     - arn: "arn:aws:iam::YOURACCOUNTID:policy/YOURPOLICYNAME"
+
+#       # if you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the configured instanceProfile.
+#       # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
+#       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
+        # todo [customize] per account & region
+        instanceProfile:
+          arn: "arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role"
+
+#      # Number of worker nodes to create for an autoscaling group based pool
+      count: 1
+      instanceType: m4.large
+#      # Autoscaling by adding/removing nodes according to resource usage
+      autoscaling:
+#        # Make this node pool an autoscaling-target of k8s cluster-autoscaler
+#        #
+#        # Beware that making this an autoscaing-target doesn't automatically deploy cluster-autoscaler itself -
+#        # turn on `addons.clusterAutoscaler.enabled` to deploy it on controller nodes.
+        clusterAutoscaler:
+          enabled: true
+#      # Add predefined set of labels to the nodes
+#      # The set includes names of launch configurations and autoscaling groups
+      awsNodeLabels:
+        enabled: true
+#      # Will provision worker nodes with IAM permissions to run cluster-autoscaler and add node labels so that
+#      # cluster-autoscaler pods are scheduled to nodes in this node pool
+      clusterAutoscalerSupport:
+        enabled: true
+      kubeletOpts: --image-gc-low-threshold=65 --image-gc-high-threshold=75
+
+#      # Kubernetes node labels to be added to worker nodes
+      nodeLabels:
+        kube-aws.coreos.com/role: kafka-worker
+      taints:
+        - key: dedicated
+          value: kafka
+          effect: NoSchedule
+
+#      # User defined files that will be added to the NodePool cloud-init configuration in the "write_files:" section.
+      customFiles:
+      - path: /etc/systemd/journald.conf.d/10-override-config.conf
+        permissions: 0644
+        content: |
+          [Journal]
+          MaxLevelConsole=crit
+          Compress=false
+          RateLimitInterval=0
+          RateLimitBurst=0
+
+      - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
+        permissions: 0644
+        content: |
+          [Service]
+          Environment="DOCKER_OPTS=--log-driver=journald --host 0.0.0.0:2375 --log-opt tag={{.ImageName}}"
+
+#        - path: "/etc/rkt/auth.d/docker.json"
+#          permissions: 0600
+#          content: |
+#            { "rktKind": "dockerAuth", "rktVersion": "v1", ... }
+#
+#      # User defined systemd units that will be added to the NodePool cluster cloud-init configuration in the "units:" section.
+      customSystemdUnits:
+      - name: systemd-journald.service
+        command: restart
+
+      - name: authorized_keys.service
+        command: start
+        content: |
+            [Unit]
+            Description=Update authorized_keys
+
+            [Service]
+            Type=oneshot
+            ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
+            ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys.sha512 https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys.sha512"
+            ExecStart=/bin/sh -c "curl -sSL --retry 5 --retry-delay 2 -o /tmp/authorized_keys https://raw.githubusercontent.com/Financial-Times/up-ssh-keys/master/authorized_keys"
+            ExecStart=/bin/sh -c "cd /tmp/ && sha512sum -c authorized_keys.sha512 && cp authorized_keys /home/core/.ssh/authorized_keys && chmod 700 /home/core/.ssh && chmod 600 /home/core/.ssh/authorized_keys && chown -R core:core /home/core/.ssh"
+            Restart=no
+      - name: authorized_keys.timer
+        command: start
+        content: |
+            [Unit]
+            Description=Authorized keys timer
+
+            [Timer]
+            OnBootSec=1min
+            OnUnitActiveSec=1min
+
+            [Install]
+            WantedBy=timers.target
+      - name: splunk-forwarder.service
+        command: start
+        runtime: true
+        content: |
+          [Unit]
+          Description=Splunk forwarder
+          Wants=kubelet.service docker.service cfn-etcd-environment.service
+          After=kubelet.service
+          [Service]
+          EnvironmentFile=/etc/etcd-environment
+          Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
+          Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.7"
+          TimeoutStartSec=1200
+          # Change killmode from "control-group" to "none" to let Docker remove
+          # work correctly.
+          KillMode=none
+          ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
+          ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker kill "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-filter_)" > /dev/null 2>&1'
+          ExecStartPre=-/bin/bash -c 'docker rm "$(docker ps -q --filter=name=%p-http_)" > /dev/null 2>&1'
+          ExecStartPre=/bin/bash -c 'docker history coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION >/dev/null 2>&1 \
+            || docker pull coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+          ExecStartPre=/bin/bash -c 'docker history coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION >/dev/null 2>&1 \
+            || docker pull coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION'
+          ExecStart=/bin/sh -c '\
+            set -e; \
+            alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
+            export FORWARD_URL=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_url); \
+            export TOKEN=$(etcdctl_cmd get /ft/config/splunk-forwarder/splunk_hec_token); \
+            BATCHSIZE=$(etcdctl_cmd get /ft/config/splunk-forwarder/batchsize  2>/dev/null) || BATCHSIZE=10; \
+            export ENV=$(etcdctl_cmd get /ft/config/environment_tag); \
+            journalctl -a -f --since=now --output=json \
+            | docker run -i --log-driver=none -e=ENV=$ENV --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
+            | docker run -i --log-driver=none --rm --name %p-http_$(uuidgen) --memory="256m" -e="FORWARD_URL=$FORWARD_URL" -e="ENV=$ENV" -e="HOSTNAME=$(hostname -s)" -e="WORKERS=8" -e="BUFFER=256" -e="TOKEN=$TOKEN" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" coco/coco-splunk-http-forwarder:$DOCKER_FORWARDER_VERSION'
+
+          ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-http_)"'
+          Restart=always
+          RestartSec=60
+
+          [Install]
+          WantedBy=multi-user.target
+
+          [X-Fleet]
+          Global=true
+
+
 
 ## Etcd Cluster config
 ## WARNING: Any changes to etcd parameters after the cluster is first created will not be applied
@@ -742,10 +865,10 @@ etcd:
 #  # (Set to an odd number >= 3 for HA control plane)
 #  # WARNING: You can't add etcd nodes after the first creation by modifying this and running `kube-aws update`
 #  # See https://github.com/kubernetes-incubator/kube-aws/issues/631 for more information
-  count: $ETCD_COUNT
+  count: 3
 #
 #  # Instance type for etcd node
-  instanceType: $ETCD_INSTANCE_TYPE
+  instanceType: t2.medium
 #
 #  rootVolume:
 #    # Root volume size (GiB) for etcd node
@@ -787,7 +910,7 @@ etcd:
   securityGroupIds:
     # Allow SSH from internal VPC ips. Group name: "Internal SSH security group"
     # todo [customize] per account & region
-    - $VPC_INTERNAL_SSH_SG
+    - sg-9e99c1e6
 #    - sg-5678efab
 #
 #  # If you omit this block kube-aws would create an IAM Role and a managed policy for etcd nodes with a random name.
@@ -803,7 +926,7 @@ etcd:
 #    # If you dont know which permissions are required, it is recommended to go ahead with a managed instance profile.
     # todo [customize] per account & region
     instanceProfile:
-      arn: $ETCD_IAM_ROLE
+      arn: "arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-etcd-role"
 #
 #  # The version of etcd to be used. Set to e.g. "3.2.1" to use etcd3
   version: 3.2.6
@@ -887,7 +1010,6 @@ etcd:
     content: |
         [Unit]
         Description=Update authorized_keys
-
         [Service]
         Type=oneshot
         ExecStartPre=/bin/sh -c "mkdir -p /home/core/.ssh && touch /home/core/.ssh/authorized_keys"
@@ -900,14 +1022,11 @@ etcd:
     content: |
         [Unit]
         Description=Authorized keys timer
-
         [Timer]
         OnBootSec=1min
         OnUnitActiveSec=1min
-
         [Install]
         WantedBy=timers.target
-
   - name: diamond.service
     command: start
     runtime: true
@@ -917,7 +1036,6 @@ etcd:
       Requires=docker.socket
       Wants=cfn-etcd-environment.service
       After=docker.socket
-
       [Service]
       EnvironmentFile=/etc/environment
       Environment="DOCKER_APP_VERSION=latest"
@@ -926,7 +1044,6 @@ etcd:
       ExecStartPre=-/bin/bash -c '/usr/bin/docker kill "$(docker ps -q --filter=name=%p_)" > /dev/null 2>&1'
       ExecStartPre=-/bin/bash -c '/usr/bin/docker rm "$(docker ps -q --filter=name=%p_)" > /dev/null 2>&1'
       ExecStartPre=/bin/bash -c 'docker history coco/coco-diamond-auto:$DOCKER_APP_VERSION >/dev/null 2>&1 || docker pull coco/coco-diamond-auto:$DOCKER_APP_VERSION'
-
       ExecStart=/bin/sh -c '\
         set -e; \
         ENV=$(/usr/bin/etcdctl get /ft/config/environment_tag); \
@@ -940,17 +1057,13 @@ etcd:
         -v /proc:/host_proc:ro \
         -v /var/run/docker.sock:/var/run/docker.sock:ro \
         coco/coco-diamond-auto:$DOCKER_APP_VERSION'
-
       ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p_)"'
       Restart=on-failure
       RestartSec=60
-
       [Install]
       WantedBy=multi-user.target
-
       [X-Fleet]
       Global=true
-
 #    - name: monitoring.service
 #      command: start
 #      enable: true
@@ -968,7 +1081,7 @@ etcd:
 vpc:
 #  # ID of existing VPC to create subnet in. Leave blank to create a new VPC
   # todo [customize] per account & region
-  id: $VPC_ID
+  id: vpc-ee57bf89
 #  # Exported output's name from another stack
 #  # Only specify either id or idFromStackOutput but not both
 #  idFromStackOutput: VpcId
@@ -1001,7 +1114,7 @@ vpc:
 
 # CIDR for Kubernetes VPC. If vpcId is specified, must match the CIDR of existing vpc.
 # todo [customize] per account & region
-vpcCIDR: "$VPC_CIDR"
+vpcCIDR: "10.172.40.0/21"
 
 # CIDR for Kubernetes subnet when placing nodes in a single availability zone (not highly-available) Leave commented out for multi availability zone setting and use the below `subnets` section instead.
 # instanceCIDR: "10.0.0.0/24"
@@ -1033,47 +1146,48 @@ subnets:
 #   # An internet gateway(igw) and a route table contains the route to the igw must have been properly configured by YOU.
 #   # kube-aws tries to reuse the subnet specified by id or idFromStackOutput but kube-aws never modify the subnet
 #   #
+
    - name: ExistingPublicSubnet1
 #     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
-     availabilityZone: $REGIONa
+     availabilityZone: eu-west-1a
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
      # todo [customize] per account & region
-     id: "$PUB_SUBNET_ZONE_A"
+     id: "subnet-122e1e4a"
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
 #     #idFromStackOutput: myinfra-PublicSubnet1
 
    - name: ExistingPublicSubnet2
 #     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
-     availabilityZone: $REGIONb
+     availabilityZone: eu-west-1b
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
     # todo [customize] per account & region
-     id: "$PUB_SUBNET_ZONE_B"
+     id: "subnet-5e00f439"
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
 #     #idFromStackOutput: myinfra-PublicSubnet1
    - name: ExistingPublicSubnet3
 #     # Beware that `availabilityZone` can't be omitted; it must be the one in which the subnet exists.
-     availabilityZone: $REGIONc
+     availabilityZone: eu-west-1c
 #     # ID of existing subnet to be reused.
 #     # availabilityZone should still be provided but instanceCIDR can be omitted when id is specified.
      # todo [customize] per account & region
-     id: "$PUB_SUBNET_ZONE_C"
+     id: "subnet-02be4f4b"
 
    - name: ExistingPrivateSubnet1
-     availabilityZone: $REGIONa
+     availabilityZone: eu-west-1a
      # todo [customize] per account & region
-     id: "$PRIV_SUBNET_ZONE_A"
+     id: "subnet-901020c8"
    - name: ExistingPrivateSubnet2
-     availabilityZone: $REGIONb
+     availabilityZone: eu-west-1b
      # todo [customize] per account & region
-     id: "$PRIV_SUBNET_ZONE_B"
+     id: "subnet-5f00f438"
    - name: ExistingPrivateSubnet3
-     availabilityZone: $REGIONc
+     availabilityZone: eu-west-1c
      # todo [customize] per account & region
-     id: "$PRIV_SUBNET_ZONE_C"
+     id: "subnet-8cbe4fc5"
 
 #     # Exported output's name from another stack
 #     # Only specify either id or idFromStackOutput but not both
@@ -1196,7 +1310,6 @@ subnets:
 #       # Only specify either id or idFromStackOutput but not both
 #       #idFromStackOutput: myinfra-PublicRouteTable1
 
-
 # CIDR for all service IP addresses
 # serviceCIDR: "10.3.0.0/24"
 
@@ -1220,7 +1333,7 @@ subnets:
 # and pulling from quay or dockerhub is slow and you get many timeouts.
 
 # Version of hyperkube image to use. This is the tag for the hyperkube image repository.
-kubernetesVersion: $K8S_VERSION
+kubernetesVersion: v1.7.7_coreos.0
 
 # Hyperkube image repository to use.
 # hyperkubeImage:
@@ -1367,6 +1480,7 @@ kubernetesVersion: $K8S_VERSION
 #
 # You can create a new EFS volume using the CLI:
 # $ aws efs create-file-system --creation-token $(uuidgen)
+
 #
 # Beware that:
 # * an EFS file system can not be mounted from multiple subnets from the same availability zone and
@@ -1443,7 +1557,6 @@ addons:
   # This feature is experimental currently so may not be production ready
   rescheduler:
     enabled: false
-
 # Experimental features will change in backward-incompatible ways
 experimental:
 #   # Enable admission controllers
@@ -1523,17 +1636,13 @@ experimental:
 
 # AWS Tags for cloudformation stack resources
 stackTags:
-  stopSchedule: "nostop"
-  # todo [customize] per environment & stack
-  systemCode: "$TAGS.systemCode"
-  environment: "$TAGS.environment"
-  ipCode: "$TAGS.ipCode"
-  teamDL: "$TAGS.teamDL"
-  $ADDITIONAL_TAG1
-  $ADDITIONAL_TAG2
-  $ADDITIONAL_TAG3
-  $ADDITIONAL_TAG4
-
+  systemCode: upp
+  environment: p
+  coco-environment-tag: upp-jpd-test1-del-eu
+  name: upp-jpd-test1-del-eu
+  ipCode: P196
+  teamDL: universal.publishing.platform@ft.com
+  stopSchedule: nostop
 
 # User-provided YAML map available in control-plane's stack-template.json
 #customSettings:

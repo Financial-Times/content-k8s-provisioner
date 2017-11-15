@@ -1,0 +1,29 @@
+aws_account_number: 469211898354
+region: us-east-1
+kms_key_arn: arn:aws:kms:us-east-1:469211898354:key/b1bcda88-92e0-49ff-a866-a5da03821aa3
+releaseChannel: stable
+
+vpc_id: vpc-4bc03f32
+vpc_cidr: 10.174.32.0/21
+
+public_subnet_zone_a: subnet-f8fcc99d
+public_subnet_zone_b: subnet-ecc00fc0
+public_subnet_zone_c: subnet-9c3f87d4
+
+private_subnet_zone_a: subnet-f9fcc99c
+private_subnet_zone_b: subnet-a8dc1384
+private_subnet_zone_c: subnet-d63d859e
+
+vpc_internal_ssh_sg: sg-f1ec2b82
+api_private_access_sg: sg-71f03702
+efs_access_sg: sg-ba8ef4c8 
+
+nat_gw_ips:
+  - 52.21.82.191
+  - 34.192.49.175
+  - 34.224.153.249
+  - 54.194.189.228
+
+controller_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-controller-role
+etcd_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-etcd-role
+worker_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role
