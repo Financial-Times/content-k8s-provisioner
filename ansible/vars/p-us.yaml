@@ -22,7 +22,6 @@ nat_gw_ips:
   - 52.21.82.191
   - 34.192.49.175
   - 34.224.153.249
-  - 54.194.189.228
 
 controller_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-controller-role
 etcd_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-etcd-role
