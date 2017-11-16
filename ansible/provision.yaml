@@ -5,15 +5,15 @@
   
   # Include the aws account specific cluster variables
   vars_files:
-    - vars/{{ environment_type }}-{{ aws_region }}.yaml
+    - vars/account_configs/{{ environment_type }}-{{ aws_region }}.yaml
     - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
 
   # Include the environment specific cluster variables
   pre_tasks:
-    - include_vars: vars/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
+    - include_vars: vars/platform_configs/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
       when: (cluster_environment == "")
 
-    - include_vars: vars/{{ platform }}-{{ environment_type }}-{{ cluster_environment }}-{{ aws_region }}.yaml
+    - include_vars: vars/platform_configs/{{ platform }}-{{ environment_type }}-{{ cluster_environment }}-{{ aws_region }}.yaml
       when: (cluster_environment != "")
 
   tasks:
