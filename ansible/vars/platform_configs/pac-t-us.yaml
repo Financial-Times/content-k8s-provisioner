@@ -10,7 +10,7 @@ etcd_count: 2
 
 # Worker Instance Properties
 worker_pools: 
-  - {id: 1, instance_type: t2.large, count: 2, role: worker}
+  - {id: 1, instance_type: t2.large, count: 2, role: worker, subnets: 3}
 
 worker_security_groups:
   - sg-f1ec2b82
