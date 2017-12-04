@@ -3,6 +3,7 @@
 - name: EFS instance for transformers cache
   efs:
     state: present
+    name: "{{ stack_name }}-transformers-cache"
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_key }}"
     region: "{{ region }}"
@@ -21,6 +22,7 @@
 - name: EFS instance for factset uploader
   efs:
     state: present
+    name: "{{ stack_name }}-transformers-cache"
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_key }}"
     region: "{{ region }}"
