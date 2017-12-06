@@ -44,7 +44,7 @@
     region: "{{ region }}"
     zone: "{{ region }}a"
     name: "{{ stack_name }}-kafka"
-    volume_size: 50
+    volume_size: 80
     volume_type: gp2
     tags:
       environment: "{{ environment_type }}"
@@ -59,7 +59,7 @@
     region: "{{ region }}"
     zone: "{{ item }}"
     name: "{{ stack_name }}-mongo-{{ item }}"
-    volume_size: 50
+    volume_size: 350
     volume_type: gp2
     tags:
       environment: "{{ environment_type }}"
