@@ -49,10 +49,10 @@ the cluster was initially provisioned in the /credentials folder. Failure in doi
 ## LastPass: UPP - k8s Cluster Provisioning env variables
 
 docker run \
-    -v $(pwd)/credentials:/ansible/credentials
+    -v $(pwd)/credentials:/ansible/credentials \
     -e "AWS_REGION=$AWS_REGION" \
     -e "CLUSTER_NAME=$CLUSTER_NAME" \
-    -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \    
+    -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
     -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
     -e "PLATFORM=$PLATFORM" \
     -e "VAULT_PASS=$VAULT_PASS" \
