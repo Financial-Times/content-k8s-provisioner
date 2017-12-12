@@ -1,4 +1,4 @@
-FROM coco/k8s-cli-utils
+FROM coco/k8s-cli-utils:kube-aws-upgrade
 
 ENV ANSIBLE_HOSTS=/ansible/hosts
 
