@@ -289,7 +289,7 @@ controller:
       [Service]
       EnvironmentFile=/etc/etcd-environment
       Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
-      Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.7"
+      Environment="DOCKER_LOGFILTER_VERSION=1.2.0-k8s"
       TimeoutStartSec=1200
       # Change killmode from "control-group" to "none" to let Docker remove
       # work correctly.
@@ -682,7 +682,7 @@ worker:
           [Service]
           EnvironmentFile=/etc/etcd-environment
           Environment="DOCKER_FORWARDER_VERSION=v1.0.2"
-          Environment="DOCKER_LOGFILTER_VERSION=kube-version-0.7"
+          Environment="DOCKER_LOGFILTER_VERSION=1.2.0-k8s"
           TimeoutStartSec=1200
           # Change killmode from "control-group" to "none" to let Docker remove
           # work correctly.
