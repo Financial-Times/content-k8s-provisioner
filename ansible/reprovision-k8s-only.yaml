@@ -1,0 +1,83 @@
+---
+- name: Reprovision the k8s cluster only
+  hosts: localhost
+  connection: local
+  
+  # Include the aws account specific cluster variables
+  vars_files:
+    - vars/account_configs/{{ environment_type }}-{{ aws_region }}.yaml
+    - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
+
+  # Include the environment specific cluster variables
+  pre_tasks:
+    - include_vars: vars/platform_configs/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
+      when: (cluster_environment == "")
+
+    - include_vars: vars/platform_configs/{{ platform }}-{{ environment_type }}-{{ cluster_environment }}-{{ aws_region }}.yaml
+      when: (cluster_environment != "")
+
+  tasks:
+    - include: tasks/set_stack_name.yaml
+
+    - name: Generate the cluster config
+      template:
+        src: templates/cluster-template.yaml.j2
+        dest: /ansible/cluster.yaml
+
+    # Check if the credentials folder is empty
+    # If it is, abort the execution of the playbook
+    - name: Get the number of pem files in the credentials directory
+      find:
+        paths: /ansible/credentials
+        patterns: '*.pem'
+      register: pem_files
+
+    - name: Check if the credentials folder is empty
+      fail: msg="The credentials folder is empty. Add the cluster credentials in the /ansible/credentials folder"
+      when: pem_files.examined|int == 0
+
+    - name: Destroy the k8s cluster
+      command: kube-aws destroy
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+
+    - include: tasks/delete_cname.yaml
+      vars:
+        dns_cname: "{{ stack_name }}-api"
+
+    - name: Set the provisioner bucket
+      set_fact:
+        provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
+
+    - name: Validate the cluster config
+      command: kube-aws validate --s3-uri s3://{{ provisioner_bucket }}
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+
+    - name: Provision the k8s cluster
+      command: kube-aws up --s3-uri s3://{{ provisioner_bucket }}
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+
+    # Get the DNS name of the API Server ELB
+    - name: Retrieve the Cluster API server ELB
+      script: /bin/bash /get_elb.sh
+      environment:
+        AWS_REGION: "{{ region }}"
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        CLUSTER_NAME: "{{ stack_name }}"
+      register: api_server_elb
+
+    - name: API Server ELB
+      debug:
+        msg: "API Server ELB: '{{ api_server_elb.stdout }}'"
+
+    # Create a DNS name for the API Server
+    - include: tasks/create_cname.yaml
+      vars:
+        dns_cname: "{{ stack_name }}-api"
+        hostname: "{{ api_server_elb.stdout }}"
