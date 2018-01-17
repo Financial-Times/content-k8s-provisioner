@@ -90,10 +90,12 @@ kubectl version
 ## Accessing k8s clusters
 
 1. Clone this repository
-1. Go to lastpass and search for the secure note "upp-k8s-stack infraprod credentials". 
-1. Download the attachment from this secure note (either one is fine) and unzip it in the credentials folder. You should have now the key files needed to communicate with the Kubernetes cluster into this folder.
+1. Go to lastpass and search for the following secure notes:
+    1. UPP - k8s Prod EU Delivery, Publishing & Neo4j Login credentials
+    1. UPP - k8s Prod US Delivery, Publishing & Neo4J Login credentials
+1. Download the attachments from the secure notes, and unzip them into in the EU and US credentials directories.
     1. To download attachments, you need to install [LP binary plugin](https://lastpass.com/support.php?cmd=showfaq&id=3206) and access the vault through the add-on/extension.
-1. Set the environment variable `KUBECONFIG` to point to the absolute path of the file:
+1. Set the environment variable `KUBECONFIG` to point to the path of the file:
     1. `export KUBECONFIG=~/k8s-aws-delivery-poc/kubeconfig`
 1. Set your context:
     1. `kubectl config use-context upp-prod-delivery-eu`
@@ -114,8 +116,11 @@ kubectl cluster-info
 ```
 You should get something like:
 ```
-Kubernetes master is running at https://sorin-kube-aws-test.ft.com
-Heapster is running at https://sorin-kube-aws-test.ft.com/api/v1/proxy/namespaces/kube-system/services/heapster
-KubeDNS is running at https://sorin-kube-aws-test.ft.com/api/v1/proxy/namespaces/kube-system/services/kube-dns
-kubernetes-dashboard is running at https://sorin-kube-aws-test.ft.com/api/v1/proxy/namespaces/kube-system/services/kubernetes-dashboard
+$ kubectl cluster-info
+Kubernetes master is running at https://upp-prod-delivery-eu-api.ft.com
+Heapster is running at https://upp-prod-delivery-eu-api.ft.com/api/v1/namespaces/kube-system/services/heapster/proxy
+KubeDNS is running at https://upp-prod-delivery-eu-api.ft.com/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+$
 ```
