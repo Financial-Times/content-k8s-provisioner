@@ -630,6 +630,10 @@ worker:
           RateLimitInterval=0
           RateLimitBurst=0
 
+#  Tuned the net.ipv4.tcp_retries2 kernel param on the worker nodes, so that stale TCP connections will be closed in ~ 1min.
+#  Since the kubelet holds a long TCP connection to the API server for posting its status, if that connection gets stalled, we'll get a NodeNotReady
+#  The default was 15 which caused the stale connections to be closed in ~ 15 mins.
+#  More on this here:  https://github.com/kubernetes/kubernetes/pull/48670, https://github.com/kubernetes/kubernetes/issues/41916#issuecomment-312428731
       - path: /etc/sysctl.d/90-tcp-retries.conf
         permissions: 0644
         content: |
@@ -651,6 +655,7 @@ worker:
       - name: systemd-journald.service
         command: restart
 
+#     Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/90-tcp-retries.conf will be picked up.
       - name: sysctl-reload.service
         command: start
         runtime: true
