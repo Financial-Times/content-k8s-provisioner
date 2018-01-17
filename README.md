@@ -87,16 +87,26 @@ You can check the client version by running
 kubectl version
 ```
 
-## Accessing the cluster
-We'll share the same Kubernetes cluster that was provisioned on aws. Please do the following setup:
+## Accessing k8s clusters
 
 1. Clone this repository
 1. Go to lastpass and search for the secure note "upp-k8s-stack infraprod credentials". 
 1. Download the attachment from this secure note (either one is fine) and unzip it in the credentials folder. You should have now the key files needed to communicate with the Kubernetes cluster into this folder.
     1. To download attachments, you need to install [LP binary plugin](https://lastpass.com/support.php?cmd=showfaq&id=3206) and access the vault through the add-on/extension.
 1. Set the environment variable `KUBECONFIG` to point to the absolute path of the file:
-    1. For the delivery cluster: the kubeconfig file in the cloned folder. 
-    1. For the publishing cluster: the kubeconfig-pub file in the cloned folder.
+    1. `export KUBECONFIG=~/k8s-aws-delivery-poc/kubeconfig`
+1. Set your context:
+    1. `kubectl config use-context upp-prod-delivery-eu`
+
+Available clusters are:
+```
+upp-prod-delivery-eu
+upp-prod-publish-eu
+upp-prod-neo4j-eu
+upp-prod-delivery-us
+upp-prod-publish-us
+upp-prod-neo4j-us
+```
 
 You should be all set now. Test your setup by running
 ```
