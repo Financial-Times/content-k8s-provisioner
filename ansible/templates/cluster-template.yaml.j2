@@ -630,6 +630,15 @@ worker:
           RateLimitInterval=0
           RateLimitBurst=0
 
+#  Tuned the net.ipv4.tcp_retries2 kernel param on the worker nodes, so that stale TCP connections will be closed in ~ 1min.
+#  Since the kubelet holds a long TCP connection to the API server for posting its status, if that connection gets stalled, we'll get a NodeNotReady
+#  The default was 15 which caused the stale connections to be closed in ~ 15 mins.
+#  More on this here:  https://github.com/kubernetes/kubernetes/pull/48670, https://github.com/kubernetes/kubernetes/issues/41916#issuecomment-312428731
+      - path: /etc/sysctl.d/90-tcp-retries.conf
+        permissions: 0644
+        content: |
+          net.ipv4.tcp_retries2=6
+
       - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
         permissions: 0644
         content: |
@@ -646,6 +655,22 @@ worker:
       - name: systemd-journald.service
         command: restart
 
+#     Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/90-tcp-retries.conf will be picked up.
+      - name: sysctl-reload.service
+        command: start
+        runtime: true
+        content: |
+          [Unit]
+          Description=Make sure we update sysctl settings
+
+          [Service]
+          Before=kubelet.service docker.service
+          Type=oneshot
+          ExecStart=/bin/sh -c "sysctl --system"
+          Restart=no
+
+          [Install]
+          WantedBy=multi-user.target
       - name: authorized_keys.service
         command: start
         content: |
@@ -1563,7 +1588,7 @@ experimental:
   # Command line flag passed to the controller-manager. (default 40s)
   # This is the amount of time which we allow running Node to be unresponsive before marking it unhealthy.
   # Must be N times more than kubelet's nodeStatusUpdateFrequency (default 10s).
-#   nodeMonitorGracePeriod: "40s"
+  nodeMonitorGracePeriod: "60s"
 
 # AWS Tags for cloudformation stack resources
 stackTags:
