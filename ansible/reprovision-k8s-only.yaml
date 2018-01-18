@@ -32,9 +32,21 @@
         patterns: '*.pem'
       register: pem_files
 
-    - name: Check if the credentials folder is empty
-      fail: msg="The credentials folder is empty. Add the cluster credentials in the /ansible/credentials folder"
-      when: pem_files.examined|int == 0
+    # If credentials are being shared between environments, generate certs except ca
+    - name: Generate cluster credentials if necessary
+      command: "{{ item }}"
+      with_items:
+        - find credentials/ ! -name 'ca*' -type f -exec rm -f {} +
+        - kube-aws render credentials
+      when: (share_cluster_credentials | lower == "y" ) and (reuse_credentials | lower != "y")
+
+    # If credentials are not being shared between environments, generate certs
+    - name: Generate cluster credentials if necessary
+      command: "{{ item }}"
+      with_items:
+        - rm -rf credentials/*
+        - kube-aws render credentials --generate-ca
+      when: (share_cluster_credentials | lower != "y") and (reuse_credentials | lower != "y")
 
     - name: Destroy the k8s cluster
       command: kube-aws destroy
