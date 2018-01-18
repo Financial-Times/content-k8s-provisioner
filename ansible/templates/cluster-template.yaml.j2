@@ -156,7 +156,7 @@ kmsKeyArn: "{{ kms_key_arn }}"
 
 controller:
 #  # Number of controller nodes to create, for more control use `controller.autoScalingGroup` and do not use this setting
-  count: {{ controller_count }}
+#  count: {{ controller_count }}
 #
 #  # Maximum time to wait for controller creation
 #  createTimeout: PT15M
@@ -187,10 +187,11 @@ controller:
     - {{ vpc_internal_ssh_sg }}
 #
 #  # Auto Scaling Group definition for controllers. If only `controllerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
-#  autoScalingGroup:
-#    minSize: 1
-#    maxSize: 3
-#    rollingUpdateMinInstancesInService: 2
+  autoScalingGroup:
+    minSize: {{ controller_count }}
+    maxSize: {{ controller_count | int + 1 }}
+    rollingUpdateMinInstancesInService: {{ controller_count }}
+
 #  # If you specify managedIamRoleName the role created for controller nodes will not suffix the random id at the end
 #  # Role will be created with "Ref": {"AWS::StackName"}-{"AWS::Region"}-yourManagedRole
 #  # to follow the recommendation in AWS documentation  http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
@@ -434,7 +435,7 @@ worker:
 #
 #      # Number of worker nodes to create for an autoscaling group based pool
 #      # Specify `worker.autoScalingGroup` instead for more control over its min/max/desired capacity.
-      count: {{ worker.count }}
+#      count: {{ worker.count }}
 #      # Instance type for worker nodes
 #      # CAUTION: Don't use t2.micro or the cluster won't work. See https://github.com/kubernetes/kubernetes/issues/16122
       instanceType: {{ worker.instance_type }}
@@ -479,10 +480,10 @@ worker:
 #        maxBatchSize: 1
 #
 #      # Auto Scaling Group definition for workers. If only `workerCount` is specified, min and max will be the set to that value and `rollingUpdateMinInstancesInService` will be one less.
-#      autoScalingGroup:
-#        minSize: 1
-#        maxSize: 3
-#        rollingUpdateMinInstancesInService: 2
+      autoScalingGroup:
+        minSize: {{ worker.count }}
+        maxSize: {{ worker.count | int + 1 }}
+        rollingUpdateMinInstancesInService: {{ worker.count }}
 #
 #      #
 #      # Spot fleet config for worker nodes
