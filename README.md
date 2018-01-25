@@ -77,6 +77,7 @@ The Splunk hec token and the url can be found in lastpass.
 ## For PAC Prod Clusters
 ## LastPas: PAC - Splunk HEC Token
 ```
+7. Enable access logs on the ELB's
 
 Note:
 * If you are re-provisioning a cluster, the restoration of the config from the S3 backup should bring the cluster healthy.
@@ -116,12 +117,14 @@ To restore a config to a new cluster, do the following:
 1. Clone this repository
 2. Get the `<backup_timestamped_folder>` of the cluster config (preferably latest) that you want to be restored. The S3 buckets that holds the backups are as follows:
 
+
 | AWS Account  | Region |       S3 Bucket         |
 |--------------|--------|-------------------------|
 | Content Test | EU     | k8s-provisioner-test-eu |
                | US     | k8s-provisioner-test-us |
 | Content Prod | EU     | k8s-provisioner-prod-eu |
                | US     | k8s-provisioner-prod-us |
+               
 
 3. Set the S3 bucket URI for the backup that needs to be restored to the new cluster.
 ```
