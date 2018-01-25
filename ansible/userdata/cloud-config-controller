@@ -2143,6 +2143,7 @@ write_files:
           {{ end }}
           - --root-ca-file=/etc/kubernetes/ssl/ca.pem
           - --cloud-provider=aws
+          - --pod-eviction-timeout=20m
           {{if .Experimental.NodeMonitorGracePeriod}}
           - --node-monitor-grace-period={{ .Experimental.NodeMonitorGracePeriod }}
           {{end}}
