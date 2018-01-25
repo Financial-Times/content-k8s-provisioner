@@ -3,7 +3,7 @@
 # Delivery cluster on Kubernetes POC
 
 ## Description
-This repository contains the files needed to provision clusters using Kubernetes on AWS for UPP (delivery, publishing, neo4j) and PAC platforms.
+This repository contains the files required to provision clusters using Kubernetes on AWS for UPP (delivery, publishing, neo4j) and PAC platforms.
 
 It uses [kube-aws](https://coreos.com/kubernetes/docs/latest/kubernetes-on-aws.html) for provisioning the cluster on AWS.
 
@@ -85,6 +85,9 @@ docker run \
     -e "VAULT_PASS=$VAULT_PASS" \
     k8s-provisioner:local /bin/bash update.sh
 ```
+
+##  Restore config for a cluster
+
 
 ##  Decommissioning a cluster
 
