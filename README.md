@@ -7,7 +7,7 @@ This repository contains the files required to provision clusters using Kubernet
 
 It uses [kube-aws](https://coreos.com/kubernetes/docs/latest/kubernetes-on-aws.html) for provisioning the cluster on AWS.
 
-## Prerequisites for development
+## Prerequisites
 1. [Install docker](https://docs.docker.com/engine/installation/) locally
 2. [Install kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl-binary-via-curl), the latest version (preferably >1.8). OSX users can install using brew.
 ```
@@ -52,7 +52,7 @@ Once the stack is created, update the kubeconfig file with the API servers DNS n
 kubectl cluster-info
 ```
 
-The following steps has to be manually done (will be automated):
+The following steps has to be manually done:
 
 1. Connect to the cluster and grant admin to the default user
 ```
@@ -60,8 +60,12 @@ kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-adm
 ```
 1. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment). 
 1. Make sure you have defined the credentials for the new cluster in Jenkins.
-1. Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Deploy the global config to the new environment.
-1. Restore the config from a S3 backup or synchronize the cluster with an already existing cluster to deploy all the applications using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
+1. Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Build and deploy the global config to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
+1. [Restore](#restore-k8s-config) the config from a S3 backup or synchronize the cluster with an already existing cluster to deploy all the applications using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
+
+Note:
+* If you are re-provisioning a cluster, the restoration of the config from the S3 backup should bring the cluster healthy.
+* If you are creating a new cluster, after the restoration of the config, manual intervention is required for mongodb and kafka. Steps are detailed [here](README-app_troubleshooting.md)
 
 ##  Updating a cluster
 
@@ -86,8 +90,41 @@ docker run \
     k8s-provisioner:local /bin/bash update.sh
 ```
 
-##  Restore config for a cluster
+##  Restore k8s Config
 
+`kube-resources-autosave` on kubernetes is a pod which takes and uploads snapshots of all the kubernetes resources to an S3 bucket in 24 hours interval. The backups are stored in a timestamped folder in the S3 bucket in the following format.
+```
+s3://<s3-bucket-name>/kube-aws/clusters/<cluster-name>/backup/<backup_timestamped_folder>
+```
+To restore a config to a new cluster, do the following:
+
+1. Clone this repository
+2. Get the `<backup_timestamped_folder>` of the cluster config (preferably latest) that you want to be restored. The S3 buckets that holds the backups are as follows:
+
+| AWS Account  | Region |       S3 Bucket         |
+|--------------|--------|-------------------------|
+| Content Test | EU     | k8s-provisioner-test-eu |
+               | US     | k8s-provisioner-test-us |
+| Content Prod | EU     | k8s-provisioner-prod-eu |
+               | US     | k8s-provisioner-prod-us |
+
+3. Set the S3 bucket URI for the backup that needs to be restored to the new cluster.
+```
+s3://<s3-bucket-name>/kube-aws/clusters/<cluster-name>/backup/<backup_timestamped_folder>
+```
+4. Set the AWS credentials as environment variables. They are stored in lastpass.
+```
+## For PAC Cluster
+## LastPass: PAC - k8s Cluster Provisioning env variables
+## For UPP Cluster
+## LastPass: UPP - k8s Cluster Provisioning env variables
+```
+
+5. Run the following command from the root of this repository to restore the `default` and the `kube-system` namespace
+```
+./sh/restore <S3URI-from-previous-step> default
+./sh/restore <S3URI-from-previous-step> kube-system
+```
 
 ##  Decommissioning a cluster
 
