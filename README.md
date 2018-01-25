@@ -1,7 +1,5 @@
 # USE https://github.com/Financial-Times/upp-global-configs FOR GLOBAL CONFIGS
 
-# Delivery cluster on Kubernetes POC
-
 ## Description
 This repository contains the files required to provision clusters using Kubernetes on AWS for UPP (delivery, publishing, neo4j) and PAC platforms.
 
@@ -58,10 +56,27 @@ The following steps has to be manually done:
 ```
 kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=default:default
 ```
-1. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment). 
-1. Make sure you have defined the credentials for the new cluster in Jenkins.
-1. Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Build and deploy the global config to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
-1. [Restore](#restore-k8s-config) the config from a S3 backup or synchronize the cluster with an already existing cluster to deploy all the applications using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
+2. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment). 
+3. Make sure you have defined the credentials for the new cluster in Jenkins.
+4. Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Build and deploy the global config to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
+5. [Restore](#restore-k8s-config) the config from a S3 backup or synchronize the cluster with an already existing cluster to deploy all the applications using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
+6. Connect through SSH to one of the etcd servers and use the command “etcdctl mk <key> <value>” to introduce the following etcd keys needed for forwarding the logs to splunk
+```
+/ft/config/environment_tag
+/ft/config/splunk-forwarder/batchsize
+/ft/config/splunk-forwarder/splunk_hec_token
+/ft/config/splunk-forwarder/splunk_hec_url
+```
+The Splunk hec token and the url can be found in lastpass.
+
+```
+## For UPP Dev clusters
+## LastPass: content-test: Splunk HEC token
+## For UPP Prod & Staging clusters
+## LastPass: content-prod: Splunk HEC token
+## For PAC Prod Clusters
+## LastPas: PAC - Splunk HEC Token
+```
 
 Note:
 * If you are re-provisioning a cluster, the restoration of the config from the S3 backup should bring the cluster healthy.
@@ -73,7 +88,7 @@ Note:
 the cluster was initially provisioned in the /credentials folder. Failure in doing this will damage the cluster**
  
 ```
-## Set the environments variables to provision a cluster. The variables are stored in LastPass
+## Login credentials and the environments variables are stored in LastPass
 ## For PAC Cluster
 ## LastPass: PAC - k8s Cluster Provisioning env variables
 ## For UPP Cluster
