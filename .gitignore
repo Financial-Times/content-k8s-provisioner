@@ -2,4 +2,5 @@
 .idea
 *.iml
 credentials/*
+credentials-*/*
 ansible/*.retry
