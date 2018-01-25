@@ -118,12 +118,12 @@ To restore a config to a new cluster, do the following:
 2. Get the `<backup_timestamped_folder>` of the cluster config (preferably latest) that you want to be restored. The S3 buckets that holds the backups are as follows:
 
 
-| AWS Account  | Region |       S3 Bucket         |
-|--------------|--------|-------------------------|
-| Content Test | EU     | k8s-provisioner-test-eu |
-               | US     | k8s-provisioner-test-us |
-| Content Prod | EU     | k8s-provisioner-prod-eu |
-               | US     | k8s-provisioner-prod-us |
+| AWS Account   | Region   |       S3 Bucket           |
+|-------------- | -------- | ------------------------- |
+| Content Test  | EU       |  k8s-provisioner-test-eu  |
+                | US       |  k8s-provisioner-test-us  |
+| Content Prod  | EU       |  k8s-provisioner-prod-eu  |
+                | US       |  k8s-provisioner-prod-us  |
                
 
 3. Set the S3 bucket URI for the backup that needs to be restored to the new cluster.
