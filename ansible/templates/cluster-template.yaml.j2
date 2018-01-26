@@ -290,7 +290,7 @@ controller:
       [Service]
       EnvironmentFile=/etc/etcd-environment
       Environment="DOCKER_LOG_COLLECTOR_VERSION=1.0.0-fd-rc5"
-      Environment="DOCKER_LOGFILTER_VERSION=1.2.2-k8s-fd-blacklist-for-k8s-rc1"
+      Environment="DOCKER_LOGFILTER_VERSION=1.2.3-k8s-log-collector-rc1"
       TimeoutStartSec=1200
       # Change killmode from "control-group" to "none" to let Docker remove
       # work correctly.
@@ -553,7 +553,7 @@ worker:
 #        # Beware that making this an autoscaing-target doesn't automatically deploy cluster-autoscaler itself -
 #        # turn on `addons.clusterAutoscaler.enabled` to deploy it on controller nodes.
         clusterAutoscaler:
-          enabled: true
+          enabled: false
 #
 #      # Used to provide `/etc/environment` env vars with values from arbitrary CloudFormation refs
 #      awsEnvironment:
@@ -568,7 +568,7 @@ worker:
 #      # Will provision worker nodes with IAM permissions to run cluster-autoscaler and add node labels so that
 #      # cluster-autoscaler pods are scheduled to nodes in this node pool
       clusterAutoscalerSupport:
-        enabled: true
+        enabled: false
 #
 #      # Mount an EFS only to a specific node pool.
 #      # This is a NFS share that will be available across a node pool through a hostPath volume on the "/efs" mountpoint
@@ -642,6 +642,9 @@ worker:
         permissions: 0644
         content: |
           net.ipv4.tcp_retries2=6
+          net.ipv4.tcp_keepalive_time=30
+          net.ipv4.tcp_keepalive_probes=4
+          net.ipv4.tcp_keepalive_intvl=5
 
       - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
         permissions: 0644
@@ -711,7 +714,7 @@ worker:
           [Service]
           EnvironmentFile=/etc/etcd-environment
           Environment="DOCKER_LOG_COLLECTOR_VERSION=1.0.0-fd-rc5"
-          Environment="DOCKER_LOGFILTER_VERSION=1.2.2-k8s-fd-blacklist-for-k8s-rc1"
+          Environment="DOCKER_LOGFILTER_VERSION=1.2.3-k8s-log-collector-rc1"
           TimeoutStartSec=1200
           # Change killmode from "control-group" to "none" to let Docker remove
           # work correctly.
@@ -1495,7 +1498,7 @@ addons:
   # CA runs only on controller nodes by default. Turn on `worker.nodePools[].clusterAutoscalerSupport.enabled` to
   # add nodes from a node pool to be where CA runs
   clusterAutoscaler:
-    enabled: true
+    enabled: false
 
   # When enabled, Kubernetes rescheduler is deployed to the cluster controller(s)
   # This feature is experimental currently so may not be production ready
