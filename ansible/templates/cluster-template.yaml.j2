@@ -550,7 +550,7 @@ worker:
 #        # Beware that making this an autoscaing-target doesn't automatically deploy cluster-autoscaler itself -
 #        # turn on `addons.clusterAutoscaler.enabled` to deploy it on controller nodes.
         clusterAutoscaler:
-          enabled: true
+          enabled: false
 #
 #      # Used to provide `/etc/environment` env vars with values from arbitrary CloudFormation refs
 #      awsEnvironment:
@@ -565,7 +565,7 @@ worker:
 #      # Will provision worker nodes with IAM permissions to run cluster-autoscaler and add node labels so that
 #      # cluster-autoscaler pods are scheduled to nodes in this node pool
       clusterAutoscalerSupport:
-        enabled: true
+        enabled: false
 #
 #      # Mount an EFS only to a specific node pool.
 #      # This is a NFS share that will be available across a node pool through a hostPath volume on the "/efs" mountpoint
