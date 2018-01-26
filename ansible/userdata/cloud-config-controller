@@ -2143,6 +2143,8 @@ write_files:
           {{ end }}
           - --root-ca-file=/etc/kubernetes/ssl/ca.pem
           - --cloud-provider=aws
+          # set the pod eviction to 20m, so that if the one node goes into NotReady because of AWS ELB,
+          # the pods on the node should be rescheduled only after 20 mins, since the connection to API server is reestablished in ~ 15mins. More details in here: https://trello.com/c/Qu67stMu/296-nodenotready
           - --pod-eviction-timeout=20m
           {{if .Experimental.NodeMonitorGracePeriod}}
           - --node-monitor-grace-period={{ .Experimental.NodeMonitorGracePeriod }}
