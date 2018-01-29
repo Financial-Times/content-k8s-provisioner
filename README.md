@@ -140,8 +140,8 @@ s3://<s3-bucket-name>/kube-aws/clusters/<cluster-name>/backup/<backup_timestampe
 
 5. Run the following command from the root of this repository to restore the `default` and the `kube-system` namespace
 ```
-./sh/restore <S3URI-from-previous-step> default
-./sh/restore <S3URI-from-previous-step> kube-system
+./sh/restore <S3URI-from-step-3> default
+./sh/restore <S3URI-from-step-3> kube-system
 ```
 
 ##  Decommissioning a cluster
@@ -162,8 +162,6 @@ docker run \
     -e "VAULT_PASS=$VAULT_PASS" \
     k8s-provisioner:local /bin/bash decom.sh
 ```
-
-Follow the steps in [here](https://docs.google.com/document/d/1TTih1gcj-Vsqjp1aCAzsP4lpt6ivR8jDIXaZtBxNaUU/edit?pli=1#heading=h.idonu4gksr10) 
 
 ## Accessing the cluster
 
