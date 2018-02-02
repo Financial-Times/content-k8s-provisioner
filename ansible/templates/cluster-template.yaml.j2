@@ -6,7 +6,7 @@ clusterName: {{ stack_name }}
 
 # CoreOS release channel to use. Currently supported options: alpha, beta, stable
 # See coreos.com/releases for more information
-#releaseChannel: stable
+releaseChannel: {{ coreos_release_channel}}
 
 # The AMI ID of CoreOS.
 # If omitted, the latest AMI for the releaseChannel is used.
