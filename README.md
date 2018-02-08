@@ -58,7 +58,7 @@ kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-adm
 ```
 2. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment). 
 3. Make sure you have defined the credentials for the new cluster in Jenkins.
-4. Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Build and deploy the global config to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
+4. [Just for UPP Clusters] Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Build and deploy the global config to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
 5. [Restore](#restore-k8s-config) the config from a S3 backup or synchronize the cluster with an already existing cluster to deploy all the applications using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
 6. Connect through SSH to one of the etcd servers and use the command “etcdctl mk <key> <value>” to introduce the following etcd keys needed for forwarding the logs to splunk
 ```
@@ -115,33 +115,41 @@ s3://<s3-bucket-name>/kube-aws/clusters/<cluster-name>/backup/<backup_timestampe
 To restore a config to a new cluster, do the following:
 
 1. Clone this repository
-2. Get the `<backup_timestamped_folder>` of the cluster config (preferably latest) that you want to be restored. The S3 buckets that holds the backups are as follows:
+2. Get the `<backup_timestamped_folder>` of the cluster config (preferably latest or a time when the cluster was healthy) that you want to be restored. The S3 buckets that holds the backups are as follows:
 
 
-| AWS Account   | Region   |       S3 Bucket           |
-|-------------- | -------- | ------------------------- |
-| Content Test  | EU       |  k8s-provisioner-test-eu  |
-|               | US       |  k8s-provisioner-test-us  |
-| Content Prod  | EU       |  k8s-provisioner-prod-eu  |
-|               | US       |  k8s-provisioner-prod-us  |
+| AWS Account   | Region       |       S3 Bucket           |
+|-------------- | ------------ | ------------------------- |
+| Content Test  | eu-west-1    |  k8s-provisioner-test-eu  |
+|               | us-east-1    |  k8s-provisioner-test-us  |
+| Content Prod  | eu-west-1    |  k8s-provisioner-prod-eu  |
+|               | us-east-1    |  k8s-provisioner-prod-us  |
                
 
 3. Set the S3 bucket URI for the backup that needs to be restored to the new cluster.
 ```
 s3://<s3-bucket-name>/kube-aws/clusters/<cluster-name>/backup/<backup_timestamped_folder>
 ```
-4. Set the AWS credentials as environment variables. They are stored in lastpass.
+4. Set the AWS credentials. They are stored in lastpass.
 ```
 ## For PAC Cluster
 ## LastPass: PAC - k8s Cluster Provisioning env variables
 ## For UPP Cluster
 ## LastPass: UPP - k8s Cluster Provisioning env variables
 ```
+You can do so by doing a `aws configure` and entering the keys from the lastpass note. 
+Make sure you set the region based on where the S3 bucket lives.
 
-5. Run the following command from the root of this repository to restore the `default` and the `kube-system` namespace
+**Make sure you are connected to the right cluster that you are restoring the config to**
+5. Test if you are connected to the correct cluster by doing a
 ```
-./sh/restore <S3URI-from-step-3> default
-./sh/restore <S3URI-from-step-3> kube-system
+kubectl cluster-info
+```
+
+6. Run the following command from the root of this repository to restore the `default` and the `kube-system` namespace
+```
+./sh/restore.sh <S3URI-from-step-3> default
+./sh/restore.sh <S3URI-from-step-3> kube-system
 ```
 
 ##  Decommissioning a cluster
