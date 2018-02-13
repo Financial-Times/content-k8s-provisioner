@@ -63,13 +63,13 @@ kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-adm
 6. Connect through SSH to one of the etcd servers and use the command “etcdctl mk <key> <value>” to introduce the following etcd keys needed for forwarding the logs to splunk
 
 ```
-/ft/config/public_address
-/ft/config/splunk-forwarder/bucket_name
-/ft/config/splunk-forwarder/aws_region
-/ft/config/splunk-forwarder/aws_access_key_id
-/ft/config/splunk-forwarder/aws_secret_access_key
-/ft/config/splunk-forwarder/batchsize
-/ft/config/environment_tag
+/ft/config/public_address {clusters_dns_name_without_region - ex: upp-dev-cj-publish.ft.com}
+/ft/config/splunk-forwarder/bucket_name {s3_bucket_name_for_logs, pattern: splunklogs-upp-[env] - ex: splunklogs-upp-dev-cj}
+/ft/config/splunk-forwarder/aws_region {s3_aws_region}
+/ft/config/splunk-forwarder/aws_access_key_id {s3_aws_access_key_id}
+/ft/config/splunk-forwarder/aws_secret_access_key {s3_aws_secret_access_key_id}
+/ft/config/splunk-forwarder/batchsize {log_msgs_batch_size, default value: 100}
+/ft/config/environment_tag {environment_name, ex: upp-dev-cj-publish-eu}
 ```
 
 The Splunk hec token and the url can be found in lastpass.
