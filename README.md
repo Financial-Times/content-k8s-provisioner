@@ -72,13 +72,13 @@ The following steps have to be manually done:
 ```
 kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=default:default
 ```
-2. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment). 
-3. Make sure you have defined the credentials for the new cluster in Jenkins.
-4. [Just for UPP Clusters] Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Release and deploy a new version of this app to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
-5. Deploy all the apps necessary in the current cluster. This can be done in 2 ways:
-    1. One quick way, but this would require some more manual steps: [Restore](#restore-k8s-config) the config from a S3 backup of another cluster 
+1. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment). 
+1. Make sure you have defined the credentials for the new cluster in Jenkins.
+1. [Just for UPP Clusters] Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Release and deploy a new version of this app to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
+1. Deploy all the apps necessary in the current cluster. This can be done in 2 ways:
     1. One slower way, but which is fire & forget: synchronize the cluster with an already existing cluster using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
-6. Connect through SSH to one of the etcd servers and use the command “etcdctl mk <key> <value>” to introduce the following etcd keys needed for forwarding the logs to splunk
+    1. One quick way, but this would require some more manual steps: [Restore](#restore-k8s-config) the config from a S3 backup of another cluster 
+1. Connect through SSH to one of the etcd servers and use the command “etcdctl mk <key> <value>” to introduce the following etcd keys needed for forwarding the logs to splunk
     ```
     /ft/config/environment_tag
     /ft/config/splunk-forwarder/batchsize
@@ -125,8 +125,12 @@ docker run \
 ```
 s3://<s3-bucket-name>/kube-aws/clusters/<cluster-name>/backup/<backup_timestamped_folder>
 ```
-To restore a config to a new cluster, do the following:
-
+To restore the k8s cluster state, do the following:
+1. Before restoring make sure you have deployed the following apps, using [this Jenkins job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/deploy-upp-helm-chart/), 
+so that they don't get overwritten by the restore:
+    - upp-global-configs
+    - kafka-bridges
+     
 1. Clone this repository
 1. Determine the S3 bucket name where the backup of the source cluster resides.
    Choose one of the exports bellow:
@@ -172,6 +176,8 @@ Test if you are connected to the correct cluster by doing a
     ./sh/restore.sh s3://$RESTORE_BUCKET/kube-aws/clusters/<source_cluster>/backup/<source_backup_folder> kube-system
     ./sh/restore.sh s3://$RESTORE_BUCKET/kube-aws/clusters/<source_cluster>/backup/<source_backup_folder> default
     ```
+
+1. In order to get the cluster green after an S3 restoration, some manual steps are further required for mongo, kafka and varnish. Steps are detailed [here](README-app_troubleshooting.md)
 
 ##  Decommissioning a cluster
 
