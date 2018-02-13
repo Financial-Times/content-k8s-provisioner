@@ -26,31 +26,47 @@ docker build -t k8s-provisioner:local .
 
 ##  Provisioning a new cluster
 
-```
-## Set the environments variables to provision a cluster. The variables are stored in LastPass
-## For PAC Cluster
-## LastPass: PAC - k8s Cluster Provisioning env variables
-## For UPP Cluster
-## LastPass: UPP - k8s Cluster Provisioning env variables
+Here are the steps for provisioning a new cluster:
 
-docker run \
-    -v $(pwd)/credentials:/ansible/credentials \
-    -e "AWS_REGION=$AWS_REGION" \
-    -e "CLUSTER_NAME=$CLUSTER_NAME" \
-    -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
-    -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
-    -e "SHARE_CLUSTER_CREDENTIALS=$SHARE_CLUSTER_CREDENTIALS" \
-    -e "PLATFORM=$PLATFORM" \
-    -e "VAULT_PASS=$VAULT_PASS" \
-    k8s-provisioner:local /bin/bash provision.sh
-```
+1. [Build your docker image locally](#building-the-docker-image)
+1. Set the environment variables to provision a cluster. The variables are stored in LastPass:
+    - For PAC Cluster: LP note "PAC - k8s Cluster Provisioning env variables"
+    - For UPP Cluster: LP note "UPP - k8s Cluster Provisioning env variables"
+1. Create an empty folder named `credentials` in the current folder    
+1. Determine the credentials TLS assets to be used by the cluster and for logging into the cluster
+    1. For sharing the authentication credentials with another cluster, meaning that you will be able to access 
+    using `kubectl` both clusters with the same TLS certificates:
+        1. place the certificates `ca.pem` and `ca-key.pem` in the `credentials` folder. These can be found zipped in the LassPass note from step 2. 
+        1. set the env var ```export SHARE_CLUSTER_CREDENTIALS=y```
+    1. For creating a new set of authentication credentials for a brand new cluster
+        1. leave the `credentials` folder empty
+        1. set the env var ```export SHARE_CLUSTER_CREDENTIALS=n```  
+1. Run the docker container that will provision the stack in AWS 
+    ```
+    docker run \
+        -v $(pwd)/credentials:/ansible/credentials \
+        -e "AWS_REGION=$AWS_REGION" \
+        -e "CLUSTER_NAME=$CLUSTER_NAME" \
+        -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
+        -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
+        -e "SHARE_CLUSTER_CREDENTIALS=$SHARE_CLUSTER_CREDENTIALS" \
+        -e "PLATFORM=$PLATFORM" \
+        -e "VAULT_PASS=$VAULT_PASS" \
+        k8s-provisioner:local /bin/bash provision.sh
+    ```    
+1. Once the stack is created, update the kubeconfig file with the API servers DNS name and test if you can connect to the cluster by doing
+    ```
+    kubectl cluster-info
+    ```
+1. `VERY IMPORTANT`: Zip the credentials folder and upload it in the LastPass node from step 2.
+    ```
+    export CLUSTER_NAME=_the_name_of_the_cluster_as_outputted_by_the_stack_creation_
+    mv credentials credentials.${CLUSTER_NAME}
+    zip -r ${CLUSTER_NAME}.zip credentials.${CLUSTER_NAME}
+    ```
+    These initial credentials are vital for subsequent updates in the cluster.
 
-Once the stack is created, update the kubeconfig file with the API servers DNS name and test if you can connect to the cluster by doing
-```
-kubectl cluster-info
-```
-
-The following steps has to be manually done:
+The following steps have to be manually done:
 
 1. Connect to the cluster and grant admin to the default user
 ```
@@ -58,30 +74,27 @@ kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-adm
 ```
 2. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment). 
 3. Make sure you have defined the credentials for the new cluster in Jenkins.
-4. [Just for UPP Clusters] Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Build and deploy the global config to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
-5. [Restore](#restore-k8s-config) the config from a S3 backup or synchronize the cluster with an already existing cluster to deploy all the applications using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
+4. [Just for UPP Clusters] Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Release and deploy a new version of this app to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
+5. Deploy all the apps necessary in the current cluster. This can be done in 2 ways:
+    1. One quick way, but this would require some more manual steps: [Restore](#restore-k8s-config) the config from a S3 backup of another cluster 
+    1. One slower way, but which is fire & forget: synchronize the cluster with an already existing cluster using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
 6. Connect through SSH to one of the etcd servers and use the command “etcdctl mk <key> <value>” to introduce the following etcd keys needed for forwarding the logs to splunk
-```
-/ft/config/environment_tag
-/ft/config/splunk-forwarder/batchsize
-/ft/config/splunk-forwarder/splunk_hec_token
-/ft/config/splunk-forwarder/splunk_hec_url
-```
-The Splunk hec token and the url can be found in lastpass.
+    ```
+    /ft/config/environment_tag
+    /ft/config/splunk-forwarder/batchsize
+    /ft/config/splunk-forwarder/splunk_hec_token
+    /ft/config/splunk-forwarder/splunk_hec_url
+    ```
+    The Splunk hec token and the url can be found in lastpass.
 
-```
-## For UPP Dev clusters
-## LastPass: content-test: Splunk HEC token
-## For UPP Prod & Staging clusters
-## LastPass: content-prod: Splunk HEC token
-## For PAC Prod Clusters
-## LastPas: PAC - Splunk HEC Token
-```
-7. Enable access logs on the ELB's
-
-Note:
-* If you are re-provisioning a cluster, the restoration of the config from the S3 backup should bring the cluster healthy.
-* If you are creating a new cluster, after the restoration of the config, manual intervention is required for mongodb and kafka. Steps are detailed [here](README-app_troubleshooting.md)
+    ```
+    ## For UPP Dev clusters
+    ## LastPass: content-test: Splunk HEC token
+    ## For UPP Prod & Staging clusters
+    ## LastPass: content-prod: Splunk HEC token
+    ## For PAC Prod Clusters
+    ## LastPas: PAC - Splunk HEC Token
+    ```
 
 ##  Updating a cluster
 
@@ -115,42 +128,50 @@ s3://<s3-bucket-name>/kube-aws/clusters/<cluster-name>/backup/<backup_timestampe
 To restore a config to a new cluster, do the following:
 
 1. Clone this repository
-2. Get the `<backup_timestamped_folder>` of the cluster config (preferably latest or a time when the cluster was healthy) that you want to be restored. The S3 buckets that holds the backups are as follows:
+1. Determine the S3 bucket name where the backup of the source cluster resides.
+   Choose one of the exports bellow:
+    ```
+    # When the source cluster is a test (team) cluster in the EU region. The AWS account is Content Test
+    # export RESTORE_BUCKET=k8s-provisioner-test-eu
+    # 
+    # When the source cluster is a test (team) cluster in the US region. The AWS account is Content Test
+    # export RESTORE_BUCKET=k8s-provisioner-test-us
+    #
+    # When the source cluster is staging or prod in the EU region. The AWS account is Content Prod
+    # export RESTORE_BUCKET=k8s-provisioner-prod-eu
+    # 
+    # When the source cluster is staging or prod in the US region. The AWS account is Content Prod
+    # export RESTORE_BUCKET=k8s-provisioner-prod-us
+    #     
 
+1. Set the AWS credentials for the AWS account where the source cluster resides, based on the previous choice. They are stored in lastpass.
+    - For PAC Cluster "PAC - k8s Cluster Provisioning env variables"
+    - For UPP Cluster "UPP - k8s Cluster Provisioning env variables"
+    ```
+    export AWS_ACCESS_KEY_ID=
+    export AWS_SECRET_ACCESS_KEY=
+    # This should be either eu-west-1 or us-east-1, depending on the cluster's region.
+    export AWS_DEFAULT_REGION=
+    ```
+1. Determine the backup folder that should be used for restore. Use awscli for this
+    ```
+    # Check that the source cluster is in the chosen bucket
+    aws s3 --human-readable ls s3://$RESTORE_BUCKET/kube-aws/clusters/
+    
+    # Determine the backup S3 folder that should be used for restore. This should be a recent folder. 
+    aws s3 ls --page-size 100 --human-readable s3://$RESTORE_BUCKET/kube-aws/clusters/<source_cluster>/backup/ | sort | tail -n 7
+    ```
+1. **Make sure you are connected to the right cluster that you are restoring the config to** 
+Test if you are connected to the correct cluster by doing a
+    ```
+    kubectl cluster-info
+    ```
 
-| AWS Account   | Region       |       S3 Bucket           |
-|-------------- | ------------ | ------------------------- |
-| Content Test  | eu-west-1    |  k8s-provisioner-test-eu  |
-|               | us-east-1    |  k8s-provisioner-test-us  |
-| Content Prod  | eu-west-1    |  k8s-provisioner-prod-eu  |
-|               | us-east-1    |  k8s-provisioner-prod-us  |
-               
-
-3. Set the S3 bucket URI for the backup that needs to be restored to the new cluster.
-```
-s3://<s3-bucket-name>/kube-aws/clusters/<cluster-name>/backup/<backup_timestamped_folder>
-```
-4. Set the AWS credentials. They are stored in lastpass.
-```
-## For PAC Cluster
-## LastPass: PAC - k8s Cluster Provisioning env variables
-## For UPP Cluster
-## LastPass: UPP - k8s Cluster Provisioning env variables
-```
-You can do so by doing a `aws configure` and entering the keys from the lastpass note. 
-Make sure you set the region based on where the S3 bucket lives.
-
-**Make sure you are connected to the right cluster that you are restoring the config to**
-5. Test if you are connected to the correct cluster by doing a
-```
-kubectl cluster-info
-```
-
-6. Run the following command from the root of this repository to restore the `default` and the `kube-system` namespace
-```
-./sh/restore.sh <S3URI-from-step-3> default
-./sh/restore.sh <S3URI-from-step-3> kube-system
-```
+1. Run the following command from the root of this repository to restore the `default` and the `kube-system` namespace
+    ```
+    ./sh/restore.sh s3://$RESTORE_BUCKET/kube-aws/clusters/<source_cluster>/backup/<source_backup_folder> kube-system
+    ./sh/restore.sh s3://$RESTORE_BUCKET/kube-aws/clusters/<source_cluster>/backup/<source_backup_folder> default
+    ```
 
 ##  Decommissioning a cluster
 
