@@ -6,10 +6,10 @@ controller_count: 2
 
 # ETCD Instance Properties
 etcd_instance_type: t2.medium
-etcd_count: 2
+etcd_count: 3
 
 # Worker Instance Properties
-worker_pools: 
+worker_pools:
   - {id: 1, instance_type: t2.large, count: 2, role: worker, subnets: 3}
 
 worker_security_groups:
