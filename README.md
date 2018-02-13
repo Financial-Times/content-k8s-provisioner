@@ -95,7 +95,16 @@ kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-adm
     ## For PAC Prod Clusters
     ## LastPas: PAC - Splunk HEC Token
     ```
-
+1. If this is a test/team cluster that needs to be shutdown over night please put the `ec2Powercycle` tag on the autoscaling groups in the cluster.
+You can do this from the AWS console:
+    1. [Login](https://awslogin.in.ft.com) to the cluster's account
+    1. Go to Ec2 -> Auto Scaling Groups 
+    1. Select ASG, go to Tags, and add the `ec2Powercycle` tag. Example value:
+    ```
+    { "start":"30 6 * * 1-5", "stop": "30 18 * * 1-5", "desired": 2, "min": 2}
+    ```
+    Make sure you get the `desired` and `min` values in sync with the current ASG's values
+     
 ##  Updating a cluster
 
 **Before updating the cluster make sure you put the initial credentials(certificates & keys) that were used when 
