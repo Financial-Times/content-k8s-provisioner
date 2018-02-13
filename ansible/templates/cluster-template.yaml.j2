@@ -289,8 +289,8 @@ controller:
       After=kubelet.service
       [Service]
       EnvironmentFile=/etc/etcd-environment
-      Environment="DOCKER_LOG_COLLECTOR_VERSION=1.0.0-fd-rc5"
-      Environment="DOCKER_LOGFILTER_VERSION=1.2.4-k8s-log-collector-rc1"
+      Environment="DOCKER_LOG_COLLECTOR_VERSION=1.0.0"
+      Environment="DOCKER_LOGFILTER_VERSION=1.2.4"
       TimeoutStartSec=1200
       # Change killmode from "control-group" to "none" to let Docker remove
       # work correctly.
@@ -713,8 +713,8 @@ worker:
           After=kubelet.service
           [Service]
           EnvironmentFile=/etc/etcd-environment
-          Environment="DOCKER_LOG_COLLECTOR_VERSION=1.0.0-fd-rc5"
-          Environment="DOCKER_LOGFILTER_VERSION=1.2.4-k8s-log-collector-rc1"
+          Environment="DOCKER_LOG_COLLECTOR_VERSION=1.0.0"
+          Environment="DOCKER_LOGFILTER_VERSION=1.2.4"
           TimeoutStartSec=1200
           # Change killmode from "control-group" to "none" to let Docker remove
           # work correctly.
