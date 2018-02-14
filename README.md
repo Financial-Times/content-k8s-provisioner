@@ -61,12 +61,17 @@ kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-adm
 4. [Just for UPP Clusters] Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Build and deploy the global config to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
 5. [Restore](#restore-k8s-config) the config from a S3 backup or synchronize the cluster with an already existing cluster to deploy all the applications using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
 6. Connect through SSH to one of the etcd servers and use the command “etcdctl mk <key> <value>” to introduce the following etcd keys needed for forwarding the logs to splunk
+
 ```
-/ft/config/environment_tag
-/ft/config/splunk-forwarder/batchsize
-/ft/config/splunk-forwarder/splunk_hec_token
-/ft/config/splunk-forwarder/splunk_hec_url
+/ft/config/public_address {clusters_dns_name_without_region - ex: upp-dev-cj-publish.ft.com}
+/ft/config/splunk-forwarder/bucket_name {s3_bucket_name_for_logs, pattern: splunklogs-upp-[env] - ex: splunklogs-upp-dev-cj}
+/ft/config/splunk-forwarder/aws_region {s3_aws_region}
+/ft/config/splunk-forwarder/aws_access_key_id {s3_aws_access_key_id}
+/ft/config/splunk-forwarder/aws_secret_access_key {s3_aws_secret_access_key_id}
+/ft/config/splunk-forwarder/batchsize {log_msgs_batch_size, default value: 100}
+/ft/config/environment_tag {environment_name, ex: upp-dev-cj-publish-eu}
 ```
+
 The Splunk hec token and the url can be found in lastpass.
 
 ```
