@@ -41,7 +41,7 @@ Resources:
               IpAddress:
                 aws:SourceIp:
                 # Elastic IP address of the NAT gateway for Jenkins machines
-                - 54.194.189.228
+                - 52.30.14.145
                 # OSB + LDNWebPerf
                 - 82.136.1.214/32
                 # Park Royal
