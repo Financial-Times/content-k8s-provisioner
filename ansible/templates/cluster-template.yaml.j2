@@ -85,12 +85,7 @@ apiEndpoints:
 #    # Network ranges of sources you'd like Kubernetes API accesses to be allowed from, in CIDR notation. Defaults to ["0.0.0.0/0"] which allows any sources.
 #    # Explicitly set to an empty array to completely disable it.
 #    # If you do that, probably you would like to set securityGroupIds to provide this load balancer an existing SG with a Kubernetes API access allowed from specific ranges.
-    apiAccessAllowedSourceCIDRs:
-    # todo [customize] per account & region
-    # private subnets NAT gateway
-{% for nat_gw in nat_gw_ips %}
-    - {{ nat_gw }}/32
-{% endfor %}
+#    apiAccessAllowedSourceCIDRs:
 
 #    # Existing security groups attached to this load balancer which are typically used to
 #    # allow Kubernetes API accesses from admins and/or CD systems when `apiAccessAllowedSourceCIDRs` are explicitly set to an empty array

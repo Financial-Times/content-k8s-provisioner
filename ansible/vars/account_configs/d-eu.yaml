@@ -22,7 +22,3 @@ vpc_internal_ssh_sg: sg-9a7630e2
 api_private_access_sg: sg-53531d2b
 efs_access_sg: sg-c76f91bc
 
-nat_gw_ips:
-  - 52.212.63.130
-  - 52.30.225.182
-  - 52.215.87.156

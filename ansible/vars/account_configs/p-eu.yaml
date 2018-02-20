@@ -18,11 +18,6 @@ vpc_internal_ssh_sg: sg-9e99c1e6
 api_private_access_sg: sg-16663e6e
 efs_access_sg: sg-a6e41cdd
 
-nat_gw_ips:
-  - 34.253.41.229
-  - 34.248.139.58
-  - 54.76.127.119
-
 worker_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role
 etcd_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-etcd-role
 controller_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-controller-role
