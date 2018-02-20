@@ -38,6 +38,12 @@ coreos:
   update:
     reboot-strategy: "off"
   units:
+    - name: update-engine.service
+      command: stop
+      mask: true
+    - name: locksmithd.service
+      command: stop
+      mask: true
 {{- range $u := .Etcd.CustomSystemdUnits}}
     - name: {{$u.Name}}
       {{- if $u.Command }}

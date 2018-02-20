@@ -34,6 +34,12 @@ coreos:
     etcd_keyfile: /etc/kubernetes/ssl/etcd-client-key.pem
 
   units:
+    - name: update-engine.service
+      command: stop
+      mask: true
+    - name: locksmithd.service
+      command: stop
+      mask: true
 {{- range $u := .Controller.CustomSystemdUnits}}
     - name: {{$u.Name}}
       {{- if $u.Command }}
