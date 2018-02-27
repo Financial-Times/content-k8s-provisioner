@@ -2875,7 +2875,8 @@ write_files:
           name: kubernetes-dashboard
           namespace: kube-system
         spec:
-          replicas: 1
+          # Set replicas to 0 so that the dashboard will not start on the kubernetes cluster.         
+          replicas: 0
           revisionHistoryLimit: 10
           selector:
             matchLabels:
