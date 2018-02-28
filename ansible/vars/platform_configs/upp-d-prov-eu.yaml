@@ -1,0 +1,23 @@
+debug_key_name: upp-k8s-provisioning-debug
+
+# Controller Instance Properties
+controller_instance_type: t2.medium
+controller_count: 1
+
+# ETCD Instance Properties
+etcd_instance_type: t2.medium
+etcd_count: 1
+
+# Worker Instance Properties
+worker_pools: 
+  - {id: 1, instance_type: t2.medium, count: 1, role: worker, subnets: 3}
+
+worker_security_groups:
+  - sg-9a7630e2
+
+k8s_version: v1.8.4_coreos.0
+tags:
+  - {name: ipCode, value: P196}
+  - {name: teamDL, value: universal.publishing.platform@ft.com}
+  - {name: stopSchedule, value: nostop}
+  - {name: test, value: true}
