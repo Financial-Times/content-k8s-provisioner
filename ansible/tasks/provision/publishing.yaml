@@ -5,7 +5,7 @@
     state: present
     name: "{{ stack_name }}-transformers-cache"
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     targets: 
       - {subnet_id: "{{ private_subnet_zone_a }}", security_groups: [ "{{ efs_access_sg }}" ]}
@@ -24,7 +24,7 @@
     state: present
     name: "{{ stack_name }}-factset-uploader"
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     targets:
       - {subnet_id: "{{ public_subnet_zone_a }}", security_groups: [ "{{ efs_access_sg }}" ]}
@@ -40,7 +40,7 @@
 - name: Provision a persistent volume for kafka
   ec2_vol:
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     zone: "{{ region }}a"
     name: "{{ stack_name }}-kafka"
@@ -55,7 +55,7 @@
 - name: Provision a persistent volume for mongo
   ec2_vol:
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     zone: "{{ item }}"
     name: "{{ stack_name }}-mongo-{{ item }}"
