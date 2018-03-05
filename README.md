@@ -46,6 +46,8 @@ Here are the steps for provisioning a new cluster:
     docker run \
         -v $(pwd)/credentials:/ansible/credentials \
         -e "AWS_REGION=$AWS_REGION" \
+        -e "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" \
+        -e "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" \
         -e "CLUSTER_NAME=$CLUSTER_NAME" \
         -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
         -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
@@ -123,6 +125,8 @@ the cluster was initially provisioned in the /credentials folder. Failure in doi
 docker run \
     -v $(pwd)/credentials:/ansible/credentials \
     -e "AWS_REGION=$AWS_REGION" \
+    -e "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" \
+    -e "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" \
     -e "CLUSTER_NAME=$CLUSTER_NAME" \
     -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
     -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \

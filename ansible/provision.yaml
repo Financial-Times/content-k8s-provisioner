@@ -49,20 +49,20 @@
       command: kube-aws validate --s3-uri s3://{{ provisioner_bucket }}
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
 
     - name: Provision a cluster
       command: kube-aws up --s3-uri s3://{{ provisioner_bucket }}
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
 
     # The public subnets have to tagged for the application ELB can identify the subnets that it can attach itself to
     - name: Tag the public subnets with the clusterid
       command: aws ec2 create-tags --resources {{ item }} --tags Key=kubernetes.io/cluster/{{ stack_name }},Value=true --region={{ region }}
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
       with_items:
         - "{{ public_subnet_zone_a }}"
         - "{{ public_subnet_zone_b }}"
@@ -74,7 +74,7 @@
       environment:
         AWS_REGION: "{{ region }}"
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
         CLUSTER_NAME: "{{ stack_name }}"
       register: api_server_elb
 

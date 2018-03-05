@@ -2,7 +2,7 @@
 - name: Provision a persistent volume for Neo4j
   ec2_vol:
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     zone: "{{ item }}"
     name: "{{ stack_name }}-neo4j-{{ item }}"
@@ -21,7 +21,7 @@
 - name: Provision a persistent volume for Neo4j Backup
   ec2_vol:
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     zone: "{{ region }}a"
     name: "{{ stack_name }}-neo4j-backup-{{ region }}a"

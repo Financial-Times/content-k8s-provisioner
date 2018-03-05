@@ -46,10 +46,10 @@
       command: kube-aws validate --s3-uri s3://{{ provisioner_bucket }}
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
 
     - name: Update the cluster
       command: kube-aws update --s3-uri s3://{{ provisioner_bucket }}
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"

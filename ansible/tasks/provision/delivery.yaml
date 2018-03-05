@@ -2,7 +2,7 @@
 - name: Provision a persistent volume for Kafka
   ec2_vol:
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     zone: "{{ region }}a"
     name: "{{ stack_name }}-kafka"
@@ -17,7 +17,7 @@
 - name: Provision a persistent volume for Mongo
   ec2_vol:
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     zone: "{{ item }}"
     name: "{{ stack_name }}-mongo-{{ item }}"
@@ -41,7 +41,7 @@
 - name: Create an S3 bucket for Image Publish
   s3_bucket:
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     name: "{{ stack_name }}-imagepublish"
     state: present
@@ -53,7 +53,7 @@
 - name: Add bucket policy for the Image Publish S3 bucket
   s3_bucket:
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     name: "{{ stack_name }}-imagepublish"
     policy: "{{ lookup('file','templates/image-publish-s3.json') }}"
 
@@ -65,7 +65,7 @@
 - name: Create an S3 bucket for generic rw s3
   s3_bucket:
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     name: "{{ stack_name }}-genericrw"
     policy: "{{ lookup('file','templates/generic-rw-s3.json') }}"
@@ -78,7 +78,7 @@
 - name: Add bucket policy for the generic rw S3 bucket
   s3_bucket:
     aws_access_key: "{{ aws_access_key }}"
-    aws_secret_key: "{{ aws_secret_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
     region: "{{ region }}"
     name: "{{ stack_name }}-genericrw"
     policy: "{{ lookup('file','templates/generic-rw-s3.json') }}"

@@ -29,13 +29,13 @@
       command: kube-aws destroy
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
  
     - name: Untag the public subnets with the clusterid
       command: aws ec2 delete-tags --resources {{ item }} --tags Key=kubernetes.io/cluster/{{ stack_name }},Value=true --region={{ region }}
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
       with_items:
         - "{{ public_subnet_zone_a }}"
         - "{{ public_subnet_zone_b }}"
@@ -50,7 +50,7 @@
         state: absent
         name: "{{ item }}"
         aws_access_key: "{{ aws_access_key }}"
-        aws_secret_key: "{{ aws_secret_key }}"
+        aws_secret_key: "{{ aws_secret_access_key }}"
         region: "{{ region }}"
       with_items:
         - "{{ stack_name }}-transformers-cache"
@@ -62,7 +62,7 @@
       environment:
         AWS_REGION: "{{ region }}"
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
         VOLUME_NAME: "{{ stack_name }}-kafka"
       when: (cluster_environment | lower == "publish" or cluster_environment | lower == "delivery")
 
@@ -71,7 +71,7 @@
       environment:
         AWS_REGION: "{{ region }}"
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
         VOLUME_NAME: "{{ stack_name }}-mongo"
       when: (cluster_environment | lower == "publish" or cluster_environment | lower == "delivery")
 
@@ -80,14 +80,14 @@
       environment:
         AWS_REGION: "{{ region }}"
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
         VOLUME_NAME: "{{ stack_name }}-neo4j"
       when: (cluster_environment | lower == "neo4j")
 
     - name: Delete the S3 bucket for Image Publish and generic RW
       s3_bucket:
         aws_access_key: "{{ aws_access_key }}"
-        aws_secret_key: "{{ aws_secret_key }}"
+        aws_secret_key: "{{ aws_secret_access_key }}"
         region: "{{ region }}"
         name: "{{ item }}"
         state: absent
