@@ -314,7 +314,7 @@ controller:
         | docker run -i --log-driver=none --rm --name %p-s3_$(uuidgen) --memory="256m" -e="ENV=$ENV" -e="WORKERS=8" -e="BUFFER=256" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" -e="BUCKET_NAME=$BUCKET_NAME" -e="AWS_REGION=$AWS_REGION" -e="AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" -e="AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" -e="BATCHTIMER=5" coco/log-collector:$DOCKER_LOG_COLLECTOR_VERSION'
       ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-s3_)"'
       Restart=always
-      RestartSec=60
+      RestartSec=1
       [Install]
       WantedBy=multi-user.target
       [X-Fleet]
