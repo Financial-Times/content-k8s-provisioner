@@ -739,7 +739,7 @@ worker:
 
           ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-s3_)"'
           Restart=always
-          RestartSec=60
+          RestartSec=1
 
           [Install]
           WantedBy=multi-user.target
