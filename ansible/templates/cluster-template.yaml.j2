@@ -309,12 +309,21 @@ controller:
         export AWS_REGION=$(etcdctl_cmd get /ft/config/splunk-forwarder/aws_region); \
         export AWS_ACCESS_KEY_ID=$(etcdctl_cmd get /ft/config/splunk-forwarder/aws_access_key_id); \
         export AWS_SECRET_ACCESS_KEY=$(etcdctl_cmd get /ft/config/splunk-forwarder/aws_secret_access_key); \
-        journalctl -a -f --since=now --output=json \
+        TIME=$(etcdctl_cmd get /ft/config/splunk-forwarder/stop-time/$(hostname) 2>/dev/null) || TIME="now"; \
+        echo "Processing logs from:"$TIME; \
+        journalctl -a -f --since="$TIME" --output=json \
         | docker run -i --log-driver=none -e=ENV=$ENV -e="DNS_ADDRESS=$DNS_ADDRESS" --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
-        | docker run -i --log-driver=none --rm --name %p-s3_$(uuidgen) --memory="256m" -e="ENV=$ENV" -e="WORKERS=8" -e="BUFFER=256" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" -e="BUCKET_NAME=$BUCKET_NAME" -e="AWS_REGION=$AWS_REGION" -e="AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" -e="AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" -e="BATCHTIMER=5" coco/log-collector:$DOCKER_LOG_COLLECTOR_VERSION'
-      ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-s3_)"'
+        | docker run -i --log-driver=none --rm --name %p-s3_$(uuidgen) --memory="256m" -e="ENV=$ENV" -e="WORKERS=8" -e="BUFFER=256" \
+        -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" -e="BUCKET_NAME=$BUCKET_NAME" -e="AWS_REGION=$AWS_REGION" -e="AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" \
+        -e="AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" coco/log-collector:$DOCKER_LOG_COLLECTOR_VERSION'
+      ExecStop=-/bin/sh -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-s3_)";'
+      ExecStopPost=-/bin/sh -c '\
+        set -e; \
+        alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
+        TIME=$(date "+%%Y-%%m-%%d %%H:%%M:%%S.%%3N"); \
+        echo "Logs will be resumed from: "$(etcdctl_cmd set /ft/config/splunk-forwarder/stop-time/$(hostname) "$TIME");'
       Restart=always
-      RestartSec=60
+      RestartSec=1
       [Install]
       WantedBy=multi-user.target
       [X-Fleet]
@@ -733,13 +742,21 @@ worker:
             export AWS_REGION=$(etcdctl_cmd get /ft/config/splunk-forwarder/aws_region); \
             export AWS_ACCESS_KEY_ID=$(etcdctl_cmd get /ft/config/splunk-forwarder/aws_access_key_id); \
             export AWS_SECRET_ACCESS_KEY=$(etcdctl_cmd get /ft/config/splunk-forwarder/aws_secret_access_key); \
-            journalctl -a -f --since=now --output=json \
+            TIME=$(etcdctl_cmd get /ft/config/splunk-forwarder/stop-time/$(hostname) 2>/dev/null) || TIME="now"; \
+            echo "Processing logs from:"$TIME; \
+            journalctl -a -f --since="$TIME" --output=json \
             | docker run -i --log-driver=none -e=ENV=$ENV -e="DNS_ADDRESS=$DNS_ADDRESS" --rm --name %p-filter_$(uuidgen) --memory="256m" coco/coco-logfilter:$DOCKER_LOGFILTER_VERSION \
-            | docker run -i --log-driver=none --rm --name %p-s3_$(uuidgen) --memory="256m" -e="ENV=$ENV" -e="WORKERS=8" -e="BUFFER=256" -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" -e="BUCKET_NAME=$BUCKET_NAME" -e="AWS_REGION=$AWS_REGION" -e="AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" -e="AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" -e="BATCHTIMER=5" coco/log-collector:$DOCKER_LOG_COLLECTOR_VERSION'
-
-          ExecStop=-/bin/bash -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-s3_)"'
+            | docker run -i --log-driver=none --rm --name %p-s3_$(uuidgen) --memory="256m" -e="ENV=$ENV" -e="WORKERS=8" -e="BUFFER=256" \
+            -e="BATCHSIZE=$BATCHSIZE" -e="BATCHTIMER=5" -e="BUCKET_NAME=$BUCKET_NAME" -e="AWS_REGION=$AWS_REGION" -e="AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" \
+            -e="AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" coco/log-collector:$DOCKER_LOG_COLLECTOR_VERSION'
+          ExecStop=-/bin/sh -c 'docker stop -t 3 "$(docker ps -q --filter=name=%p-filter_)" && docker stop -t 3 "$(docker ps -q --filter=name=%p-s3_)";'
+          ExecStopPost=-/bin/sh -c '\
+            set -e; \
+            alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
+            TIME=$(date "+%%Y-%%m-%%d %%H:%%M:%%S.%%3N"); \
+            echo "Logs will be resumed from: "$(etcdctl_cmd set /ft/config/splunk-forwarder/stop-time/$(hostname) "$TIME");'
           Restart=always
-          RestartSec=60
+          RestartSec=1
 
           [Install]
           WantedBy=multi-user.target
