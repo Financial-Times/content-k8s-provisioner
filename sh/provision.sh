@@ -12,4 +12,5 @@ cluster_name=${CLUSTER_NAME} \
 share_cluster_credentials=${SHARE_CLUSTER_CREDENTIALS} \
 platform=${PLATFORM} \
 environment_type=${ENVIRONMENT_TYPE} \
-cluster_environment=${CLUSTER_ENVIRONMENT} "
+cluster_environment=${CLUSTER_ENVIRONMENT} \
+oidc_issuer_url=${OIDC_ISSUER_URL}"
