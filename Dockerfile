@@ -1,5 +1,5 @@
 # Using kube-aws 0.9.9
-FROM coco/k8s-cli-utils:1.1.0
+FROM coco/k8s-cli-utils:latest
 
 ENV ANSIBLE_HOSTS=/ansible/hosts
 
