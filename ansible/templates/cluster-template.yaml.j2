@@ -285,7 +285,7 @@ controller:
       [Service]
       EnvironmentFile=/etc/etcd-environment
       Environment="DOCKER_LOG_COLLECTOR_VERSION=1.0.0"
-      Environment="DOCKER_LOGFILTER_VERSION=1.3.0-improvements-rc2"
+      Environment="DOCKER_LOGFILTER_VERSION=1.3.0"
       TimeoutStartSec=1200
       # Change killmode from "control-group" to "none" to let Docker remove
       # work correctly.
@@ -718,7 +718,7 @@ worker:
           [Service]
           EnvironmentFile=/etc/etcd-environment
           Environment="DOCKER_LOG_COLLECTOR_VERSION=1.0.0"
-          Environment="DOCKER_LOGFILTER_VERSION=1.3.0-improvements-rc2"
+          Environment="DOCKER_LOGFILTER_VERSION=1.3.0"
           TimeoutStartSec=1200
           # Change killmode from "control-group" to "none" to let Docker remove
           # work correctly.
