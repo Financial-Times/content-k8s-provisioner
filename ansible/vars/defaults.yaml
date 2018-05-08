@@ -1,1 +1,2 @@
 coreos_release_channel: stable
+oidc_issuer_url: ""
