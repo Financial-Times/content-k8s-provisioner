@@ -3205,6 +3205,13 @@ write_files:
       apiVersion: audit.k8s.io/v1beta1
       kind: Policy
       rules:
+        - level: None
+          users:
+            - "system:serviceaccount:kube-system:default"
+            - "system:apiserver"
+            - "system:serviceaccount:default:default"
+            - "kube-worker"
+            - "system:unsecured"
         # The following requests were manually identified as high-volume and low-risk,
         # so drop them.
         - level: None
