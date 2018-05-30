@@ -218,6 +218,9 @@ docker run \
     k8s-provisioner:local /bin/bash decom.sh
 ```
 
+Additional manual steps  to do:
+
+1. Delete all AWS resources associated with the cluster. Go to AWS console -> Resource groups -> Tag editor -> find all resources by the k8s cluster tag & delete them
 ## Accessing the cluster
 
 See [here](https://github.com/Financial-Times/upp-kubeconfig).
