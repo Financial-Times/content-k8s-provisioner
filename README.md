@@ -208,6 +208,8 @@ Test if you are connected to the correct cluster by doing a
 
 docker run \
     -e "AWS_REGION=$AWS_REGION" \
+    -e "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" \
+    -e "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" \
     -e "CLUSTER_NAME=$CLUSTER_NAME" \
     -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
     -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
