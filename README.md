@@ -208,6 +208,8 @@ Test if you are connected to the correct cluster by doing a
 
 docker run \
     -e "AWS_REGION=$AWS_REGION" \
+    -e "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" \
+    -e "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" \
     -e "CLUSTER_NAME=$CLUSTER_NAME" \
     -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
     -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
@@ -216,6 +218,9 @@ docker run \
     k8s-provisioner:local /bin/bash decom.sh
 ```
 
+Additional manual steps  to do:
+
+1. Delete all AWS resources associated with the cluster. Go to AWS console -> Resource groups -> Tag editor -> find all resources by the k8s cluster tag & delete them
 ## Accessing the cluster
 
 See [here](https://github.com/Financial-Times/upp-kubeconfig).
