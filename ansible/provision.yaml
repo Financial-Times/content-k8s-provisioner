@@ -96,3 +96,10 @@
 
     - include: tasks/provision/neo4j.yaml
       when: (cluster_environment | lower == "neo4j")
+
+    - name: Install RBAC helm chart
+      script: /bin/bash /install-rbac-chart.sh
+      register: cmd_res
+
+    - name: Output RBAC result
+      debug: var=cmd_res.stdout_lines
