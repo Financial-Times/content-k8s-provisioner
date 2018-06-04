@@ -1548,9 +1548,9 @@ experimental:
 
   # Enable audit log for apiserver. Recommended when `rbac` is enabled.
   auditLog:
-    enabled: false
-    maxage: 30
-    logpath: /dev/stdout
+    enabled: true
+    maxage: 1
+    logpath: "-"
 
   # See https://kubernetes.io/docs/admin/authentication/#webhook-token-authentication for more information
   authentication:
