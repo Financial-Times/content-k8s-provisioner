@@ -20,6 +20,10 @@
   tasks:
     - include: tasks/set_stack_name.yaml
 
+    - name: Set the provisioner bucket
+      set_fact:
+        provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
+
     - name: Generate the cluster config
       template:
         src: templates/cluster-template.yaml.j2
