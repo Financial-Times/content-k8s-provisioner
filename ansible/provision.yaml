@@ -20,6 +20,10 @@
   tasks:
     - include: tasks/set_stack_name.yaml
 
+    - name: Set the provisioner bucket
+      set_fact:
+        provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
+
     - name: Generate the cluster config
       template:
         src: templates/cluster-template.yaml.j2
@@ -40,19 +44,14 @@
         - rm -rf credentials/*
         - kube-aws render credentials --generate-ca
       when: (share_cluster_credentials | lower != "y")
-    
-    - name: Set the provisioner bucket
-      set_fact:
-        provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
 
     - name: Validate the cluster config
-      command: kube-aws validate --s3-uri s3://{{ provisioner_bucket }}
+      command: kube-aws validate
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
 
     - name: Provision a cluster
-      command: kube-aws up --s3-uri s3://{{ provisioner_bucket }}
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"

@@ -20,6 +20,10 @@
   tasks:
     - include: tasks/set_stack_name.yaml
 
+    - name: Set the provisioner bucket
+      set_fact:
+        provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
+
     # Generate the cluster.yaml template
     - name: Generate the cluster config
       template:
@@ -38,18 +42,14 @@
       fail: msg="The credentials folder is empty. Add the cluster credentials in the /ansible/credentials folder"
       when: pem_files.examined|int == 0
 
-    - name: Set the provisioner bucket
-      set_fact:
-        provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
-
     - name: Validate the cluster config
-      command: kube-aws validate --s3-uri s3://{{ provisioner_bucket }}
+      command: kube-aws validate
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
 
     - name: Update the cluster
-      command: kube-aws update --s3-uri s3://{{ provisioner_bucket }}
+      command: kube-aws update
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
