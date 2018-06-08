@@ -397,7 +397,6 @@ coreos:
         {{- if .FeatureGates.Enabled }}
         --feature-gates="{{.FeatureGates.String}}" \
         {{- end }}
-        --require-kubeconfig \
         $KUBELET_OPTS
         Restart=always
         RestartSec=10

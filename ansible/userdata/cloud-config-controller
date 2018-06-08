@@ -332,7 +332,6 @@ coreos:
         {{ end -}}
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
         --kubeconfig=/etc/kubernetes/kubeconfig/controller.yaml \
-        --require-kubeconfig \
         --cni-conf-dir=/etc/kubernetes/cni/net.d \
         {{/* Work-around until https://github.com/kubernetes/kubernetes/issues/43967 is fixed via https://github.com/kubernetes/kubernetes/pull/43995 */ -}}
         --cni-bin-dir=/opt/cni/bin \
@@ -3056,7 +3055,7 @@ write_files:
         namespace: kube-system
       data:
         kube-proxy-config.yaml: |
-          apiVersion: {{if ge .K8sVer "v1.9"}}kubeproxy.config.k8s.io{{else}}componentconfig{{end}}/v1alpha1
+          apiVersion: kubeproxy.config.k8s.io/v1alpha1
           kind: KubeProxyConfiguration
           bindAddress: 0.0.0.0
           clientConnection:
