@@ -113,7 +113,7 @@ main() {
     NAMESPACES=""
     if [ -z ${NAMESPACE_WHITELIST} ]; then
         for ns in $(jq -r '.items[].metadata.name' < ${TEMP_DIR}/namespaces.json); do
-            if [[ ${ns} != "kube-system" && ${ns} != "default" ]] ; then
+            if [[ ${ns} != "kube-system" && ${ns} != "default" && ${ns} != "kube-public" ]] ; then
                 doesResourceExist "namespace" "${ns}" || err "Namespace '${ns}' already exists in the cluster!"
                 NAMESPACES="${NAMESPACES} ${ns}"
             fi
@@ -133,9 +133,9 @@ main() {
 
     echo "Restoring resources that are not within a Namespace..."
     # Create the Kubernetes resources that reside outside of namespaces
-#    for r in ${RESTORATION_ORDER[@]}; do
-#       createResource "${r}"
-#    done
+    for r in ${RESTORATION_ORDER[@]}; do
+       createResource "${r}"
+    done
 
     # Iterate through namespaces and create the Kubernetes resources that reside inside of namespaces
     for ns in ${NAMESPACES}; do
