@@ -244,12 +244,12 @@ Here are some guidelines on how to do it:
             ./kube-aws render
             ```
 1. At this point kube-aws should have created 2 folders: `stack-templates` & `userdata`
-1. Carefully update the file `ansible/templates/cluster-template.yaml.j2` addapting it to the changes from `kube-aws-upgrade/cluster.yaml`.
+1. Carefully update the file `ansible/templates/cluster-template.yaml.j2` adapting it to the changes from `kube-aws-upgrade/cluster.yaml`.
 One way to do this is to do a merge with a tool like Intellij Idea between the two files.
-1. Carefully update the contents of the files from `ansible/stack-templates/` addapting them to the changes from `kube-aws-upgrade/stack-templates`.
+1. Carefully update the contents of the files from `ansible/stack-templates/` adapting them to the changes from `kube-aws-upgrade/stack-templates`.
 Before doing this, it is advisable to look at the Git history of the folder and see if there have been executed some manual changes on the files, as those need to be kept.
 Use the same technique of merging the files.
-1. Carefully update the contents of the files from `ansible/userdata/` addapting them to the changes from `kube-aws-upgrade/userdata`.
+1. Carefully update the contents of the files from `ansible/userdata/` adapting them to the changes from `kube-aws-upgrade/userdata`.
 Before doing this, it is advisable to look at the Git history of the folder and see if there have been executed some manual changes on the files, as those need to be kept.
 Use the same technique of merging the files.
 
@@ -264,7 +264,7 @@ It is advisable to go through the following steps for doing a full validation:
 1. Test upgrading a simple cluster to the new version
     1. Provision a new cluster using the `master` version of the provisioner. Use the same `CLUSTER_ENVIRONMENT=prov`
     1. Update the cluster with the new version of the provisioner
-    1. Validate that after the upgrade everyghing works (nodes, kube-system namespace pods)
+    1. Validate that after the upgrade everything works (nodes, kube-system namespace pods)
 1. Test upgrading a replica of a delivery cluster
     1. Provision a new cluster using the `master` version of the provisioner. Use `CLUSTER_ENVIRONMENT=delivery`
     1. Go through the [restore procedure](##restore-k8s-config). Use as source cluster the `upp-uptst-delivery-eu` cluster
