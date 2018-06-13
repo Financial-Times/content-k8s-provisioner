@@ -273,5 +273,6 @@ It is advisable to go through the following steps for doing a full validation:
     1. Validate that everything is ok & the cluster is still green after the update
     1. [Add the environment to the Jenkins pipeline](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment).
     1. Validate that Jenkins can deploy to the updated cluster. You can trigger a [Diff & Sync](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/) job to update from prod.
+1. Don't forget to [decommision the cluster](https://github.com/Financial-Times/content-k8s-provisioner#decommissioning-a-cluster) after all these validations.
 
 After all these validations succeed, you are ready to update the dev clusters.
