@@ -131,11 +131,11 @@
 # File System  and Volume ID's for Kafka and Mongo which needs to be added in the global config
 - name: Setup vol names
   set_fact:
-    mongo_neo_volume_info: []
+    mongo_volume_info: []
 
 - name: Build EBS details for Mongo
   set_fact:
-    mongo_neo_volume_info: "{{ mongo_neo_volume_info }} + [ '{{ item.volume.zone}} => {{ item.volume_id }}' ]"
+    mongo_volume_info: "{{ mongo_volume_info }} + [ '{{ item.volume.zone}} => {{ item.volume_id }}' ]"
   with_items: "{{ ec2_vol_del_mongo.results }}"
 
 - name: EBS details for Neo4j volumes
@@ -152,4 +152,4 @@
 
 - name: EBS volume details for Mongo
   debug:
-    msg: "{{ mongo_neo_volume_info }}"
+    msg: "{{ mongo_volume_info }}"
