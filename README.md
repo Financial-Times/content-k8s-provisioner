@@ -224,3 +224,55 @@ Additional manual steps  to do:
 ## Accessing the cluster
 
 See [here](https://github.com/Financial-Times/upp-kubeconfig).
+
+## How to upgrade kube-aws
+When upgrading the Kubernetes version, it is wise to do it on the latest kube-aws version, since they might upgraded already to a closer version that you need.
+Here are some guidelines on how to do it:
+
+1. Read all the changelogs involved (kube-aws, kubernetes) to spot any show-stoppers.
+1. Generate the plain kube-aws artifacts with the new version of kube-aws
+
+        1. Open a terminal
+        1. Create a new folder and go into it ```mkdir kube-aws-upgrade; cd kube-aws-upgrade```
+        1. [Download the kube-aws](https://github.com/kubernetes-incubator/kube-aws/releases) version that you want to upgrade to and put it in this new folder
+        1. Init the cluster.yaml of kube-aws using some dummy values:
+            ```
+            ./kube-aws init --cluster-name=kube-aws-up --external-dns-name=kube-aws-up --region=eu-west-1 --key-name="dum" --kms-key-arn="dum" --no-record-set --s3-uri s3://k8s-provisioner-test-eu --availability-zone=eu-west-1a
+            ```
+        1. Render the stack:
+            ```
+            ./kube-aws render
+            ```
+1. At this point kube-aws should have created 2 folders: `stack-templates` & `userdata`
+1. Carefully update the file `ansible/templates/cluster-template.yaml.j2` adapting it to the changes from `kube-aws-upgrade/cluster.yaml`.
+One way to do this is to do a merge with a tool like Intellij Idea between the two files.
+1. Carefully update the contents of the files from `ansible/stack-templates/` adapting them to the changes from `kube-aws-upgrade/stack-templates`.
+Before doing this, it is advisable to look at the Git history of the folder and see if there have been executed some manual changes on the files, as those need to be kept.
+Use the same technique of merging the files.
+1. Carefully update the contents of the files from `ansible/userdata/` adapting them to the changes from `kube-aws-upgrade/userdata`.
+Before doing this, it is advisable to look at the Git history of the folder and see if there have been executed some manual changes on the files, as those need to be kept.
+Use the same technique of merging the files.
+
+The update part should be done. Now we need to validate it is really working.
+### Validate that the update works
+It is advisable to go through the following steps for doing a full validation:
+
+1. Create a new branch in the [k8s-cli-utils](https://github.com/Financial-Times/k8s-cli-utils/) repo  & update the `kube-aws` version.
+1. Update the Dockefile of the provisioner to extend from the new version of [k8s-cli-utils Docker image](https://hub.docker.com/r/coco/k8s-cli-utils/tags/) & build the new docker image of the provisioner
+1. Test provisioning of a new simple cluster. Use `CLUSTER_ENVIRONMENT=prov` when provisioning. Validate that everything worked well (nodes, kube-system namespace pods)
+1. Test that decommisioning still work. Decommision this new cluster and check that AWS resources were deleted.
+1. Test upgrading a simple cluster to the new version
+    1. Provision a new cluster using the `master` version of the provisioner. Use the same `CLUSTER_ENVIRONMENT=prov`
+    1. Update the cluster with the new version of the provisioner
+    1. Validate that after the upgrade everything works (nodes, kube-system namespace pods)
+1. Test upgrading a replica of a delivery cluster
+    1. Provision a new cluster using the `master` version of the provisioner. Use `CLUSTER_ENVIRONMENT=delivery`
+    1. Go through the [restore procedure](##restore-k8s-config). Use as source cluster the `upp-uptst-delivery-eu` cluster
+    1. Get the cluster as green as possible
+    1. Update the cluster with the new version of the provisioner
+    1. Validate that everything is ok & the cluster is still green after the update
+    1. [Add the environment to the Jenkins pipeline](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment).
+    1. Validate that Jenkins can deploy to the updated cluster. You can trigger a [Diff & Sync](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/) job to update from prod.
+1. Don't forget to [decommision the cluster](https://github.com/Financial-Times/content-k8s-provisioner#decommissioning-a-cluster) after all these validations.
+
+After all these validations succeed, you are ready to update the dev clusters.

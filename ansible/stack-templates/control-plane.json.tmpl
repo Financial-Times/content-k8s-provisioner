@@ -251,7 +251,8 @@
                   "Action": [
                     "autoscaling:DescribeAutoScalingGroups",
                     "autoscaling:DescribeAutoScalingInstances",
-                    "autoscaling:DescribeTags"
+                    "autoscaling:DescribeTags",
+                    "autoscaling:DescribeLaunchConfigurations"
                   ],
                   "Effect": "Allow",
                   "Resource": "*"
@@ -268,7 +269,7 @@
                   "Resource": "*"
                 },
                 {{end}}
-                {{if .Experimental.Kube2IamSupport.Enabled }}
+                {{if or .Experimental.Kube2IamSupport.Enabled .Experimental.KIAMSupport.Enabled }}
                 {
                   "Action": "sts:AssumeRole",
                   "Effect":"Allow",
@@ -320,6 +321,64 @@
         }
       }
     },
+    {{if and .Experimental.KIAMSupport.Enabled .KubeResourcesAutosave.Enabled }}
+    "IAMManagedPolicyResourcesAutoSave" : {
+      "Type" : "AWS::IAM::ManagedPolicy",
+      "Properties" : {
+        "Description" : "Policy for managing Resources Auto Save",
+        "Path" : "/",
+        "PolicyDocument" :   {
+          "Version":"2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject"
+              ],
+              "Resource": "arn:{{.Region.Partition}}:s3:::{{ .KubeResourcesAutosave.S3Path }}/*"
+            }
+          ]
+        }
+      }
+    },
+    "IAMRoleResourcesAutoSave": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.{{.Region.PublicDomainName}}"
+                ]
+              }
+            },
+            {
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": [
+                  {"Fn::GetAtt": ["IAMRoleController", "Arn"]}
+                ]
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "Path": "/",
+        "RoleName":  "{{$.ClusterName}}-IAMRoleResourcesAutoSave",
+        "ManagedPolicyArns": [
+          {"Ref": "IAMManagedPolicyResourcesAutoSave"}
+        ]
+      },
+      "Type": "AWS::IAM::Role"
+    },
+    {{end}}
     "IAMRoleController": {
       "Properties": {
         "AssumeRolePolicyDocument": {
@@ -835,7 +894,7 @@
           {{end}}
         ],
         "PlacementTenancy": "{{$.Etcd.Tenancy}}",
-        "UserData": {{ $.UserDataEtcd.Parts.instance.Base64 true (dict "etcdIndex" $etcdIndex) | checkSizeLessThan 16384 | quote }}
+        "UserData": {{ $.UserDataEtcd.Parts.instance.Template (dict "etcdIndex" $etcdIndex) | checkSizeLessThan 16384 }}
       },
       "Type": "AWS::AutoScaling::LaunchConfiguration"
     },
@@ -884,7 +943,7 @@
           {{end}}
         ],
         "PlacementTenancy": "{{ .Controller.Tenancy }}",
-        "UserData": {{ $.UserDataController.Parts.instance.Base64 true | checkSizeLessThan 16384 | quote }}
+        "UserData": {{ $.UserDataController.Parts.instance.Template | checkSizeLessThan 16384 }}
       },
   {{ if .Experimental.AwsEnvironment.Enabled }}
       "Metadata" : {
@@ -1236,7 +1295,37 @@
       },
       "Type": "AWS::EC2::SecurityGroup"
     },
-    "SecurityGroupWorkerIngressFromControllerToFlannel": {
+    {{ if .Kubernetes.Networking.SelfHosting.Typha -}}
+    "SecurityGroupWorkerIngressFromControllerToTypha": {
+      "Properties": {
+        "FromPort": 5473,
+        "GroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupController"
+        },
+        "ToPort": 5473
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "SecurityGroupWorkerIngressFromWorkerToTypha": {
+      "Properties": {
+        "FromPort": 5473,
+        "GroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "ToPort": 5473
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    {{ end -}}
+   "SecurityGroupWorkerIngressFromControllerToFlannel": {
       "Properties": {
         "FromPort": 8472,
         "GroupId": {
@@ -1362,6 +1451,120 @@
       },
       "Type": "AWS::EC2::SecurityGroupIngress"
     },
+    {{if .Addons.Prometheus.SecurityGroupsEnabled}}
+    "SecurityGroupWorkerIngressFromWorkerToControllerKubelet": {
+      "Properties": {
+        "FromPort": 10250,
+        "GroupId": {
+          "Ref": "SecurityGroupController"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "ToPort": 10250
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "SecurityGroupWorkerIngressFromWorkerToWorkerKubelet": {
+      "Properties": {
+        "FromPort": 10250,
+        "GroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "ToPort": 10250
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "SecurityGroupWorkerIngressFromWorkerToWorkerCadvisor": {
+      "Properties": {
+        "FromPort": 4194,
+        "GroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "ToPort": 4194
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "SecurityGroupWorkerIngressFromWorkerToControllerCadvisor": {
+      "Properties": {
+        "FromPort": 4194,
+        "GroupId": {
+          "Ref": "SecurityGroupController"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "ToPort": 4194
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "SecurityGroupWorkerIngressFromWorkerToWorkerNodeExporter": {
+      "Properties": {
+        "FromPort": 9100,
+        "GroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "ToPort": 9100
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "SecurityGroupWorkerIngressFromWorkerToControllerNodeExporter": {
+      "Properties": {
+        "FromPort": 9100,
+        "GroupId": {
+          "Ref": "SecurityGroupController"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "ToPort": 9100
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "SecurityGroupWorkerIngressFromWorkerToControllerControllerManager": {
+      "Properties": {
+        "FromPort": 10252,
+        "GroupId": {
+          "Ref": "SecurityGroupController"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "ToPort": 10252
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "SecurityGroupWorkerIngressFromWorkerToControllerScheduleManager": {
+      "Properties": {
+        "FromPort": 10251,
+        "GroupId": {
+          "Ref": "SecurityGroupController"
+        },
+        "IpProtocol": "tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "SecurityGroupWorker"
+        },
+        "ToPort": 10251
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    {{ end }}
     "SecurityGroupEtcd": {
       "Properties": {
         "GroupDescription": {
