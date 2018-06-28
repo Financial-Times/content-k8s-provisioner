@@ -86,7 +86,7 @@
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
         VOLUME_NAME: "{{ stack_name }}-neo4j"
-      when: (cluster_environment | lower == "neo4j")
+      when: (cluster_environment | lower == "delivery")
 
     - name: Delete the S3 bucket for Image Publish and generic RW
       s3_bucket:
