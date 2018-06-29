@@ -1,7 +1,7 @@
 # USE https://github.com/Financial-Times/upp-global-configs FOR GLOBAL CONFIGS
 
 ## Description
-This repository contains the files required to provision clusters using Kubernetes on AWS for UPP (delivery, publishing, neo4j) and PAC platforms.
+This repository contains the files required to provision clusters using Kubernetes on AWS for UPP (delivery, publishing) and PAC platforms.
 
 It uses [kube-aws](https://coreos.com/kubernetes/docs/latest/kubernetes-on-aws.html) for provisioning the cluster on AWS.
 
