@@ -10,7 +10,7 @@ etcd_count: 3
 
 # Worker Instance Properties
 worker_pools:
-  - {id: 1, instance_type: t2.large, count: 2, role: worker, subnets: 3}
+  - {id: 1, instance_type: t2.large, count: 2, role: worker, subnets: 2} # using only 2 subnets to have nodes only in AZ a and b
 
 worker_security_groups:
   - sg-17f58d6e
