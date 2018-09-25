@@ -95,7 +95,7 @@
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
         VOLUME_NAME: "{{ stack_name }}-prometheus"
-      when: (platform | lower == "pac")
+      when: (platform | lower == "pac" or cluster_environment | lower == "publish" or cluster_environment | lower == "delivery")
 
     - name: Delete the S3 bucket for Image Publish and generic RW
       s3_bucket:
