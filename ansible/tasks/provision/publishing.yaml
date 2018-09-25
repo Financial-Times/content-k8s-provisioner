@@ -33,6 +33,24 @@
     - "{{ region }}c"
   register: ec2_vol_pub_mongo
 
+- name: Provision EBS volume for Prometheus
+  ec2_vol:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
+    region: "{{ region }}"
+    zone: "{{ item }}"
+    name: "{{ stack_name }}-prometheus-{{ item }}"
+    volume_size: 50
+    volume_type: gp2
+    tags:
+      environment: "{{ environment_type }}"
+      teamDL: "universal.publishing.platform@ft.com"
+      systemCode: "{{ platform }}"
+  with_items: 
+    - "{{ region }}a"
+    - "{{ region }}b"
+  register: ec2_vol_pub_prometheus
+
 # File System  and Volume ID's for Kafka and Mongo which needs to be added in the global config
 - name: Setup vol names
   set_fact:
@@ -50,3 +68,9 @@
 - name: EBS volume details for mongo
   debug:
     msg: "{{ mongo_volume_info }}"
+
+# Volume IDs for Prometheus which needs to be added in the config
+- name: EBS details for Prometheus
+  set_fact:
+    prometheus_volume_info: "{{ prometheus_volume_info }} + [ '{{ item.volume.zone}} => {{ item.volume_id }}' ]"
+  with_items: "{{ ec2_vol_pub_prometheus.results }}"
