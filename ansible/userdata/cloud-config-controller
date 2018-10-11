@@ -2281,7 +2281,7 @@ write_files:
           metadata:
             {{if .Experimental.KIAMSupport.Enabled -}}
             annotations:
-              iam.amazonaws.com/role: "{{$.ClusterName}}-IAMRoleResourcesAutoSave"
+              iam.amazonaws.com/role: "kube-resources-autosaver-s3-role"
             {{ end -}}
             name: kube-resources-autosave
             namespace: kube-system
