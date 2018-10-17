@@ -9,25 +9,8 @@
     - vars/account_configs/{{ environment_type }}-{{ aws_region }}.yaml
     - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
 
-  # Include the environment specific cluster variables
-  pre_tasks:
-    - include_vars: vars/platform_configs/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
-      when: (cluster_environment == "")
-
-    - include_vars: vars/platform_configs/{{ platform }}-{{ environment_type }}-{{ cluster_environment }}-{{ aws_region }}.yaml
-      when: (cluster_environment != "")
-
   tasks:
-    - include: tasks/set_stack_name.yaml
-
-    - name: Set the provisioner bucket
-      set_fact:
-        provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
-
-    - name: Generate the cluster config
-      template:
-        src: templates/cluster-template.yaml.j2
-        dest: /ansible/cluster.yaml
+    - include: tasks/setup_for_kube-aws_ops.yaml
 
     - name: Decom a cluster
       command: kube-aws destroy --force
