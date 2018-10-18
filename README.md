@@ -33,15 +33,7 @@ Here are the steps for provisioning a new cluster:
     - For PAC Cluster: LP note "PAC - k8s Cluster Provisioning env variables"
     - For UPP Cluster: LP note "UPP - k8s Cluster Provisioning env variables"
 1. Create an empty folder named `credentials` in the current folder    
-1. Determine the credentials TLS assets to be used by the cluster and for logging into the cluster
-    1. For sharing the authentication credentials with another cluster, meaning that you will be able to access 
-    using `kubectl` both clusters with the same TLS certificates:
-        1. place the certificates `ca.pem` and `ca-key.pem` in the `credentials` folder. These can be found zipped in the LassPass note from step 2. 
-        1. set the env var ```export SHARE_CLUSTER_CREDENTIALS=y```
-    1. For creating a new set of authentication credentials for a brand new cluster
-        1. leave the `credentials` folder empty
-        1. set the env var ```export SHARE_CLUSTER_CREDENTIALS=n```  
-1. Run the docker container that will provision the stack in AWS 
+1. Run the docker container that will provision the stack in AWS
     ```
     docker run \
         -v $(pwd)/credentials:/ansible/credentials \
@@ -52,25 +44,16 @@ Here are the steps for provisioning a new cluster:
         -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
         -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
         -e "OIDC_ISSUER_URL=$OIDC_ISSUER_URL" \
-        -e "SHARE_CLUSTER_CREDENTIALS=$SHARE_CLUSTER_CREDENTIALS" \
         -e "PLATFORM=$PLATFORM" \
         -e "VAULT_PASS=$VAULT_PASS" \
         k8s-provisioner:local /bin/bash provision.sh
     ```    
-1. Once the stack is created, update the kubeconfig file with the API servers DNS name and test if you can connect to the cluster by doing
-    ```
-    kubectl cluster-info
-    ```
-1. `VERY IMPORTANT`: Zip the credentials folder and upload it in the LastPass node from step 2.
-    ```
-    export CLUSTER_NAME=_the_name_of_the_cluster_as_outputted_by_the_stack_creation_
-    mv credentials credentials.${CLUSTER_NAME}
-    zip -r ${CLUSTER_NAME}.zip credentials.${CLUSTER_NAME}
-    ```
+1. `VERY IMPORTANT`: Upload the zip with the TLS assets in the LastPass note from step 2.
+    The zip is found at `credentials/${CLUSTER_NAME}.zip`
     These initial credentials are vital for subsequent updates in the cluster.
 
 The following steps have to be manually done:
-
+1.
 1. Connect to the cluster and grant admin to the default user
 ```
 kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=default:default
