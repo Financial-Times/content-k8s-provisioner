@@ -78,6 +78,14 @@
     - include: tasks/provision/publishing.yaml
       when: (cluster_environment | lower == "publish")
 
+    - name: Zip the credentials
+      shell: |
+        rm -rf credentials/*.zip
+        mkdir credentials.{{ stack_name }}
+        cp credentials/* credentials.{{ stack_name }}/
+        zip -r credentials/{{ stack_name }}.zip credentials.{{ stack_name }}/*
+      tags: post-up
+
     - include: tasks/provision/pac.yaml
       when: (platform | lower == "pac")
 
