@@ -39,6 +39,7 @@
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+      tags: prov
 
     # The public subnets have to tagged for the application ELB can identify the subnets that it can attach itself to
     - name: Tag the public subnets with the clusterid
@@ -53,7 +54,7 @@
  
     # Get the DNS name of the API Server ELB
     - name: Retrieve the Cluster API server ELB
-      script: /bin/bash /get_elb.sh
+      script: /bin/bash /ansible/files/sh/get_elb.sh
       environment:
         AWS_REGION: "{{ region }}"
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
@@ -81,7 +82,9 @@
       when: (platform | lower == "pac")
 
     - name: Install RBAC helm chart
-      script: /bin/bash /install-rbac-chart.sh
+      script: /bin/bash /ansible/files/sh/install-rbac-chart.sh
+      environment:
+        KUBECONFIG: "{{kubeconfig_file_path}}"
       register: cmd_res
 
     - name: Output RBAC result

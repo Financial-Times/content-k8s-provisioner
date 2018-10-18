@@ -18,3 +18,8 @@
   template:
     src: templates/cluster-template.yaml.j2
     dest: /ansible/cluster.yaml
+
+- name: Generate the kubeconfig file
+  template:
+    src: templates/kubeconfig.yaml.j2
+    dest: "{{ kubeconfig_file_path }}"

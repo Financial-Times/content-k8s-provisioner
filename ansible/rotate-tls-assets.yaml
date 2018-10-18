@@ -1,0 +1,55 @@
+---
+- name: Rotate tls assets in the k8s cluster
+  hosts: localhost
+  connection: local
+  
+  # Include the aws account specific cluster variables
+  vars_files:
+    - vars/defaults.yaml
+    - vars/account_configs/{{ environment_type }}-{{ aws_region }}.yaml
+    - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
+
+  tasks:
+    - include: tasks/setup_for_kube-aws_ops.yaml
+      tags: setup
+
+    # If credentials are not being shared between environments, generate certs
+    - name: Generate cluster credentials
+      shell: |
+        rm -rf credentials/*
+        kube-aws render credentials --generate-ca
+      tags: ['setup', 'new-creds']
+
+    - name: Validate the cluster config
+      command: kube-aws validate
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+      tags: setup
+
+    - name: Update the cluster
+      command: kube-aws update
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+      tags: up
+
+    - name: Recreate the service account tokens
+      script: /bin/bash /ansible/files/sh/rotate-sa-tokens.sh
+      environment:
+        KUBECONFIG: "{{kubeconfig_file_path}}"
+      register: cmd_res
+      tags: post-up
+
+    - name: Output the new Jenkins & Backup tokens
+      debug: var=cmd_res.stdout_lines
+      tags: post-up
+
+    - name: Zip the new credentials
+      shell: |
+        rm -rf credentials/*.zip
+        mkdir credentials.{{ stack_name }}
+        cp credentials/* credentials.{{ stack_name }}/
+        zip -r credentials/{{ stack_name }}.zip credentials.{{ stack_name }}/*
+      tags: post-up
+

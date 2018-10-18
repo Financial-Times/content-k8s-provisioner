@@ -13,15 +13,6 @@ function printToken() {
   echo "${tokenName} token value is: ${tokenValue}"
 }
 
-# Using 'kube-aws render stack' to generate the kubeconfig file used for logging into the cluster
-mv stack-templates stack-templates-bak
-mv userdata userdata-bak
-kube-aws render stack
-rm -rf userdata stack-templates
-mv userdata-bak userdata
-mv stack-templates-bak stack-templates
-
-export KUBECONFIG=/ansible/kubeconfig
 
 # Install the RBAC helm chart
 helm init -c
