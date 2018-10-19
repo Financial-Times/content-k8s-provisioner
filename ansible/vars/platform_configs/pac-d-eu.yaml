@@ -1,7 +1,7 @@
 debug_key_name: pac-provisioner-d-eu
 
 # Controller Instance Properties
-controller_instance_type: t2.medium
+controller_instance_type: c4.large
 controller_count: 2
 
 # ETCD Instance Properties
@@ -10,7 +10,7 @@ etcd_count: 3
 
 # Worker Instance Properties
 worker_pools: 
-  - {id: 1, instance_type: t2.large, count: 2, role: worker, subnets: 2} # using only 2 subnets to have nodes only in AZ a and b
+  - {id: 1, instance_type: m4.large, count: 2, role: worker, subnets: 2} # using only 2 subnets to have nodes only in AZ a and b
 
 worker_security_groups:
   - sg-9a7630e2
