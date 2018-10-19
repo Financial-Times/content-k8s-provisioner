@@ -80,6 +80,12 @@
     - include: tasks/provision/pac.yaml
       when: (platform | lower == "pac")
 
+    - name: Make default account admin
+      shell: |
+        kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=default:default
+      environment:
+        KUBECONFIG: "{{kubeconfig_file_path}}"
+
     - name: Install RBAC helm chart
       script: /bin/bash /ansible/files/sh/install-rbac-chart.sh
       environment:

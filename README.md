@@ -53,12 +53,9 @@ Here are the steps for provisioning a new cluster:
     These initial credentials are vital for subsequent updates in the cluster.
 
 The following steps have to be manually done:
-1.
-1. Connect to the cluster and grant admin to the default user
-```
-kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=default:default
-```
-1. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment). 
+
+1. Add the new environment to the [auth setup](https://github.com/Financial-Times/content-k8s-auth-setup/) following the instructions [here](https://github.com/Financial-Times/content-k8s-auth-setup/blob/master/README.md#how-to-add-a-new-cluster)
+1. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment).
 1. Make sure you have defined the credentials for the new cluster in Jenkins.
 1. [Just for UPP Clusters] Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Release and deploy a new version of this app to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
 1. Deploy all the apps necessary in the current cluster. This can be done in 2 ways:
