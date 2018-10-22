@@ -69,6 +69,9 @@
     - include: tasks/provision/publishing.yaml
       when: (cluster_environment | lower == "publish")
 
+    - include: tasks/provision/pac.yaml
+      when: (platform | lower == "pac")
+
     - name: Zip the credentials
       shell: |
         rm -rf credentials/*.zip
@@ -76,9 +79,6 @@
         cp credentials/* credentials.{{ stack_name }}/
         zip -r credentials/{{ stack_name }}.zip credentials.{{ stack_name }}/*
       tags: post-up
-
-    - include: tasks/provision/pac.yaml
-      when: (platform | lower == "pac")
 
     - name: Make default account admin
       shell: |
