@@ -1,0 +1,25 @@
+# Include the environment specific cluster variables
+- name: Set cluster vars when cluster_environment variable is not set
+  include_vars: vars/platform_configs/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
+  when: (cluster_environment == "")
+
+- name: Set cluster vars when cluster_environment variable is set
+  include_vars: vars/platform_configs/{{ platform }}-{{ environment_type }}-{{ cluster_environment }}-{{ aws_region }}.yaml
+  when: (cluster_environment != "")
+
+- include: set_stack_name.yaml
+
+- name: Set the provisioner bucket
+  set_fact:
+    provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
+
+# Generate the cluster.yaml template
+- name: Generate the cluster config
+  template:
+    src: templates/cluster-template.yaml.j2
+    dest: /ansible/cluster.yaml
+
+- name: Generate the kubeconfig file
+  template:
+    src: templates/kubeconfig.yaml.j2
+    dest: "{{ kubeconfig_file_path }}"

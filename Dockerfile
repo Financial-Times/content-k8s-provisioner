@@ -3,7 +3,7 @@ FROM coco/k8s-cli-utils:1.2.2
 
 ENV ANSIBLE_HOSTS=/ansible/hosts
 
-RUN apk --update add python py-pip ansible bash \
+RUN apk --update add python py-pip ansible bash zip jq \
     && pip install --upgrade pip boto boto3 awscli
 
 # Get the files for the provisioner

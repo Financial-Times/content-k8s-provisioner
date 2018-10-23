@@ -9,33 +9,8 @@
     - vars/account_configs/{{ environment_type }}-{{ aws_region }}.yaml
     - vaults/{{ platform }}/vault_{{ environment_type }}.yaml
 
-  # Include the environment specific cluster variables
-  pre_tasks:
-    - include_vars: vars/platform_configs/{{ platform }}-{{ environment_type }}-{{ aws_region }}.yaml
-      when: (cluster_environment == "")
-
-    - include_vars: vars/platform_configs/{{ platform }}-{{ environment_type }}-{{ cluster_environment }}-{{ aws_region }}.yaml
-      when: (cluster_environment != "")
-
   tasks:
-    - include: tasks/set_stack_name.yaml
-
-    - name: Set the provisioner bucket
-      set_fact:
-        provisioner_bucket: "{{ 'k8s-provisioner-test-{{ aws_region }}' if (environment_type == 'd') else 'k8s-provisioner-prod-{{ aws_region }}' }}"
-
-    - name: Generate the cluster config
-      template:
-        src: templates/cluster-template.yaml.j2
-        dest: /ansible/cluster.yaml
-
-    # If credentials are being shared between environments, generate certs except ca
-    - name: Generate cluster credentials if necessary
-      command: "{{ item }}"
-      with_items:
-        - find credentials/ ! -name 'ca*' -type f -exec rm -f {} +
-        - kube-aws render credentials
-      when: (share_cluster_credentials | lower == "y")
+    - include: tasks/setup_for_kube-aws_ops.yaml
 
     # If credentials are not being shared between environments, generate certs
     - name: Generate cluster credentials if necessary
@@ -43,7 +18,6 @@
       with_items:
         - rm -rf credentials/*
         - kube-aws render credentials --generate-ca
-      when: (share_cluster_credentials | lower != "y")
 
     - name: Validate the cluster config
       command: kube-aws validate
@@ -56,6 +30,7 @@
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+      tags: prov
 
     # The public subnets have to tagged for the application ELB can identify the subnets that it can attach itself to
     - name: Tag the public subnets with the clusterid
@@ -70,7 +45,7 @@
  
     # Get the DNS name of the API Server ELB
     - name: Retrieve the Cluster API server ELB
-      script: /bin/bash /get_elb.sh
+      script: /bin/bash /ansible/files/sh/get_elb.sh
       environment:
         AWS_REGION: "{{ region }}"
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
@@ -97,8 +72,24 @@
     - include: tasks/provision/pac.yaml
       when: (platform | lower == "pac")
 
+    - name: Zip the credentials
+      shell: |
+        rm -rf credentials/*.zip
+        mkdir credentials.{{ stack_name }}
+        cp credentials/* credentials.{{ stack_name }}/
+        zip -r credentials/{{ stack_name }}.zip credentials.{{ stack_name }}/*
+      tags: post-up
+
+    - name: Make default account admin
+      shell: |
+        kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=default:default
+      environment:
+        KUBECONFIG: "{{kubeconfig_file_path}}"
+
     - name: Install RBAC helm chart
-      script: /bin/bash /install-rbac-chart.sh
+      script: /bin/bash /ansible/files/sh/install-rbac-chart.sh
+      environment:
+        KUBECONFIG: "{{kubeconfig_file_path}}"
       register: cmd_res
 
     - name: Output RBAC result

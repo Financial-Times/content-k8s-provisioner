@@ -33,15 +33,7 @@ Here are the steps for provisioning a new cluster:
     - For PAC Cluster: LP note "PAC - k8s Cluster Provisioning env variables"
     - For UPP Cluster: LP note "UPP - k8s Cluster Provisioning env variables"
 1. Create an empty folder named `credentials` in the current folder    
-1. Determine the credentials TLS assets to be used by the cluster and for logging into the cluster
-    1. For sharing the authentication credentials with another cluster, meaning that you will be able to access 
-    using `kubectl` both clusters with the same TLS certificates:
-        1. place the certificates `ca.pem` and `ca-key.pem` in the `credentials` folder. These can be found zipped in the LassPass note from step 2. 
-        1. set the env var ```export SHARE_CLUSTER_CREDENTIALS=y```
-    1. For creating a new set of authentication credentials for a brand new cluster
-        1. leave the `credentials` folder empty
-        1. set the env var ```export SHARE_CLUSTER_CREDENTIALS=n```  
-1. Run the docker container that will provision the stack in AWS 
+1. Run the docker container that will provision the stack in AWS
     ```
     docker run \
         -v $(pwd)/credentials:/ansible/credentials \
@@ -52,31 +44,19 @@ Here are the steps for provisioning a new cluster:
         -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
         -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
         -e "OIDC_ISSUER_URL=$OIDC_ISSUER_URL" \
-        -e "SHARE_CLUSTER_CREDENTIALS=$SHARE_CLUSTER_CREDENTIALS" \
         -e "PLATFORM=$PLATFORM" \
         -e "VAULT_PASS=$VAULT_PASS" \
         k8s-provisioner:local /bin/bash provision.sh
     ```    
-1. Once the stack is created, update the kubeconfig file with the API servers DNS name and test if you can connect to the cluster by doing
-    ```
-    kubectl cluster-info
-    ```
-1. `VERY IMPORTANT`: Zip the credentials folder and upload it in the LastPass node from step 2.
-    ```
-    export CLUSTER_NAME=_the_name_of_the_cluster_as_outputted_by_the_stack_creation_
-    mv credentials credentials.${CLUSTER_NAME}
-    zip -r ${CLUSTER_NAME}.zip credentials.${CLUSTER_NAME}
-    ```
+1. `VERY IMPORTANT`: Upload the zip with the TLS assets in the LastPass note from step 2.
+    The zip is found at `credentials/${CLUSTER_NAME}.zip`
     These initial credentials are vital for subsequent updates in the cluster.
 
 The following steps have to be manually done:
 
-1. Connect to the cluster and grant admin to the default user
-```
-kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=default:default
-```
-1. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment). 
-1. Make sure you have defined the credentials for the new cluster in Jenkins.
+1. Add the new environment to the [auth setup](https://github.com/Financial-Times/content-k8s-auth-setup/) following the instructions [here](https://github.com/Financial-Times/content-k8s-auth-setup/blob/master/README.md#how-to-add-a-new-cluster)
+1. Add the new environment to the jenkins pipeline. Instructions can be found [here](https://github.com/Financial-Times/k8s-pipeline-library#what-to-do-when-adding-a-new-environment).
+1. Make sure you have defined the credentials for the new cluster in Jenkins. See previous step.
 1. [Just for UPP Clusters] Create/ amend the app-configs for the [upp-global-configs](https://github.com/Financial-Times/upp-global-configs/tree/master/helm/upp-global-configs/app-configs) repository. Release and deploy a new version of this app to the new environment using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/apps-deployment/job/upp-global-configs-auto-deploy/)
 1. Deploy all the apps necessary in the current cluster. This can be done in 2 ways:
     1. One slower way, but which is fire & forget: synchronize the cluster with an already existing cluster using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
@@ -136,6 +116,44 @@ docker run \
     -e "VAULT_PASS=$VAULT_PASS" \
     k8s-provisioner:local /bin/bash update.sh
 ```
+
+##  Rotating the TLS assets for a cluster
+
+
+```
+## Login credentials and the environments variables are stored in LastPass
+## For PAC Cluster
+## LastPass: PAC - k8s Cluster Provisioning env variables
+## For UPP Cluster
+## LastPass: UPP - k8s Cluster Provisioning env variables
+
+docker run \
+    -v $(pwd)/credentials:/ansible/credentials \
+    -e "AWS_REGION=$AWS_REGION" \
+    -e "AWS_ACCESS_KEY=$AWS_ACCESS_KEY" \
+    -e "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" \
+    -e "CLUSTER_NAME=$CLUSTER_NAME" \
+    -e "CLUSTER_ENVIRONMENT=$CLUSTER_ENVIRONMENT" \
+    -e "ENVIRONMENT_TYPE=$ENVIRONMENT_TYPE" \
+    -e "OIDC_ISSUER_URL=$OIDC_ISSUER_URL" \
+    -e "PLATFORM=$PLATFORM" \
+    -e "VAULT_PASS=$VAULT_PASS" \
+    k8s-provisioner:local /bin/bash rotate-tls.sh
+```
+
+After rotating the TLS assets, there are some **important** manual steps that should be done:
+
+1. Update the TLS assets used by Jenkins for cluster updates.
+   The credential has the id `ft.k8s-provision.${full-cluster-name}.credentials`. Look it up [here](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/credentials/store/folder/domain/_/) and update the zip with the one created in the `credentials` folder with the name `${full-cluster-name}.zip`
+1. Update the token used by jenkins to access the K8s cluster.
+   The credential has the id `ft.k8s-auth.${full-cluster-name}.token`. Look it up [here](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/credentials/store/folder/domain/_/) and update it with the token from the provisioner output:
+       ```
+       "jenkins token value is: .......
+       ```
+1. Update the backup token access in the LP note `kubectl-login config`. You can find the new token value in the provisioner output:
+        ```
+        backup-access token value is: .....
+        ```
 
 ##  Restore k8s Config
 
