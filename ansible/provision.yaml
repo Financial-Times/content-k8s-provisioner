@@ -30,7 +30,7 @@
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
-      tags: prov
+      tags: k-prov
 
     # The public subnets have to tagged for the application ELB can identify the subnets that it can attach itself to
     - name: Tag the public subnets with the clusterid
@@ -42,7 +42,8 @@
         - "{{ public_subnet_zone_a }}"
         - "{{ public_subnet_zone_b }}"
         - "{{ public_subnet_zone_c }}"
- 
+      tags: k-prov
+
     # Get the DNS name of the API Server ELB
     - name: Retrieve the Cluster API server ELB
       script: /bin/bash /ansible/files/sh/get_elb.sh
@@ -52,17 +53,32 @@
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
         CLUSTER_NAME: "{{ stack_name }}"
       register: api_server_elb
+      tags: k-prov
 
     - name: API Server ELB
       debug:
         msg: "API Server ELB: '{{ api_server_elb.stdout }}'"
+      tags: k-prov
 
     # Create a DNS name for the API Server
     - include: tasks/create_cname.yaml
       vars:
         dns_cname: "{{ stack_name }}-api"
         hostname: "{{ api_server_elb.stdout }}"
-        
+      tags: k-prov
+
+    - name: Create prometheus S3 bucket
+      cloudformation:
+        stack_name: "{{ stack_name }}-prometheus-s3"
+        state: present
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_access_key }}"
+        region: "{{ region }}"
+        disable_rollback: true
+        template: "files/cf/prometheus-s3-store.yaml"
+        template_parameters:
+          FullEnvName: "{{ stack_name }}"
+
     - include: tasks/provision/delivery.yaml
       when: (cluster_environment | lower == "delivery")
 
@@ -85,18 +101,22 @@
         kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=default:default
       environment:
         KUBECONFIG: "{{kubeconfig_file_path}}"
+      tags: k-setup
 
     - name: Install RBAC helm chart
       script: /bin/bash /ansible/files/sh/install-rbac-chart.sh
       environment:
         KUBECONFIG: "{{kubeconfig_file_path}}"
       register: cmd_res
+      tags: k-setup
 
     - name: Output RBAC result
       debug: var=cmd_res.stdout_lines
+      tags: k-setup
 
     - name: Annotate default namespace with an expression expressing which roles are permitted to be assumed within that namespace
       shell: |
         kubectl annotate namespace default iam.amazonaws.com/permitted='.*'
       environment:
         KUBECONFIG: "{{kubeconfig_file_path}}"
+      tags: k-setup

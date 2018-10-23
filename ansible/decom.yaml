@@ -91,3 +91,12 @@
         - "{{ stack_name }}-imagepublish"
         - "{{ stack_name }}-genericrw"
       when: (cluster_environment | lower == "delivery")
+
+    - name: Delete prometheus S3 bucket
+      cloudformation:
+        stack_name: "{{ stack_name }}-prometheus-s3"
+        state: absent
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_access_key }}"
+        region: "{{ region }}"
+
