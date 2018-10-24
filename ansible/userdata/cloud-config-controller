@@ -5246,7 +5246,7 @@ write_files:
                   - --key=/etc/kiam/tls/agent-key.pem
                   - --ca=/etc/kiam/tls/ca.pem
                   - --server-address=kiam-server:443
-                  - --gateway-timeout-creation=1s
+                  - --gateway-timeout-creation=3s
                 env:
                   - name: HOST_IP
                     valueFrom:
