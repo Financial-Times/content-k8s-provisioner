@@ -5193,6 +5193,8 @@ write_files:
         namespace: kube-system
         name: kiam-agent
       spec:
+        updateStrategy:
+          type: RollingUpdate
         template:
           metadata:
             annotations:
@@ -5270,7 +5272,8 @@ write_files:
                   httpGet:
                     path: /ping
                     port: 8181
-                  initialDelaySeconds: 3
+                  initialDelaySeconds: 10
+                  timeoutSeconds: 3
                   periodSeconds: 3
 {{end}}
 
