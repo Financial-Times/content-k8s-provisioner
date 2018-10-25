@@ -5095,8 +5095,13 @@ write_files:
                   - --ca=/etc/kiam/tls/ca.pem
                   - --role-base-arn-autodetect
                   - --sync=1m
-                  - --prometheus-listen-addr=0.0.0.0:9620
-                  - --prometheus-sync-interval=5s
+                resources:
+                  limits:
+                    cpu: 40m
+                    memory: 100Mi
+                  requests:
+                    cpu: 10m
+                    memory: 60Mi
                 volumeMounts:
                   - mountPath: /etc/ssl/certs
                     name: ssl-certs
@@ -5112,6 +5117,7 @@ write_files:
                     - --server-address=localhost:443
                     - --server-address-refresh=2s
                     - --timeout=5s
+                    - --gateway-timeout-creation=3s
                   initialDelaySeconds: 10
                   periodSeconds: 10
                   timeoutSeconds: 10
@@ -5125,6 +5131,7 @@ write_files:
                     - --server-address=localhost:443
                     - --server-address-refresh=2s
                     - --timeout=5s
+                    - --gateway-timeout-creation=3s
                   initialDelaySeconds: 3
                   periodSeconds: 10
                   timeoutSeconds: 10
@@ -5186,6 +5193,8 @@ write_files:
         namespace: kube-system
         name: kiam-agent
       spec:
+        updateStrategy:
+          type: RollingUpdate
         template:
           metadata:
             annotations:
@@ -5239,8 +5248,7 @@ write_files:
                   - --key=/etc/kiam/tls/agent-key.pem
                   - --ca=/etc/kiam/tls/ca.pem
                   - --server-address=kiam-server:443
-                  - --prometheus-listen-addr=0.0.0.0:9620
-                  - --prometheus-sync-interval=5s
+                  - --gateway-timeout-creation=3s
                 env:
                   - name: HOST_IP
                     valueFrom:
@@ -5253,11 +5261,19 @@ write_files:
                     name: tls
                   - mountPath: /var/run/xtables.lock
                     name: xtables
+                resources:
+                  limits:
+                    cpu: 20m
+                    memory: 60Mi
+                  requests:
+                    cpu: 5m
+                    memory: 30Mi
                 livenessProbe:
                   httpGet:
                     path: /ping
                     port: 8181
-                  initialDelaySeconds: 3
+                  initialDelaySeconds: 10
+                  timeoutSeconds: 3
                   periodSeconds: 3
 {{end}}
 
