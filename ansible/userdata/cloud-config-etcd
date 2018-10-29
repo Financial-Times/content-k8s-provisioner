@@ -63,7 +63,7 @@ coreos:
           --mount type=bind,source=/proc,target=/host/proc \
           --memory-reservation=100m \
           --memory=500m \
-          --cpus=1 \
+          --CPUQuota=25% \
           --restart=always \
           alertlogic/al-agent-container:latest
 
