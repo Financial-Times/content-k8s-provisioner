@@ -40,6 +40,36 @@ coreos:
   update:
     reboot-strategy: "off"
   units:
+    - name: al-agent-container.service
+      command: start
+      enable: true
+      content: |
+        [Unit]
+        Description=Alert Logic Container Service
+        After=docker.service
+        Requires=docker.service
+        [Service]
+        TimeoutStartSec=0
+        Restart=always
+        ExecStartPre=-/usr/bin/docker stop al-agent-container
+        ExecStartPre=-/usr/bin/docker rm al-agent-container
+        ExecStartPre=/usr/bin/docker pull alertlogic/al-agent-container:latest
+        ExecStart=/usr/bin/docker run \
+          --name=al-agent-container \
+          --label "app=al-agent-container" \
+          --net=host \
+          --privileged \
+          --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+          --mount type=bind,source=/proc,target=/host/proc \
+          --memory-reservation=100m \
+          --memory=500m \
+          --cpus=1 \
+          --restart=always \
+          alertlogic/al-agent-container:latest
+
+        [Install]
+        WantedBy=multi-user.target
+        
 {{if .DisableContainerLinuxAutomaticUpdates}}
     - name: disable-automatic-update.service
       command: start
