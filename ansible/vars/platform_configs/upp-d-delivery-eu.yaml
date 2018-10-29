@@ -1,7 +1,7 @@
 debug_key_name: upp-k8s-provisioning-debug
 
 # Controller Instance Properties
-controller_instance_type: c4.large
+controller_instance_type: c5.large
 controller_count: 2
 
 # ETCD Instance Properties
