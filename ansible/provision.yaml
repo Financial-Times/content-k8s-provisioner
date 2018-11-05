@@ -94,3 +94,9 @@
 
     - name: Output RBAC result
       debug: var=cmd_res.stdout_lines
+
+    - name: Annotate default namespace with an expression expressing which roles are permitted to be assumed within that namespace
+      shell: |
+        kubectl annotate namespace default iam.amazonaws.com/permitted='.*'
+      environment:
+        KUBECONFIG: "{{kubeconfig_file_path}}"
