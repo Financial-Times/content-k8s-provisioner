@@ -457,9 +457,9 @@ worker:
 #      instanceTags:
 #        instanceRole: worker
 #
-#      rootVolume:
+      rootVolume:
 #        # Disk size (GiB) for worker nodes
-#        size: 30
+        size: {{ worker.rootVolumeSize | default ('30') }}
 #        # Disk type for worker node (one of standard, io1, or gp2)
 #        type: gp2
 #        # Number of I/O operations per second (IOPS) that the worker node disk supports. Leave blank if worker.rootVolume.type is not io1
