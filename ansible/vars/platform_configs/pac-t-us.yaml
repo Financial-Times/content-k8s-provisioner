@@ -11,6 +11,7 @@ etcd_count: 3
 # Worker Instance Properties
 worker_pools:
   - {id: 1, instance_type: m5.large, count: 2, role: worker, subnets: 2} # using only 2 subnets to have nodes only in AZ a and b
+  - {id: t, instance_type: r5.large, count: 1, rootVolumeSize: 110, role: thanos-worker, dedicatedtaint: thanos, subnets: 1} # using only 1 subnet to have nodes only in AZ a
 
 worker_security_groups:
   - sg-f1ec2b82

@@ -90,7 +90,11 @@ You can do this from the AWS console:
     { "start":"30 6 * * 1-5", "stop": "30 18 * * 1-5", "desired": 2, "min": 2}
     ```
     Make sure you get the `desired` and `min` values in sync with the current ASG's values
-     
+1. For the ASG controlling the dedicated node for `Thanos` put the `ec2Powercycle` to be in sync with the thanos compactor job.
+    See [Thanos Compactor](https://github.com/Financial-Times/content-k8s-prometheus#thanos-compactor) for details.
+    Follow the same steps as above and look for the workers with the `Wt` in the name.
+    If this is prod, you should also change the `environment` tag to `t`, so that the `ec2Powercycle` will be considered
+
 ##  Updating a cluster
 
 **Before updating the cluster make sure you put the initial credentials(certificates & keys) that were used when 
