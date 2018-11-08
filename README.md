@@ -158,6 +158,10 @@ After rotating the TLS assets, there are some **important** manual steps that sh
         ```
         backup-access token value is: .....
         ```
+1. Update the `ca` certificate in the [content-k8s-auth-setup](https://github.com/Financial-Times/content-k8s-auth-setup) repository. This is needed so that everybody can access the cluster.
+    1. copy the `ca.pem` from the `credentials` folder into the repository
+    1. Commit, create PR & merge the PR after approval
+    1. Notify everybody to update their local setup so that they can still login on the cluster.
 
 ##  Restore k8s Config
 
