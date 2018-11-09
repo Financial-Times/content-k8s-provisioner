@@ -147,6 +147,7 @@ docker run \
 
 After rotating the TLS assets, there are some **important** manual steps that should be done:
 
+1. Validate that the login using the backup token works. Using the **new token** from the output, check the `kubectl-login config` on how to check this. If this validation doesn't work, there must be something wrong. Check the Troubleshooting section.
 1. Update the TLS assets used by Jenkins for cluster updates.
    The credential has the id `ft.k8s-provision.${full-cluster-name}.credentials`. Look it up [here](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/credentials/store/folder/domain/_/) and update the zip with the one created in the `credentials` folder with the name `${full-cluster-name}.zip`
 1. Update the token used by jenkins to access the K8s cluster.
@@ -162,6 +163,55 @@ After rotating the TLS assets, there are some **important** manual steps that sh
     1. copy the `ca.pem` from the `credentials` folder into the repository
     1. Commit, create PR & merge the PR after approval
     1. Notify everybody to update their local setup so that they can still login on the cluster.
+
+### Validation
+To validate everything works after the rotation do the following:
+
+1. Try to login using the normal flow through Dex
+1. Deploy an existing helm chart version onto the cluster through the [Jenkins job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/deploy-upp-helm-chart/). If it doesn't work you might not updated the Jenkins access token at step 2
+1. Trigger a cluster update using the [Jenkins job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/update-cluster/) on the cluster. It should finish quickly as it doesn't have anything to do.
+    If it takes a long time and really goes through updating, you might not update the Jenkins TLS assets from step 1.
+
+### Troubleshooting
+Here are the situations encountered so far when the rotation did not complete successfully:
+####After rotation one could not login using the normal flow
+Possible problems:
+
+1. Dex may not be started yet. Wait for 5 mins then give it another go. As an alternative try using the backup token that was newly generated and you updated in the LP note `kubectl-login config`
+2. The state of the etcd cluster is not consistent between the nodes.
+   Here's how to check that this is the situation and overcome this:
+    1. First you need to connect to the cluster. Create a `kubeconfig` file that uses the newly created certificates to login into the cluster. It may look like:
+        ```
+        apiVersion: v1
+        clusters:
+        - cluster:
+            server: https://{{full-cluster-name}}-api.ft.com
+            insecure-skip-tls-verify: true
+          name: prov-test
+        contexts:
+        - context:
+            cluster: prov-test
+            namespace: kube-system
+            user: cert
+          name: prov-test-cert-ctx
+
+        current-context: prov-test-cert-ctx
+
+        kind: Config
+        preferences: {}
+        users:
+        - name: cert
+          user:
+            client-certificate: credentials/admin.pem
+            client-key: credentials/admin-key.pem
+        ```
+    1. set KUBECONFIG in the shell to point to the newly created cluster.
+    1. issue some `kubectl get secret` multiple times. If this returns different values each time or there are duplicates in the secrets, it means the state of the etcds is out of sync.
+    1. Check which etcd is the leader & terminate the other instances that are not
+        1. Connect to SSH to one of the etcd node using [the jumpbox & portforwarding](https://docs.google.com/document/d/1TTih1gcj-Vsqjp1aCAzsP4lpt6ivR8jDIXaZtBxNaUU/edit?pli=1#heading=h.gpl69ce0q0l3)
+        1. do an ```etcdctl member list```
+        1. The leader would be printed in the above command.
+        1. From the AWS console to and terminate the 2 instances from the cluster that are not the leader.
 
 ##  Restore k8s Config
 
