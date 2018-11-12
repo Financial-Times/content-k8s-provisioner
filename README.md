@@ -147,30 +147,37 @@ docker run \
 
 After rotating the TLS assets, there are some **important** manual steps that should be done:
 
+1. Update locally the `CA` certificate for the API server of this cluster
+    1. Check where you have checked out the [content-k8s-auth-setup](https://github.com/Financial-Times/content-k8s-auth-setup) repository.
+    You can do this by running ```echo $KUBECONFIG```. This should point to the folder where you have the repo cloned
+    1. Create a new branch in this repository
+    1. copy the `ca.pem` from the `credentials` folder into the repository under `ca/$cluster-name`
 1. Validate that the login using the backup token works. Using the **new token** from the output, check the `kubectl-login config` on how to check this. If this validation doesn't work, there must be something wrong. Check the Troubleshooting section.
-1. Update the TLS assets used by Jenkins for cluster updates.
-   The credential has the id `ft.k8s-provision.${full-cluster-name}.credentials`. Look it up [here](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/credentials/store/folder/domain/_/) and update the zip with the one created in the `credentials` folder with the name `${full-cluster-name}.zip`
+1. Commit the new file in the `content-k8s-auth-setup`, push the branch & create a PR for it.
+1. Update the backup token access in the LP note `kubectl-login config`. You can find the new token value in the provisioner output:
+        ```
+        backup-access token value is: .....
+        ```
 1. Update the token used by jenkins to access the K8s cluster.
    The credential has the id `ft.k8s-auth.${full-cluster-name}.token`. Look it up [here](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/credentials/store/folder/domain/_/) and update it with the token from the provisioner output:
        ```
        "jenkins token value is: .......
        ```
-1. Update the backup token access in the LP note `kubectl-login config`. You can find the new token value in the provisioner output:
-        ```
-        backup-access token value is: .....
-        ```
-1. Update the `ca` certificate in the [content-k8s-auth-setup](https://github.com/Financial-Times/content-k8s-auth-setup) repository. This is needed so that everybody can access the cluster.
-    1. copy the `ca.pem` from the `credentials` folder into the repository
-    1. Commit, create PR & merge the PR after approval
-    1. Notify everybody to update their local setup so that they can still login on the cluster.
+1. Validate that jenkins still has access to the cluster by deploying an existing helm chart version onto the cluster through the [Jenkins job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/deploy-upp-helm-chart/).
+1. Update the TLS assets used by Jenkins for cluster updates.
+   The credential has the id `ft.k8s-provision.${full-cluster-name}.credentials`. Look it up [here](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/credentials/store/folder/domain/_/) and update the zip with the one created in the `credentials` folder with the name `${full-cluster-name}.zip`
+1. Validate that this update worked by triggering a cluster update using the [Jenkins job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/update-cluster/) on the cluster. It should finish quickly as it doesn't have anything to do.
+   If it takes a long time and really goes through updating please check that you did the previous step and try again.
+1. Validate that the normal flow of login through DEX works.
+1. Merge the PR you created for [content-k8s-auth-setup](https://github.com/Financial-Times/content-k8s-auth-setup) repository. This is needed so that everybody can access the cluster.
+1. Notify everybody to update their local setup so that they can still login on the cluster.
+1. Update the TLS assets in the LP note `UPP - k8s Cluster Provisioning env variables` or `PAC - k8s Cluster Provisioning env variables`
 
-### Validation
+### Extra validation
 To validate everything works after the rotation do the following:
 
-1. Try to login using the normal flow through Dex
-1. Deploy an existing helm chart version onto the cluster through the [Jenkins job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/deploy-upp-helm-chart/). If it doesn't work you might not updated the Jenkins access token at step 2
-1. Trigger a cluster update using the [Jenkins job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/update-cluster/) on the cluster. It should finish quickly as it doesn't have anything to do.
-    If it takes a long time and really goes through updating, you might not update the Jenkins TLS assets from step 1.
+1. Check that logs are getting into Splunk after the rotation from this environment.
+   If this is not working, you need to set the etcd keys again as they were lost. Look at the provisioning section on how to set these keys.
 
 ### Troubleshooting
 Here are the situations encountered so far when the rotation did not complete successfully:
