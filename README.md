@@ -181,7 +181,8 @@ To validate everything works after the rotation do the following:
 
 ### Troubleshooting
 Here are the situations encountered so far when the rotation did not complete successfully:
-####After rotation one could not login using the normal flow
+
+#### After rotation one could not login using the normal flow
 Possible problems:
 
 1. Dex may not be started yet. Wait for 5 mins then give it another go. As an alternative try using the backup token that was newly generated and you updated in the LP note `kubectl-login config`
