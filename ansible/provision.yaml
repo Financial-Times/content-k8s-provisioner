@@ -78,6 +78,11 @@
         template: "files/cf/prometheus-s3-store.yaml"
         template_parameters:
           FullEnvName: "{{ stack_name }}"
+          EnvType: "{{ environment_type }}"
+          SystemCode: "{{ platform }}"
+          IpCode: "P196"
+          TeamDL: "universal.publishing.platform@ft.com"
+      tags: post-up
 
     - include: tasks/provision/delivery.yaml
       when: (cluster_environment | lower == "delivery")

@@ -6,6 +6,27 @@ Parameters:
   FullEnvName:
     Type: String
     Description: 'The full name of the environment the bucket belongs to. Example value: upp-prod-delivery-eu'
+  EnvType:
+    Type: String
+    AllowedValues:
+    - p
+    - t
+    - d
+    Description: 'The env type: p for prod, t for staging, d for dev'
+  SystemCode:
+    Type: String
+    AllowedValues:
+    - upp
+    - pac
+    Description: 'The system code of the env that is using the bucket'
+  IpCode:
+    Type: String
+    Default: P196
+    Description: 'The IP code of the env that is using the bucket'
+  TeamDL:
+    Type: String
+    Default: universal.publishing.platform@ft.com
+    Description: 'The team email owning the env that is using the bucket'
 
 Resources:
   PrometheusBucket:
@@ -15,13 +36,13 @@ Resources:
       BucketName: !Sub com.ft.${FullEnvName}.prometheus
       Tags:
         - Key: "systemCode"
-          Value: "upp"
+          Value: !Sub ${SystemCode}
         - Key: "environment"
-          Value: "p"
+          Value: !Sub ${EnvType}
         - Key: "ipCode"
-          Value: "P196"
+          Value: !Sub ${IpCode}
         - Key: "teamDL"
-          Value: "universal.publishing.platform@ft.com"
+          Value: !Sub ${TeamDL}
   PrometheusBucketPolicy:
     Type: "AWS::S3::BucketPolicy"
     Properties:
