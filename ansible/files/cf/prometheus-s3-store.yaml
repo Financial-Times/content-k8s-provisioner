@@ -1,0 +1,66 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Stack to create the S3 bucket for storring the prometheus historical data through thanos.
+Parameters:
+  FullEnvName:
+    Type: String
+    Description: 'The full name of the environment the bucket belongs to. Example value: upp-prod-delivery-eu'
+  EnvType:
+    Type: String
+    AllowedValues:
+    - p
+    - t
+    - d
+    Description: 'The env type: p for prod, t for staging, d for dev'
+  SystemCode:
+    Type: String
+    AllowedValues:
+    - upp
+    - pac
+    Description: 'The system code of the env that is using the bucket'
+  IpCode:
+    Type: String
+    Default: P196
+    Description: 'The IP code of the env that is using the bucket'
+  TeamDL:
+    Type: String
+    Default: universal.publishing.platform@ft.com
+    Description: 'The team email owning the env that is using the bucket'
+
+Resources:
+  PrometheusBucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub com.ft.${FullEnvName}.prometheus
+      Tags:
+        - Key: "systemCode"
+          Value: !Sub ${SystemCode}
+        - Key: "environment"
+          Value: !Sub ${EnvType}
+        - Key: "ipCode"
+          Value: !Sub ${IpCode}
+        - Key: "teamDL"
+          Value: !Sub ${TeamDL}
+  PrometheusBucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket:
+        Ref: "PrometheusBucket"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ""
+            Action:
+            - s3:ListBucket
+            - s3:GetObject
+            - s3:DeleteObject
+            - s3:PutObject
+            Effect: "Allow"
+            Resource:
+              - !Join ["", [ !GetAtt PrometheusBucket.Arn, "/*"]]
+              - !GetAtt PrometheusBucket.Arn
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:role/thanos-s3-access-role
