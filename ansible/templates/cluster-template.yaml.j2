@@ -656,6 +656,10 @@ worker:
           net.ipv4.tcp_keepalive_time=30
           net.ipv4.tcp_keepalive_probes=4
           net.ipv4.tcp_keepalive_intvl=5
+      - path: /etc/sysctl.d/91-inotify-max.conf
+        permissions: 0644
+        content: |
+          fs.inotify.max_user_instances=256
 
       - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
         permissions: 0644
