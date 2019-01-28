@@ -61,26 +61,6 @@ The following steps have to be manually done:
 1. Deploy all the apps necessary in the current cluster. This can be done in 2 ways:
     1. One slower way, but which is fire & forget: synchronize the cluster with an already existing cluster using this [Jenkins Job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/diff-between-envs/).
     1. One quick way, but this would require some more manual steps: [Restore](#restore-k8s-config) the config from a S3 backup of another cluster 
-1. Connect through SSH to one of the etcd servers and use the command “etcdctl mk <key> <value>” to introduce the following etcd keys needed for forwarding the logs to splunk
-    ```
-    /ft/config/public_address {clusters_dns_name_without_region - ex: upp-dev-cj-publish.ft.com}
-    /ft/config/splunk-forwarder/bucket_name {s3_bucket_name_for_logs, pattern: splunklogs-upp-[env] - ex: splunklogs-upp-dev-cj}
-    /ft/config/splunk-forwarder/aws_region {s3_aws_region}
-    /ft/config/splunk-forwarder/aws_access_key_id {s3_aws_access_key_id}
-    /ft/config/splunk-forwarder/aws_secret_access_key {s3_aws_secret_access_key_id}
-    /ft/config/splunk-forwarder/batchsize {log_msgs_batch_size, default value: 100}
-    /ft/config/environment_tag {environment_name, ex: upp-dev-cj-publish-eu}
-    ```
-    The Splunk hec token and the url can be found in lastpass.
-
-    ```
-    ## For UPP Dev clusters
-    ## LastPass: content-test: Splunk HEC token
-    ## For UPP Prod & Staging clusters
-    ## LastPass: content-prod: Splunk HEC token
-    ## For PAC Prod Clusters
-    ## LastPas: PAC - Splunk HEC Token
-    ```
 1. If this is a test/team cluster that needs to be shutdown over night please put the `ec2Powercycle` tag on the autoscaling groups in the cluster.
 You can do this from the AWS console:
     1. [Login](https://awslogin.in.ft.com) to the cluster's account
@@ -177,7 +157,6 @@ After rotating the TLS assets, there are some **important** manual steps that sh
 To validate everything works after the rotation do the following:
 
 1. Check that logs are getting into Splunk after the rotation from this environment.
-   If this is not working, you need to set the etcd keys again as they were lost. Look at the provisioning section on how to set these keys.
 
 ### Troubleshooting
 Here are the situations encountered so far when the rotation did not complete successfully:
