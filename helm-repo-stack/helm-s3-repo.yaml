@@ -52,6 +52,10 @@ Resources:
                 - 62.25.64.1/32
                 # US VPN Client
                 - 64.210.200.1/32
+                # FT Sofia Office - IP range 1
+                - 94.156.217.228/31
+                # FT Sofia Office - IP range 2
+                - 94.156.217.230/32
           - Sid: ""
             Action:
               - "s3:Put*"
