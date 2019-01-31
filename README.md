@@ -300,7 +300,7 @@ Here are some guidelines on how to do it:
         1. [Download the kube-aws](https://github.com/kubernetes-incubator/kube-aws/releases) version that you want to upgrade to and put it in this new folder
         1. Init the cluster.yaml of kube-aws using some dummy values:
             ```
-            ./kube-aws init --cluster-name=kube-aws-up --external-dns-name=kube-aws-up --region=eu-west-1 --key-name="dum" --kms-key-arn="dum" --no-record-set --s3-uri s3://k8s-provisioner-test-eu --availability-zone=eu-west-1a
+            ./kube-aws init --cluster-name=kube-aws-up --external-dns-name=kube-aws-up --region=eu-west-1 --key-name="dum" --kms-key-arn="arn:aws:kms:eu-west-1:99999999999:key/99999999-9999" --no-record-set --s3-uri s3://k8s-provisioner-test-eu --availability-zone=eu-west-1a
             ```
         1. Render the stack:
             ```
