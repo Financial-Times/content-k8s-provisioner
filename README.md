@@ -315,6 +315,8 @@ Use the same technique of merging the files.
 1. Carefully update the contents of the files from `ansible/userdata/` adapting them to the changes from `kube-aws-upgrade/userdata`.
 Before doing this, it is advisable to look at the Git history of the folder and see if there have been executed some manual changes on the files, as those need to be kept.
 Use the same technique of merging the files.
+1. Compare the contents of the `credentials` folder with an older credentials folder, for example the one of `upp-prod-delivery-eu`. You can find these old ones in the LP note `UPP - k8s Cluster Provisioning env variables`.
+   It is usual that between upgrades some new files will appear in this folder. If this is the case you must be careful and check that at cluster upgrades these files are generated and recreate the credentials zips that are kept in the same LP note.
 
 The update part should be done. Now we need to validate it is really working.
 ### Validate that the update works
