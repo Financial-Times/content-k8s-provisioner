@@ -1665,20 +1665,20 @@ experimental:
       agentAddress: kiam-server:443
     # Optional resource change for kiam servers/agents can be done via using the resources block below and changing the values.
     # Values below are the default if not set.
-    # serverResources:
-    #   requests:
-    #     cpu: 50m
-    #     memory: 10Mi
-    #   limits:
-    #     cpu: 200m
-    #     memory: 200Mi
-    # agentResources:
-    #   requests:
-    #     cpu: 10m
-    #     memory: 5Mi
-    #   limits:
-    #     cpu: 200m
-    #     memory: 100Mi
+      serverResources:
+        requests:
+          cpu: 10m
+          memory: 60Mi
+        limits:
+          cpu: 40m
+          memory: 100Mi
+      agentResources:
+        requests:
+          cpu: 5m
+          memory: 30Mi
+        limits:
+          cpu: 20m
+          memory: 60Mi
 
 
   # When enabled this will install the kube2iam daemon set using the repo from `kube2iamImage`
