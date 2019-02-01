@@ -323,7 +323,7 @@ It is advisable to go through the following steps for doing a full validation:
 1. Create a new branch in the [k8s-cli-utils](https://github.com/Financial-Times/k8s-cli-utils/) repo  & update the `kube-aws` version.
 1. Update the Dockefile of the provisioner to extend from the new version of [k8s-cli-utils Docker image](https://hub.docker.com/r/coco/k8s-cli-utils/tags/) & build the new docker image of the provisioner
 1. Test provisioning of a new simple cluster. Use `CLUSTER_ENVIRONMENT=prov` when provisioning. Validate that everything worked well (nodes, kube-system namespace pods)
-1. Test that decommisioning still work. Decommision this new cluster and check that AWS resources were deleted.
+1. Test that decommisioning still works. Decommision this new cluster and check that AWS resources were deleted.
 1. Test upgrading a simple cluster to the new version
     1. Provision a new cluster using the `master` version of the provisioner. Use the same `CLUSTER_ENVIRONMENT=prov`
     1. Update the cluster with the new version of the provisioner
