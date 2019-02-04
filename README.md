@@ -122,6 +122,7 @@ docker run \
     -e "OIDC_ISSUER_URL=$OIDC_ISSUER_URL" \
     -e "PLATFORM=$PLATFORM" \
     -e "VAULT_PASS=$VAULT_PASS" \
+    -e "KEEP_CA=n" \
     k8s-provisioner:local /bin/bash rotate-tls.sh
 ```
 

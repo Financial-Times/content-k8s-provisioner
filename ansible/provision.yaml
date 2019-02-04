@@ -12,7 +12,6 @@
   tasks:
     - include: tasks/setup_for_kube-aws_ops.yaml
 
-    # If credentials are not being shared between environments, generate certs
     - name: Generate cluster credentials if necessary
       command: "{{ item }}"
       with_items:
