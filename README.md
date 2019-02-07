@@ -128,13 +128,7 @@ docker run \
 
 After rotating the TLS assets, there are some **important** manual steps that should be done:
 
-1. Update locally the `CA` certificate for the API server of this cluster
-    1. Check where you have checked out the [content-k8s-auth-setup](https://github.com/Financial-Times/content-k8s-auth-setup) repository.
-    You can do this by running ```echo $KUBECONFIG```. This should point to the folder where you have the repo cloned
-    1. Create a new branch in this repository
-    1. copy the `ca.pem` from the `credentials` folder into the repository under `ca/$cluster-name`
 1. Validate that the login using the backup token works. Using the **new token** from the output, check the `kubectl-login config` on how to check this. If this validation doesn't work, there must be something wrong. Check the Troubleshooting section.
-1. Commit the new file in the `content-k8s-auth-setup`, push the branch & create a PR for it.
 1. Update the backup token access in the LP note `kubectl-login config`. You can find the new token value in the provisioner output:
         ```
         backup-access token value is: .....
@@ -150,8 +144,6 @@ After rotating the TLS assets, there are some **important** manual steps that sh
 1. Validate that this update worked by triggering a cluster update using the [Jenkins job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/update-cluster/) on the cluster. It should finish quickly as it doesn't have anything to do.
    If it takes a long time and really goes through updating please check that you did the previous step and try again.
 1. Validate that the normal flow of login through DEX works.
-1. Merge the PR you created for [content-k8s-auth-setup](https://github.com/Financial-Times/content-k8s-auth-setup) repository. This is needed so that everybody can access the cluster.
-1. Notify everybody to update their local setup so that they can still login on the cluster.
 1. Update the TLS assets in the LP note `UPP - k8s Cluster Provisioning env variables` or `PAC - k8s Cluster Provisioning env variables`
 
 ### Extra validation
