@@ -13,12 +13,19 @@
     - include: tasks/setup_for_kube-aws_ops.yaml
       tags: setup
 
-    # If credentials are not being shared between environments, generate certs
-    - name: Generate cluster credentials
-      shell: |
-        rm -rf credentials/*
-        kube-aws render credentials --generate-ca
-      tags: ['setup', 'new-creds']
+    - name: Generate cluster credentials keeping the current CA
+      command: "{{ item }}"
+      with_items:
+        - find credentials/ ! -name 'ca*' -type f -exec rm -f {} +
+        - kube-aws render credentials
+      when: (keep_ca | lower == "y")
+
+    - name: Generate new cluster credentials with new CA
+      command: "{{ item }}"
+      with_items:
+        - rm -rf credentials/*
+        - kube-aws render credentials --generate-ca
+      when: (keep_ca | lower != "y")
 
     - name: Validate the cluster config
       command: kube-aws validate
@@ -28,7 +35,7 @@
       tags: setup
 
     - name: Update the cluster
-      command: kube-aws update
+      command: kube-aws apply --force
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"

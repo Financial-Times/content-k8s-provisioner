@@ -38,14 +38,8 @@ exec /usr/bin/coreos-cloudinit --from-file /var/run/coreos/$USERDATA_FILE
 coreos:
   update:
     reboot-strategy: "off"
-  {{ if not .Kubernetes.Networking.SelfHosting.Enabled -}}
-  flannel:
-    interface: $private_ipv4
-    etcd_cafile: /etc/kubernetes/ssl/etcd-trusted-ca.pem
-    etcd_certfile: /etc/kubernetes/ssl/etcd-client.pem
-    etcd_keyfile: /etc/kubernetes/ssl/etcd-client-key.pem
-  {{- end }}
   units:
+{{if .DisableContainerLinuxAutomaticUpdates}}
     - name: disable-automatic-update.service
       command: start
       content: |
@@ -53,6 +47,7 @@ coreos:
         Description=Disable Container Linux automatic update. Work around to be removed on Ignition migration.
         [Service]
         ExecStart=/usr/bin/sh -c 'for u in update-engine locksmithd; do systemctl stop $${u}.service; systemctl mask $${u}.service; systemctl disable $${u}.service; done; systemctl reset-failed'
+{{end}}
 {{- range $u := .CustomSystemdUnits}}
     - name: {{$u.Name}}
       {{- if $u.Command }}
@@ -83,6 +78,21 @@ coreos:
 {{- end}}
     - name: systemd-modules-load.service
       command: restart
+
+    - name: legacy-device.service
+      command: start
+      content: |
+        [Unit]
+        Description=creates the block devices as specified in ebs volume creation
+
+        [Service]
+        Type=oneshot
+{{if .EC2Instance.HasNvmeDevices}}
+        ExecStart=-/opt/nvme-hack/ebs-nvme-mapping
+{{else}}
+        ExecStart=-/bin/true
+{{end}}
+
 {{range $volumeMountSpecIndex, $volumeMountSpec := .VolumeMounts}}
     - name: format-{{$volumeMountSpec.SystemdMountName}}.service
       command: start
@@ -90,10 +100,11 @@ coreos:
         [Unit]
         Description=Formats the EBS persistent volume drive for {{$volumeMountSpec.Device}}
         Before=local-fs-pre.target
+        Requires=legacy-device.service
 
         [Service]
         Type=oneshot
-        ExecStart=-/usr/sbin/mkfs.xfs {{$volumeMountSpec.Device}}
+        ExecStart=-/usr/sbin/mkfs.{{$volumeMountSpec.FilesystemType}} {{$volumeMountSpec.Device}}
 
         [Install]
         WantedBy=local-fs-pre.target
@@ -107,7 +118,98 @@ coreos:
         [Mount]
         What={{$volumeMountSpec.Device}}
         Where={{$volumeMountSpec.Path}}
+
+{{if $volumeMountSpec.CreateTmp}}
+    - name: mkdir-{{$volumeMountSpec.SystemdMountName}}-tmp.service
+      command: start
+      content: |
+        [Unit]
+        Description=mkdir {{$volumeMountSpec.Path}}/tmp
+        Requires={{$volumeMountSpec.SystemdMountName}}.mount
+        After={{$volumeMountSpec.SystemdMountName}}.mount
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/mkdir -m 1777 -p {{$volumeMountSpec.Path}}/tmp
 {{end}}
+{{end}}
+{{range $raid0MountSpecIndex, $raid0MountSpec := .Raid0Mounts}}
+    - name: format-{{$raid0MountSpec.SystemdMountName}}.service
+      command: start
+      content: |
+        [Unit]
+        Description=Assembles and Formats the Raid0 EBS backed persistent volume mounted on {{$raid0MountSpec.Path}}
+        Before=local-fs-pre.target
+        Requires=legacy-device.service
+
+        [Service]
+        Type=oneshot
+        ExecStartPre=/usr/sbin/pvcreate {{$raid0MountSpec.DeviceList}}
+        ExecStartPre=/usr/sbin/vgcreate {{$raid0MountSpec.SystemdMountName}}_group {{$raid0MountSpec.DeviceList}}
+        ExecStartPre=/usr/sbin/lvcreate -l 100%VG --stripes {{$raid0MountSpec.NumDevices}} --stripesize 256 -n {{$raid0MountSpec.SystemdMountName}}_vol {{$raid0MountSpec.SystemdMountName}}_group
+        ExecStart=-/usr/sbin/mkfs.ext4 /dev/{{$raid0MountSpec.SystemdMountName}}_group/{{$raid0MountSpec.SystemdMountName}}_vol
+
+        [Install]
+        WantedBy=local-fs-pre.target
+
+    - name: {{$raid0MountSpec.SystemdMountName}}.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount raid0 to {{$raid0MountSpec.Path}}
+
+        [Mount]
+        What=/dev/{{$raid0MountSpec.SystemdMountName}}_group/{{$raid0MountSpec.SystemdMountName}}_vol
+        Where={{$raid0MountSpec.Path}}
+
+{{if $raid0MountSpec.CreateTmp}}
+    - name: mkdir-{{$raid0MountSpec.SystemdMountName}}-tmp.service
+      command: start
+      content: |
+        [Unit]
+        Description=mkdir {{$raid0MountSpec.Path}}/tmp
+        Requires={{$raid0MountSpec.SystemdMountName}}.mount
+        After={{$raid0MountSpec.SystemdMountName}}.mount
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/mkdir -m 1777 -p {{$raid0MountSpec.Path}}/tmp
+{{end}}
+{{end}}
+{{- if .HostOS.BashPrompt.Enabled }}
+    - name: replace-prompt.service
+      enable: true
+      command: start
+      content: |
+        [Unit]
+        Description=Replaces the default bashrc with more informative prompt
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStartPre=/bin/bash -c "mv /etc/bash/bashrc /etc/old-bashrc"
+        ExecStart=/bin/bash -c "cp /etc/bash/bashrc-kube-aws /etc/bash/bashrc"
+
+        [Install]
+        WantedBy=multi-user.target
+{{- end }}
+{{- if .HostOS.MOTDBanner.Enabled }}
+    - name: enhance-motd.service
+      enable: true
+      command: start
+      content: |
+        [Unit]
+        Description=Add additional information to system motd
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/bin/bash -c "echo -e \"{{.HostOS.MOTDBanner.KubernetesColour.On}}Kubernetes{{.HostOS.MOTDBanner.KubernetesColour.Off}} {{ .K8sVer }}\" >>/etc/motd"
+        ExecStart=/bin/bash -c "echo -e \"{{.HostOS.MOTDBanner.KubeAWSColour.On}}kube-aws{{.HostOS.MOTDBanner.KubeAWSColour.Off}} {{ .KubeAWSVersion }}\" >>/etc/motd"
+
+        [Install]
+        WantedBy=multi-user.target
+{{- end }}
 {{if and (.AmazonSsmAgent.Enabled) (ne .AmazonSsmAgent.DownloadUrl "")}}
     - name: amazon-ssm-agent.service
       command: start
@@ -159,23 +261,6 @@ coreos:
         [Install]
         WantedBy=multi-user.target
 {{end}}
-    {{ if not .Kubernetes.Networking.SelfHosting.Enabled -}}
-    - name: cfn-etcd-environment.service
-      enable: true
-      command: start
-      runtime: true
-      content: |
-        [Unit]
-        Description=Fetches etcd static IP addresses list from CF
-        After=network-online.target
-
-        [Service]
-        EnvironmentFile={{.StackNameEnvFileName}}
-        Restart=on-failure
-        RemainAfterExit=true
-        ExecStartPre=/opt/bin/cfn-etcd-environment
-        ExecStart=/usr/bin/mv -f /var/run/coreos/etcd-environment /etc/etcd-environment
-    {{ end }}
     - name: docker.service
       drop-ins:
 {{if .Experimental.EphemeralImageStorage.Enabled}}
@@ -196,17 +281,6 @@ coreos:
             [Service]
             Environment="DOCKER_OPTS=--log-opt max-size=50m --log-opt max-file=3"
 
-        {{ if not .Kubernetes.Networking.SelfHosting.Enabled -}}
-        - name: 40-flannel.conf
-          content: |
-            [Unit]
-            Wants=flanneld.service
-            [Service]
-            EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
-            ExecStartPre=/usr/bin/systemctl is-active flanneld.service
-        {{- end }}
-
-    {{ if .Kubernetes.Networking.SelfHosting.Enabled -}}
     - name: flanneld.service
       enable: false
     {{ if .AssetsEncryptionEnabled -}}
@@ -222,82 +296,12 @@ coreos:
         RemainAfterExit=true
         ExecStart=/opt/bin/decrypt-assets
     {{ end -}}
-    {{ else -}}
-    - name: net-migration-helper.path
-      enable: true
-      command: start
-      content: |
-        [Path]
-        PathExists=/etc/kubernetes/cni/net.d/net-migration
-    - name: net-migration-helper.service
-      enable: false
-      content: |
-        [Unit]
-        Description=Perform actions which help when migrating from legacy to selfhosted networking.
-        After=kubelet.service
-
-        [Service]
-        Type=oneshot
-        RemainAfterExit=true
-        ExecStartPre=-/bin/systemctl stop flanneld
-        ExecStartPre=-/bin/ip link delete cni0
-        ExecStartPre=-/bin/ip link delete flannel.1
-        ExecStart=/bin/true
-
-        [Install]
-        WantedBy=multi-user.target
-    - name: flanneld.service
-      drop-ins:
-        - name: 10-etcd.conf
-          content: |
-            [Unit]
-            Wants=cfn-etcd-environment.service
-            After=cfn-etcd-environment.service
-
-            [Service]
-            EnvironmentFile=-/etc/etcd-environment
-            EnvironmentFile=-/run/flannel/etcd-endpoints.opts
-            ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
-            ExecStartPre=/bin/sh -ec "echo FLANNELD_ETCD_ENDPOINTS=${ETCD_ENDPOINTS} >/run/flannel/etcd-endpoints.opts"
-            {{- if .AssetsEncryptionEnabled}}
-            ExecStartPre=/opt/bin/decrypt-assets
-            {{- end}}
-            Environment="ETCD_SSL_DIR=/etc/kubernetes/ssl"
-            TimeoutStartSec=120
-
-{{if .FlannelImage.RktPullDocker}}
-        - name: 20-flannel-custom-image.conf
-          content: |
-            [Unit]
-            PartOf=flanneld.service
-            Before=docker.service
-
-            [Service]
-            Environment="FLANNEL_IMAGE={{.FlannelImage.RktRepo}}"
-            Environment="RKT_RUN_ARGS={{.FlannelImage.Options}}"
-
-    - name: flannel-docker-opts.service
-      drop-ins:
-        - name: 10-flannel-docker-options.conf
-          content: |
-            [Unit]
-            PartOf=flanneld.service
-            Before=docker.service
-
-            [Service]
-            Environment="FLANNEL_IMAGE={{.FlannelImage.RktRepo}}"
-            Environment="RKT_RUN_ARGS={{.FlannelImage.Options}} --uuid-file-save=/var/lib/coreos/flannel-wrapper2.uuid"
-{{end}}
-    {{- end}}
     - name: kubelet.service
       command: start
       runtime: true
       content: |
         [Unit]
-        {{ if not .Kubernetes.Networking.SelfHosting.Enabled -}}
-        Wants=flanneld.service cfn-etcd-environment.service
-        After=cfn-etcd-environment.service
-        {{ end -}}
+        Wants=rpc-statd.service
         Wants=decrypt-assets.service
         After=decrypt-assets.service
         {{- if .Gpu.Nvidia.IsEnabledOn .InstanceType }}
@@ -308,17 +312,10 @@ coreos:
         [Service]
         EnvironmentFile=/etc/environment
         EnvironmentFile=-/etc/default/kubelet
-        {{ if not .Kubernetes.Networking.SelfHosting.Enabled -}}
-        EnvironmentFile=-/etc/etcd-environment
-        {{- end }}
         Environment=KUBELET_IMAGE_TAG={{.K8sVer}}
-        Environment=KUBELET_IMAGE_URL={{.HyperkubeImage.RktRepoWithoutTag}}
-        Environment="RKT_RUN_ARGS=--volume dns,kind=host,source=/etc/resolv.conf {{.HyperkubeImage.Options}}\
-        {{ if not .Kubernetes.Networking.SelfHosting.Enabled -}}
-        --set-env=ETCD_CA_CERT_FILE=/etc/kubernetes/ssl/etcd-trusted-ca.pem \
-        --set-env=ETCD_CERT_FILE=/etc/kubernetes/ssl/etcd-client.pem \
-        --set-env=ETCD_KEY_FILE=/etc/kubernetes/ssl/etcd-client-key.pem \
-        {{ end -}}
+        Environment=KUBELET_IMAGE_URL={{ .HyperkubeImage.RktRepoWithoutTag }}
+        Environment="RKT_RUN_ARGS={{.HyperkubeImage.Options}}\
+        --volume dns,kind=host,source=/etc/resolv.conf \
         --mount volume=dns,target=/etc/resolv.conf \
         {{ if eq .ContainerRuntime "rkt" -}}
         --volume rkt,kind=host,source=/opt/bin/host-rkt \
@@ -330,48 +327,28 @@ coreos:
         {{ end -}}
         --volume var-lib-cni,kind=host,source=/var/lib/cni \
         --mount volume=var-lib-cni,target=/var/lib/cni \
+        --volume var-run-calico,kind=host,source=/var/run/calico \
+        --mount volume=var-run-calico,target=/var/run/calico \
+        --volume var-lib-calico,kind=host,source=/var/lib/calico \
+        --mount volume=var-lib-calico,target=/var/lib/calico \
         --volume var-log,kind=host,source=/var/log \
         --mount volume=var-log,target=/var/log \
         --volume cni-bin,kind=host,source=/opt/cni/bin \
         --mount volume=cni-bin,target=/opt/cni/bin"
-        {{ if not .Kubernetes.Networking.SelfHosting.Enabled -}}
-        ExecStartPre=/usr/bin/systemctl is-active flanneld.service
-        ExecStartPre=/usr/bin/systemctl is-active cfn-etcd-environment.service
-        ExecStartPre=/usr/bin/etcdctl \
-                --ca-file /etc/kubernetes/ssl/etcd-trusted-ca.pem \
-                --key-file /etc/kubernetes/ssl/etcd-client-key.pem \
-                --cert-file /etc/kubernetes/ssl/etcd-client.pem \
-                --endpoints "${ETCD_ENDPOINTS}" \
-                cluster-health
-        {{ end -}}
         ExecStartPre=/usr/bin/mkdir -p /var/lib/cni
         ExecStartPre=/usr/bin/mkdir -p /var/log/containers
         ExecStartPre=/usr/bin/mkdir -p /opt/cni/bin
         ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
         ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/cni/net.d
-        {{ if not .Kubernetes.Networking.SelfHosting.Enabled -}}
-        ExecStartPre=/bin/sh -ec "find /etc/kubernetes/manifests /etc/kubernetes/cni/net.d/  -maxdepth 1 -type f | xargs --no-run-if-empty sed -i 's|#ETCD_ENDPOINTS#|${ETCD_ENDPOINTS}|'"
-        ExecStartPre=/usr/bin/etcdctl \
-                       --ca-file /etc/kubernetes/ssl/etcd-trusted-ca.pem \
-                       --key-file /etc/kubernetes/ssl/etcd-client-key.pem \
-                       --cert-file /etc/kubernetes/ssl/etcd-client.pem \
-                       --endpoints "${ETCD_ENDPOINTS}" \
-                       cluster-health
-        {{if .UseCalico -}}
-        ExecStartPre=/usr/bin/docker run --rm -e SLEEP=false -e KUBERNETES_SERVICE_HOST= -e KUBERNETES_SERVICE_PORT= -v /opt/cni/bin:/host/opt/cni/bin {{ .CalicoCniImage.RepoWithTag }} /install-cni.sh
-        {{ else -}}
-        ExecStartPre=/usr/bin/docker run --rm -v /opt/cni/bin:/host/opt/cni/bin {{.HyperkubeImage.RepoWithTag}} /bin/sh -ec 'cp -rp /opt/cni/bin/* /host/opt/cni/bin'
-        {{ end -}}
-        {{ end -}}
-        ExecStart=/usr/lib/coreos/kubelet-wrapper \
+        ExecStartPre=/usr/bin/mkdir -p /var/run/calico
+        ExecStartPre=/usr/bin/mkdir -p /var/lib/calico
+        ExecStart=/bin/sh -c "exec /usr/lib/coreos/kubelet-wrapper \
         --cni-conf-dir=/etc/kubernetes/cni/net.d \
         {{/* Work-around until https://github.com/kubernetes/kubernetes/issues/43967 is fixed via https://github.com/kubernetes/kubernetes/pull/43995 */ -}}
         --cni-bin-dir=/opt/cni/bin \
         --network-plugin={{.K8sNetworkPlugin}} \
         --container-runtime={{.ContainerRuntime}} \
-        --rkt-path=/usr/bin/rkt \
-        --rkt-stage1-image=coreos.com/rkt/stage1-coreos \
-        --node-labels=kubernetes.io/role=node{{if .NodeLabels.Enabled}},{{.NodeLabels.String}}{{end}} \
+        --node-labels=kubernetes.io/role=node,node-role.kubernetes.io/node=\"\",node-role.kubernetes.io/{{ toLabel .NodePoolName }}=\"\"{{if .NodeLabels.Enabled}},{{.NodeLabels.String}}{{end}} \
         --register-node=true \
         {{if .Taints}}--register-with-taints={{.Taints.String}}\
         {{end}}--allow-privileged=true \
@@ -393,43 +370,30 @@ coreos:
         {{- end }}
         --kubeconfig=/etc/kubernetes/kubeconfig/worker.yaml \
         {{- if .FeatureGates.Enabled }}
-        --feature-gates="{{.FeatureGates.String}}" \
+        --feature-gates=\"{{.FeatureGates.String}}\" \
         {{- end }}
-        $KUBELET_OPTS
+        {{- if .Kubelet.SystemReservedResources }}
+        --system-reserved={{ .Kubelet.SystemReservedResources }} \
+        {{- end }}
+        {{- if .Kubelet.KubeReservedResources }}
+        --kube-reserved={{ .Kubelet.KubeReservedResources }} \
+        {{- end }}
+        {{- if .Kubernetes.Networking.AmazonVPC.Enabled }}
+        --node-ip=$$(curl http://169.254.169.254/latest/meta-data/local-ipv4) \
+        --max-pods=$$(/opt/bin/aws-k8s-cni-max-pods) \
+        {{- end }}
+        {{if checkVersion "<1.10" .K8sVer -}}
+        --require-kubeconfig \
+        {{end -}}
+        $KUBELET_OPTS"
         Restart=always
         RestartSec=10
         [Install]
         WantedBy=multi-user.target
 
-{{ if eq .ContainerRuntime "rkt" }}
-    - name: rkt-api.service
+    - name: rpc-statd.service
+      command: start
       enable: true
-      content: |
-        [Unit]
-        Before=kubelet.service
-        [Service]
-        ExecStart=/usr/bin/rkt api-service
-        Restart=always
-        RestartSec=10
-        [Install]
-        RequiredBy=kubelet.service
-
-    - name: load-rkt-stage1.service
-      enable: true
-      content: |
-        [Unit]
-        Description=Load rkt stage1 images
-        Documentation=http://github.com/coreos/rkt
-        Requires=network-online.target
-        After=network-online.target
-        Before=rkt-api.service
-        [Service]
-        Type=oneshot
-        RemainAfterExit=yes
-        ExecStart=/usr/bin/rkt fetch /usr/lib/rkt/stage1-images/stage1-coreos.aci /usr/lib/rkt/stage1-images/stage1-fly.aci  --insecure-options=image
-        [Install]
-        RequiredBy=rkt-api.service
-{{ end }}
 
 {{if .AwsEnvironment.Enabled}}
     - name: set-aws-environment.service
@@ -498,9 +462,6 @@ coreos:
 {{end}}
 
 {{ if $.ElasticFileSystemID }}
-    - name: rpc-statd.service
-      command: start
-      enable: true
     - name: efs.service
       command: start
       content: |
@@ -528,9 +489,6 @@ coreos:
         Type=oneshot
         EnvironmentFile={{.StackNameEnvFileName}}
         ExecStartPre=/usr/bin/bash -c "while sleep 1; do if /usr/bin/curl  --insecure -s -m 20 -f  https://127.0.0.1:10250/healthz > /dev/null ; then break ; fi;  done"
-        {{ if (and (not .Kubernetes.Networking.SelfHosting.Enabled) .UseCalico) -}}
-        ExecStartPre=/usr/bin/bash -c "until /usr/bin/docker run --net=host --pid=host --rm {{ .CalicoCtlImage.RepoWithTag }} node status > /dev/null; do sleep 3; done && echo Calico running"
-        {{- end }}
         ExecStart=/opt/bin/cfn-signal
 {{end}}
 
@@ -577,8 +535,6 @@ coreos:
         What=/dev/{{.Experimental.EphemeralImageStorage.Disk}}
 {{if eq .ContainerRuntime "docker"}}
         Where=/var/lib/docker
-{{else if eq .ContainerRuntime "rkt"}}
-        Where=/var/lib/rkt
 {{end}}
         Type={{.Experimental.EphemeralImageStorage.Filesystem}}
 {{end}}
@@ -669,7 +625,7 @@ write_files:
   - path: {{$w.Path}}
     permissions: {{$w.PermissionsString}}
     encoding: gzip+base64
-    content: {{$w.GzippedBase64Content}}
+    content: {{$w.RenderGzippedBase64Content $}}
   {{- end }}
 {{- end }}
   - path: /etc/modules-load.d/ip_vs.conf
@@ -829,31 +785,6 @@ write_files:
           '
 
       rkt rm --uuid-file=/var/run/coreos/cfn-signal.uuid || :
-
-  {{ if not .Kubernetes.Networking.SelfHosting.Enabled -}}
-  - path: /opt/bin/cfn-etcd-environment
-    owner: root:root
-    permissions: 0700
-    content: |
-      #!/bin/bash -e
-
-      rkt run \
-        --volume=dns,kind=host,source=/etc/resolv.conf,readOnly=true \
-        --mount volume=dns,target=/etc/resolv.conf \
-        --volume=awsenv,kind=host,source=/var/run/coreos,readOnly=false \
-        --mount volume=awsenv,target=/var/run/coreos \
-        --uuid-file-save=/var/run/coreos/cfn-etcd-environment.uuid \
-        --set-env={{.StackNameEnvVarName}}=${{.StackNameEnvVarName}} \
-        --net=host \
-        --trust-keys-from-https \
-        {{.AWSCliImage.Options}}{{.AWSCliImage.RktRepo}} --exec=/bin/bash -- \
-          -ec \
-          '
-            cfn-init -v -c "etcd-client" --region {{.Region}} --resource {{.LogicalName}} --stack '${{.StackNameEnvVarName}}'
-          '
-
-      rkt rm --uuid-file=/var/run/coreos/cfn-etcd-environment.uuid || :
-  {{- end }}
 
   - path: /etc/default/kubelet
     permissions: 0755
@@ -1133,54 +1064,19 @@ write_files:
         current-context: kubelet-context
 {{ end }}
 
-{{ if not .Kubernetes.Networking.SelfHosting.Enabled -}}
-{{ if not .UseCalico }}
-  - path: /etc/kubernetes/cni/net.d/10-flannel.conf
-    content: |
-        {
-            "name": "podnet",
-            "type": "flannel",
-            "delegate": {
-                "isDefaultGateway": true
-            }
-        }
-
-{{ else }}
-
-  - path: /etc/kubernetes/cni/net.d/10-calico.conf
-    content: |
-      {
-        "name": "calico",
-        "type": "flannel",
-        "delegate": {
-          "type": "calico",
-          "etcd_endpoints": "#ETCD_ENDPOINTS#",
-          "etcd_key_file": "/etc/kubernetes/ssl/etcd-client-key.pem",
-          "etcd_cert_file": "/etc/kubernetes/ssl/etcd-client.pem",
-          "etcd_ca_cert_file": "/etc/kubernetes/ssl/etcd-trusted-ca.pem",
-          "log_level": "info",
-          "policy": {
-            "type": "k8s",
-            "k8s_api_root": "{{.APIEndpointURL}}/api/v1/",
-            {{- if .Experimental.TLSBootstrap.Enabled }}
-            "k8s_client_key": "/etc/kubernetes/ssl/kubelet-client.key",
-            "k8s_client_certificate": "/etc/kubernetes/ssl/kubelet-client.crt",
-            {{- else }}
-            "k8s_client_key": "/etc/kubernetes/ssl/worker-key.pem",
-            "k8s_client_certificate": "/etc/kubernetes/ssl/worker.pem",
-            {{- end }}
-            "k8s_certificate_authority": "/etc/kubernetes/ssl/ca.pem"
-          }
-        }
-      }
-{{ end }}
-{{- end }}
-
 {{ if and .Experimental.TLSBootstrap.Enabled .AssetsConfig.HasTLSBootstrapToken }}
   - path: /etc/kubernetes/auth/kubelet-tls-bootstrap-token.tmp{{if .AssetsEncryptionEnabled}}.enc{{end}}
     encoding: gzip+base64
     content: {{.AssetsConfig.TLSBootstrapToken}}
 {{ end }}
+
+{{if .Kubernetes.Networking.AmazonVPC.Enabled}}
+  - path: /opt/bin/aws-k8s-cni-max-pods
+    owner: root:root
+    permissions: 0755
+    encoding: gzip+base64
+    content: {{.Kubernetes.Networking.AmazonVPC.MaxPodsScript.ToGzip.ToBase64}}
+{{end}}
 
 {{ if .Gpu.Nvidia.IsEnabledOn .InstanceType }}
   - path: /opt/nvidia-build/README
@@ -1581,6 +1477,181 @@ write_files:
               sleep $attempt_interval_sec;
           fi
       done
-
 {{ end }}
+
+{{ if .EC2Instance.HasNvmeDevices }}
+  - path: /opt/nvme-hack/ebs-nvme-mapping
+    owner: root:root
+    permissions: 0755
+    content: |
+      #! /bin/bash
+
+      # Copyright (c) 2018 Omachonu Ogali
+      # Please see the https://github.com/kubernetes-incubator/kube-aws/tree/master/licenses/LICENSE.ebs-automatic-nvme-mapping for the licensing information
+
+      PATH="${PATH}:/usr/sbin"
+
+      for blkdev in $( nvme list | awk '/^\/dev/ { print $1 }' ) ; do
+        mapping=$(nvme id-ctrl --raw-binary "${blkdev}" | cut -c3073-3104 | tr -s ' ' | sed 's/ $//g')
+        if [[ "${mapping}" == /dev/* ]]; then
+          ( test -b "${blkdev}" && test -L "${mapping}" ) || ln -s "${blkdev}" "${mapping}"
+        else
+          mapping="/dev/${mapping}"
+          if [[ "${mapping}" == /dev/* ]]; then
+            ( test -b "${blkdev}" && test -L "${mapping}" ) || ln -s "${blkdev}" "${mapping}"
+          fi
+        fi
+      done
+
+  - path: /opt/nvme-hack/99-aws-ebs-nvme.rules
+    owner: root:root
+    permissions: 0644
+    content: |
+      # Copyright (c) 2018 Omachonu Ogali
+      # Please see the https://github.com/kubernetes-incubator/kube-aws/tree/master/licenses/LICENSE.ebs-automatic-nvme-mapping for the licensing information
+      # Create the legacy device node for the volume mount and raid0 startup
+      ACTION=="add", SUBSYSTEM=="block", KERNEL=="nvme[1-26]n1", ATTRS{model}=="Amazon Elastic Block Store              ", RUN+="/opt/nvme-hack/ebs-nvme-mapping"
+{{ end }}
+
+  - path: /etc/kube-aws-cidr-settings
+    owner: root:root
+    permissions: 0644
+    content: |
+      # This file can be sourced by system units but its primary role is to ensure that nodes role when cidrs change
+      KUBE_POD_CIDR="{{ .PodCIDR }}"
+      KUBE_SERVICE_CIDR="{{ .ServiceCIDR }}"
+
+  {{if .HostOS.BashPrompt.Enabled -}}
+  # Enable informative coreos ssh shell prompts
+  - path: /etc/bash/bashrc-kube-aws
+    permissions: 0644
+    owner: root:root
+    content: |
+      # /etc/bash/bashrc
+      #
+      # This file is sourced by all *interactive* bash shells on startup,
+      # including some apparently interactive shells such as scp and rcp
+      # that can't tolerate any output.  So make sure this doesn't display
+      # anything or bad things will happen !
+
+
+      # Test for an interactive shell.  There is no need to set anything
+      # past this point for scp and rcp, and it's important to refrain from
+      # outputting anything in those cases.
+      if [[ $- != *i* ]] ; then
+          # Shell is non-interactive.  Be done now!
+          return
+      fi
+
+      # Bash won't get SIGWINCH if another process is in the foreground.
+      # Enable checkwinsize so that bash will check the terminal size when
+      # it regains control.  #65623
+      # http://cnswww.cns.cwru.edu/~chet/bash/FAQ (E11)
+      shopt -s checkwinsize
+
+      # Disable completion when the input buffer is empty.  i.e. Hitting tab
+      # and waiting a long time for bash to expand all of $PATH.
+      shopt -s no_empty_cmd_completion
+
+      # Enable history appending instead of overwriting when exiting.  #139609
+      shopt -s histappend
+
+      # Save each command to the history file as it's executed.  #517342
+      # This does mean sessions get interleaved when reading later on, but this
+      # way the history is always up to date.  History is not synced across live
+      # sessions though; that is what `history -n` does.
+      # Disabled by default due to concerns related to system recovery when $HOME
+      # is under duress, or lives somewhere flaky (like NFS).  Constantly syncing
+      # the history will halt the shell prompt until it's finished.
+      #PROMPT_COMMAND='history -a'
+
+      # Change the window title of X terminals
+      case ${TERM} in
+      [aEkx]term*|rxvt*|gnome*|konsole*|interix)
+          PS1='\[\033]0;{{.HostOS.BashPrompt.WorkerLabel}}{{.HostOS.BashPrompt.Divider}}{{.ClusterName}} \h\007\]'
+          ;;
+      screen*)
+          PS1='\[\033k{{.HostOS.BashPrompt.WorkerLabel}}{{.HostOS.BashPrompt.Divider}}{{.ClusterName}} \h\033\\\]'
+          ;;
+      *)
+          unset PS1
+          ;;
+      esac
+
+      # Set colorful PS1 only on colorful terminals.
+      # dircolors --print-database uses its own built-in database
+      # instead of using /etc/DIR_COLORS.  Try to use the external file
+      # first to take advantage of user additions.
+      # We run dircolors directly due to its changes in file syntax and
+      # terminal name patching.
+      use_color=false
+      if type -P dircolors >/dev/null ; then
+          # Enable colors for ls, etc.  Prefer ~/.dir_colors #64489
+          LS_COLORS=
+          if [[ -f ~/.dir_colors ]] ; then
+          eval "$(dircolors -b ~/.dir_colors)"
+          elif [[ -f /etc/DIR_COLORS ]] ; then
+          eval "$(dircolors -b /etc/DIR_COLORS)"
+          else
+          eval "$(dircolors -b)"
+          fi
+          # Note: We always evaluate the LS_COLORS setting even when it's the
+          # default.  If it isn't set, then `ls` will only colorize by default
+          # based on file attributes and ignore extensions (even the compiled
+          # in defaults of dircolors). #583814
+          if [[ -n ${LS_COLORS:+set} ]] ; then
+          use_color=true
+          else
+          # Delete it if it's empty as it's useless in that case.
+          unset LS_COLORS
+          fi
+      else
+          # Some systems (e.g. BSD & embedded) don't typically come with
+          # dircolors so we need to hardcode some terminals in here.
+          case ${TERM} in
+          [aEkx]term*|rxvt*|gnome*|konsole*|screen|cons25|*color) use_color=true;;
+          esac
+      fi
+
+      if [[ ${EUID} == 0 ]] ; then
+        END_SYMBOL='#'
+        USER_COLOUR_ON='{{ .HostOS.BashPrompt.RootUserColour.PCOn }}'
+        USER_COLOUR_OFF='{{ .HostOS.BashPrompt.RootUserColour.PCOff }}'
+        USERHOST_STYLE='{{ if .HostOS.BashPrompt.IncludeHostname }}\h{{ end }}'
+        DIRECTORY_STYLE='\W'
+      else
+        END_SYMBOL='$'
+        USER_COLOUR_ON='{{ .HostOS.BashPrompt.NonRootUserColour.PCOn }}'
+        USER_COLOUR_OFF='{{ .HostOS.BashPrompt.NonRootUserColour.PCOff }}'
+        USERHOST_STYLE='\u{{ if .HostOS.BashPrompt.IncludeHostname }}@\h{{ end }}'
+        DIRECTORY_STYLE='\w'
+      fi
+
+      if ${use_color} ; then
+          PS1+="{{ .HostOS.BashPrompt.WorkerColour.PCOn }}{{ .HostOS.BashPrompt.WorkerLabel }}{{ .HostOS.BashPrompt.WorkerColour.PCOff }}
+          {{- .HostOS.BashPrompt.DividerColour.PCOn }}{{ .HostOS.BashPrompt.Divider }}{{ .HostOS.BashPrompt.DividerColour.PCOff }}
+          {{- .HostOS.BashPrompt.ClusterColour.PCOn }}{{ .ClusterName }}{{ .HostOS.BashPrompt.ClusterColour.PCOff }}
+          {{- if .HostOS.BashPrompt.IncludeUser }}${USER_COLOUR_ON} ${USERHOST_STYLE}${USER_COLOUR_OFF}{{ end }}
+          {{- .HostOS.BashPrompt.DirectoryColour.PCOn }}
+          {{- if .HostOS.BashPrompt.IncludePWD }} ${DIRECTORY_STYLE}{{ end }} ${END_SYMBOL} {{ .HostOS.BashPrompt.DirectoryColour.PCOff }}"
+
+          alias ls='ls --color=auto'
+          alias grep='grep --colour=auto'
+          alias egrep='egrep --colour=auto'
+          alias fgrep='fgrep --colour=auto'
+      else
+          PS1+="{{ .HostOS.BashPrompt.WorkerLabel }}
+          {{- .HostOS.BashPrompt.Divider }}
+          {{- .ClusterName }}
+          {{- if .HostOS.BashPrompt.IncludeUser }} ${USERHOST_STYLE}{{ end }}
+          {{- if .HostOS.BashPrompt.IncludePWD }} ${DIRECTORY_STYLE}{{ end }} ${END_SYMBOL} "
+      fi
+
+      for sh in /etc/bash/bashrc.d/* ; do
+          [[ -r ${sh} ]] && source "${sh}"
+      done
+
+      # Try to keep environment pollution down, EPA loves us.
+      unset use_color sh
+  {{- end }}
 {{ end }}

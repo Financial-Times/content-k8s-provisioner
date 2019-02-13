@@ -122,18 +122,13 @@ docker run \
     -e "OIDC_ISSUER_URL=$OIDC_ISSUER_URL" \
     -e "PLATFORM=$PLATFORM" \
     -e "VAULT_PASS=$VAULT_PASS" \
+    -e "KEEP_CA=n" \
     k8s-provisioner:local /bin/bash rotate-tls.sh
 ```
 
 After rotating the TLS assets, there are some **important** manual steps that should be done:
 
-1. Update locally the `CA` certificate for the API server of this cluster
-    1. Check where you have checked out the [content-k8s-auth-setup](https://github.com/Financial-Times/content-k8s-auth-setup) repository.
-    You can do this by running ```echo $KUBECONFIG```. This should point to the folder where you have the repo cloned
-    1. Create a new branch in this repository
-    1. copy the `ca.pem` from the `credentials` folder into the repository under `ca/$cluster-name`
 1. Validate that the login using the backup token works. Using the **new token** from the output, check the `kubectl-login config` on how to check this. If this validation doesn't work, there must be something wrong. Check the Troubleshooting section.
-1. Commit the new file in the `content-k8s-auth-setup`, push the branch & create a PR for it.
 1. Update the backup token access in the LP note `kubectl-login config`. You can find the new token value in the provisioner output:
         ```
         backup-access token value is: .....
@@ -149,8 +144,6 @@ After rotating the TLS assets, there are some **important** manual steps that sh
 1. Validate that this update worked by triggering a cluster update using the [Jenkins job](https://upp-k8s-jenkins.in.ft.com/job/k8s-deployment/job/utils/job/update-cluster/) on the cluster. It should finish quickly as it doesn't have anything to do.
    If it takes a long time and really goes through updating please check that you did the previous step and try again.
 1. Validate that the normal flow of login through DEX works.
-1. Merge the PR you created for [content-k8s-auth-setup](https://github.com/Financial-Times/content-k8s-auth-setup) repository. This is needed so that everybody can access the cluster.
-1. Notify everybody to update their local setup so that they can still login on the cluster.
 1. Update the TLS assets in the LP note `UPP - k8s Cluster Provisioning env variables` or `PAC - k8s Cluster Provisioning env variables`
 
 ### Extra validation
@@ -300,7 +293,7 @@ Here are some guidelines on how to do it:
         1. [Download the kube-aws](https://github.com/kubernetes-incubator/kube-aws/releases) version that you want to upgrade to and put it in this new folder
         1. Init the cluster.yaml of kube-aws using some dummy values:
             ```
-            ./kube-aws init --cluster-name=kube-aws-up --external-dns-name=kube-aws-up --region=eu-west-1 --key-name="dum" --kms-key-arn="dum" --no-record-set --s3-uri s3://k8s-provisioner-test-eu --availability-zone=eu-west-1a
+            ./kube-aws init --cluster-name=kube-aws-up --external-dns-name=kube-aws-up --region=eu-west-1 --key-name="dum" --kms-key-arn="arn:aws:kms:eu-west-1:99999999999:key/99999999-9999" --no-record-set --s3-uri s3://k8s-provisioner-test-eu --availability-zone=eu-west-1a
             ```
         1. Render the stack:
             ```
@@ -315,6 +308,8 @@ Use the same technique of merging the files.
 1. Carefully update the contents of the files from `ansible/userdata/` adapting them to the changes from `kube-aws-upgrade/userdata`.
 Before doing this, it is advisable to look at the Git history of the folder and see if there have been executed some manual changes on the files, as those need to be kept.
 Use the same technique of merging the files.
+1. Compare the contents of the `credentials` folder with an older credentials folder, for example the one of `upp-prod-delivery-eu`. You can find these old ones in the LP note `UPP - k8s Cluster Provisioning env variables`.
+   It is usual that between upgrades some new files will appear in this folder. If this is the case you must be careful and check that at cluster upgrades these files are generated and recreate the credentials zips that are kept in the same LP note.
 
 The update part should be done. Now we need to validate it is really working.
 ### Validate that the update works
@@ -323,7 +318,7 @@ It is advisable to go through the following steps for doing a full validation:
 1. Create a new branch in the [k8s-cli-utils](https://github.com/Financial-Times/k8s-cli-utils/) repo  & update the `kube-aws` version.
 1. Update the Dockefile of the provisioner to extend from the new version of [k8s-cli-utils Docker image](https://hub.docker.com/r/coco/k8s-cli-utils/tags/) & build the new docker image of the provisioner
 1. Test provisioning of a new simple cluster. Use `CLUSTER_ENVIRONMENT=prov` when provisioning. Validate that everything worked well (nodes, kube-system namespace pods)
-1. Test that decommisioning still work. Decommision this new cluster and check that AWS resources were deleted.
+1. Test that decommisioning still works. Decommision this new cluster and check that AWS resources were deleted.
 1. Test upgrading a simple cluster to the new version
     1. Provision a new cluster using the `master` version of the provisioner. Use the same `CLUSTER_ENVIRONMENT=prov`
     1. Update the cluster with the new version of the provisioner
