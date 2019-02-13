@@ -296,23 +296,23 @@ controller:
 # - increase the size of the hash table
 
 # Ensure the nf_conntrack module is loaded before setting kernel parameters
-      - path: /etc/modules-load.d/nf.conf
+      - path: /etc/modules-load.d/nf_conntrack.conf
         permissions: 0644
         content: |
           nf_conntrack
 
+# Increase size of hash table
+      - path: /etc/modprobe.d/nf_conntrack.conf
+        permissions: 0644
+        content: |
+          options nf_conntrack hashsize=65536
+
 # Lower TCP established timeout, increase max connections
-      - path: /etc/sysctl.d/91-conntrack.conf
+      - path: /etc/sysctl.d/91-nf_conntrack.conf
         permissions: 0644
         content: |
           net.netfilter.nf_conntrack_tcp_timeout_established=300
           net.netfilter.nf_conntrack_max=262144
-
-# Increase size of hash table
-      - path: /sys/module/nf_conntrack/parameters/hashsize
-        permissions: 0600
-        content: |
-          65536
 
   - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
     permissions: 0644
@@ -326,6 +326,11 @@ controller:
 #
 #  # User defined systemd units that will be added to the Controller cluster cloud-init configuration in the "units:" section.
   customSystemdUnits:
+
+#   Reload systemd modules to pick up nf_conntrack hashsize parameter.
+  - name: systemd-modules-load.service
+    command: restart
+
 #   Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
   - name: sysctl-reload.service
     command: start
@@ -729,23 +734,23 @@ worker:
 # - increase the size of the hash table
 
 # Ensure the nf_conntrack module is loaded before setting kernel parameters
-      - path: /etc/modules-load.d/nf.conf
+      - path: /etc/modules-load.d/nf_conntrack.conf
         permissions: 0644
         content: |
           nf_conntrack
 
+# Increase size of hash table
+      - path: /etc/modprobe.d/nf_conntrack.conf
+        permissions: 0644
+        content: |
+          options nf_conntrack hashsize=65536
+
 # Lower TCP established timeout, increase max connections
-      - path: /etc/sysctl.d/91-conntrack.conf
+      - path: /etc/sysctl.d/91-nf_conntrack.conf
         permissions: 0644
         content: |
           net.netfilter.nf_conntrack_tcp_timeout_established=300
           net.netfilter.nf_conntrack_max=262144
-
-# Increase size of hash table
-      - path: /sys/module/nf_conntrack/parameters/hashsize
-        permissions: 0600
-        content: |
-          65536
 
       - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
         permissions: 0644
@@ -761,6 +766,10 @@ worker:
 #      # User defined systemd units that will be added to the NodePool cluster cloud-init configuration in the "units:" section.
       customSystemdUnits:
       - name: systemd-journald.service
+        command: restart
+
+#     Reload systemd modules to pick up nf_conntrack hashsize parameter.
+      - name: systemd-modules-load.service
         command: restart
 
 #     Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
@@ -1016,26 +1025,31 @@ etcd:
 # - increase the size of the hash table
 
 # Ensure the nf_conntrack module is loaded before setting kernel parameters
-  - path: /etc/modules-load.d/nf.conf
+  - path: /etc/modules-load.d/nf_conntrack.conf
     permissions: 0644
     content: |
       nf_conntrack
 
+# Increase size of hash table
+      - path: /etc/modprobe.d/nf_conntrack.conf
+        permissions: 0644
+        content: |
+          options nf_conntrack hashsize=65536
+
 # Lower TCP established timeout, increase max connections
-  - path: /etc/sysctl.d/91-conntrack.conf
+  - path: /etc/sysctl.d/91-nf_conntrack.conf
     permissions: 0644
     content: |
       net.netfilter.nf_conntrack_tcp_timeout_established=300
       net.netfilter.nf_conntrack_max=262144
 
-# Increase size of hash table
-  - path: /sys/module/nf_conntrack/parameters/hashsize
-    permissions: 0600
-    content: |
-      65536
-
 #  # User defined systemd units that will be added to the Etcd cluster cloud-init configuration in the "units:" section.
   customSystemdUnits:
+
+#   Reload systemd modules to pick up nf_conntrack hashsize parameter.
+  - name: systemd-modules-load.service
+    command: restart
+
 #   Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
   - name: sysctl-reload.service
     command: start
