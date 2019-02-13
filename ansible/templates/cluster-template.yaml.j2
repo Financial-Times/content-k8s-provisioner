@@ -608,6 +608,33 @@ worker:
         content: |
           fs.inotify.max_user_instances=256
 
+# We started dropping packets because the netfilter conntrack table filled up.
+# More info - https://trello.com/c/kuI6YJSv/747-packet-drop-investigation
+# 
+# The following changes:
+# - decrease the TCP timeout for established connections
+# - increase the max number of conntrack entries
+# - increase the size of the hash table
+
+# Ensure the nf_conntrack module is loaded before setting kernel parameters
+      - path: /etc/modules-load.d/nf.conf
+        permissions: 0644
+        content: |
+          nf_conntrack
+
+# Lower TCP established timeout, increase max connections
+      - path: /etc/sysctl.d/90-conntrack.conf
+        permissions: 0644
+        content: |
+          net.netfilter.nf_conntrack_tcp_timeout_established=300
+          net.netfilter.nf_conntrack_max=262144
+
+# Increase size of hash table
+      - path: /sys/module/nf_conntrack/parameters/hashsize
+        permissions: 0600
+        content: |
+          131072
+
       - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
         permissions: 0644
         content: |
