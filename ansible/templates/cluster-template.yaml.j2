@@ -326,6 +326,8 @@ controller:
 #
 #  # User defined systemd units that will be added to the Controller cluster cloud-init configuration in the "units:" section.
   customSystemdUnits:
+  - name: systemd-journald.service
+    command: restart
 
 #   Reload systemd modules to pick up nf_conntrack hashsize parameter.
   - name: systemd-modules-load.service
@@ -347,8 +349,7 @@ controller:
 
         [Install]
         WantedBy=multi-user.target
-  - name: systemd-journald.service
-    command: restart
+
   - name: authorized_keys.service
     command: start
     content: |
