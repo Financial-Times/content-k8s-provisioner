@@ -326,6 +326,22 @@ controller:
 #
 #  # User defined systemd units that will be added to the Controller cluster cloud-init configuration in the "units:" section.
   customSystemdUnits:
+#   Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
+  - name: sysctl-reload.service
+    command: start
+    runtime: true
+    content: |
+        [Unit]
+        Description=Make sure we update sysctl settings
+
+        [Service]
+        Before=kubelet.service docker.service
+        Type=oneshot
+        ExecStart=/bin/sh -c "sysctl --system"
+        Restart=no
+
+        [Install]
+        WantedBy=multi-user.target
   - name: systemd-journald.service
     command: restart
   - name: authorized_keys.service
@@ -747,22 +763,22 @@ worker:
       - name: systemd-journald.service
         command: restart
 
-#     Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/90-tcp-retries.conf will be picked up.
+#     Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
       - name: sysctl-reload.service
         command: start
         runtime: true
         content: |
-          [Unit]
-          Description=Make sure we update sysctl settings
+            [Unit]
+            Description=Make sure we update sysctl settings
 
-          [Service]
-          Before=kubelet.service docker.service
-          Type=oneshot
-          ExecStart=/bin/sh -c "sysctl --system"
-          Restart=no
+            [Service]
+            Before=kubelet.service docker.service
+            Type=oneshot
+            ExecStart=/bin/sh -c "sysctl --system"
+            Restart=no
 
-          [Install]
-          WantedBy=multi-user.target
+            [Install]
+            WantedBy=multi-user.target
       - name: authorized_keys.service
         command: start
         content: |
@@ -1020,6 +1036,22 @@ etcd:
 
 #  # User defined systemd units that will be added to the Etcd cluster cloud-init configuration in the "units:" section.
   customSystemdUnits:
+#   Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
+  - name: sysctl-reload.service
+    command: start
+    runtime: true
+    content: |
+        [Unit]
+        Description=Make sure we update sysctl settings
+
+        [Service]
+        Before=kubelet.service docker.service
+        Type=oneshot
+        ExecStart=/bin/sh -c "sysctl --system"
+        Restart=no
+
+        [Install]
+        WantedBy=multi-user.target
   - name: authorized_keys.service
     command: start
     content: |
