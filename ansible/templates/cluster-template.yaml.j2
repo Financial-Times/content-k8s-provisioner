@@ -1031,10 +1031,10 @@ etcd:
       nf_conntrack
 
 # Increase size of hash table
-      - path: /etc/modprobe.d/nf_conntrack.conf
-        permissions: 0644
-        content: |
-          options nf_conntrack hashsize=65536
+  - path: /etc/modprobe.d/nf_conntrack.conf
+    permissions: 0644
+    content: |
+      options nf_conntrack hashsize=65536
 
 # Lower TCP established timeout, increase max connections
   - path: /etc/sysctl.d/91-nf_conntrack.conf
