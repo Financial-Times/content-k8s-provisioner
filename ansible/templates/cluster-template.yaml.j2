@@ -340,9 +340,10 @@ controller:
     content: |
         [Unit]
         Description=Make sure we update sysctl settings
+        After=systemd-modules-load.service
+        Before=kubelet.service docker.service
 
         [Service]
-        Before=kubelet.service docker.service
         Type=oneshot
         ExecStart=/bin/sh -c "sysctl --system"
         Restart=no
@@ -780,9 +781,10 @@ worker:
         content: |
             [Unit]
             Description=Make sure we update sysctl settings
+            After=systemd-modules-load.service
+            Before=kubelet.service docker.service
 
             [Service]
-            Before=kubelet.service docker.service
             Type=oneshot
             ExecStart=/bin/sh -c "sysctl --system"
             Restart=no
@@ -1058,9 +1060,10 @@ etcd:
     content: |
         [Unit]
         Description=Make sure we update sysctl settings
-
-        [Service]
+        After=systemd-modules-load.service
         Before=kubelet.service docker.service
+        
+        [Service]
         Type=oneshot
         ExecStart=/bin/sh -c "sysctl --system"
         Restart=no
