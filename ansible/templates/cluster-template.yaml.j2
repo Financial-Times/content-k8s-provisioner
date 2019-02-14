@@ -329,11 +329,7 @@ controller:
   - name: systemd-journald.service
     command: restart
 
-#   Reload systemd modules to pick up nf_conntrack hashsize parameter.
-  - name: systemd-modules-load.service
-    command: restart
-
-#   Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
+#   Reload systemd modules and sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
   - name: sysctl-reload.service
     command: start
     runtime: true
@@ -345,6 +341,7 @@ controller:
 
         [Service]
         Type=oneshot
+        ExecStart=/bin/sh -c "systemctl restart systemd-modules-load.service"
         ExecStart=/bin/sh -c "sysctl --system"
         Restart=no
 
@@ -770,11 +767,7 @@ worker:
       - name: systemd-journald.service
         command: restart
 
-#     Reload systemd modules to pick up nf_conntrack hashsize parameter.
-      - name: systemd-modules-load.service
-        command: restart
-
-#     Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
+#       Reload systemd modules and sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
       - name: sysctl-reload.service
         command: start
         runtime: true
@@ -786,6 +779,7 @@ worker:
 
             [Service]
             Type=oneshot
+            ExecStart=/bin/sh -c "systemctl restart systemd-modules-load.service"
             ExecStart=/bin/sh -c "sysctl --system"
             Restart=no
 
@@ -1049,11 +1043,7 @@ etcd:
 #  # User defined systemd units that will be added to the Etcd cluster cloud-init configuration in the "units:" section.
   customSystemdUnits:
 
-#   Reload systemd modules to pick up nf_conntrack hashsize parameter.
-  - name: systemd-modules-load.service
-    command: restart
-
-#   Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
+#   Reload systemd modules and sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
   - name: sysctl-reload.service
     command: start
     runtime: true
@@ -1065,6 +1055,7 @@ etcd:
         
         [Service]
         Type=oneshot
+        ExecStart=/bin/sh -c "systemctl restart systemd-modules-load.service"
         ExecStart=/bin/sh -c "sysctl --system"
         Restart=no
 
