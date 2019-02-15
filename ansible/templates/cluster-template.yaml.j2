@@ -13,10 +13,29 @@ releaseChannel: {{ coreos_release_channel}}
 
 # The AMI ID of CoreOS.
 # If omitted, the latest AMI for the releaseChannel is used.
+# To update this to the latest AMI run the following command with the appropriate region and channel then place the resulting ID here
+#   REGION=eu-west-1 && CHANNEL=stable && curl -s https://coreos.com/dist/aws/aws-$CHANNEL.json | jq -r ".\"$REGION\".hvm"
 amiId: {{ amiId }}
 
 # Container Linux has automatic updates https://coreos.com/os/docs/latest/update-strategies.html. This can be a risk in certain situations and this is why is disabled by default and you can enable it by setting this param to false.
 disableContainerLinuxAutomaticUpdates: true
+
+# TODO [SB] check this...
+# Override the CloudFormation logical sub-stack names of control plane, etcd and/or network.
+# Changing these names causes CF to delete the old and create a new stack and thus deleting and recreating all components in the stack.
+#
+# From kube-aws 0.11.x and onwards, separate networking and etcd CF stacks have been introduced.
+# Because CF does not support migration of resources between stacks (or renaming stacks), a new VPC will be created if you upgrade an existing 0.10.x cluster.
+# Creating a new VPC and deleting the old one can cause a lot of issues and might not be desired.
+# To make this migration more feasible it is posible to change the name of the network stack to the old controleplane stack to keep the vpc components in the same stack. This way CF will not create a new vpc.
+# In this scenario the name of the networkstack becomes "ControlPlane". (which is the name of the stack which holds the vpc components in a kube-aws pre 0.11 cluster)
+# For clearity it is advised also rename the stack of the controlPlane components to, for example, "masters"
+# Note that this will keep some legacy naming around in your configs and CF stacks...
+# cloudformation:
+#   stackNameOverrides:
+#     controlPlane: "control-plane"
+#     network: "network"
+#     etcd: "etcd"
 
 # The ID of hosted zone to add the externalDNSName to.
 # Either specify hostedZoneId or hostedZone, but not both
@@ -180,6 +199,17 @@ controller:
 #    # Number of I/O operations per second (IOPS) that the controller node disk supports. Leave blank if controller.rootVolume.type is not io1
 #    iops: 0
 #
+#  # Additional EBS volumes mounted on the controller(s)
+#  # No additional EBS volumes by default. All parameter values do not default - they must be explicitly defined
+#  volumeMounts:
+#  - type: "gp2"
+#    iops: 0
+#    size: 30
+#    # Follow the aws convention of '/dev/xvd*' where '*' is a single letter from 'f' to 'z'
+#    device: "/dev/xvdf"
+#    path: "/ebs"
+#
+#
 #  # Existing security groups attached to controller nodes which are typically used to
 #  # (1) allow access from controller nodes to services running on an existing infrastructure
 #  # (2) allow ssh accesses from bastions when `sshAccessAllowedSourceCIDRs` are explicitly set to an empty array
@@ -194,31 +224,39 @@ controller:
     maxSize: {{ controller_count | int + 1 }}
     rollingUpdateMinInstancesInService: {{ controller_count }}
 
-#  # If you specify managedIamRoleName the role created for controller nodes will not suffix the random id at the end
-#  # Role will be created with "Ref": {"AWS::StackName"}-{"AWS::Region"}-yourManagedRole
-#  # to follow the recommendation in AWS documentation  http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
-#  # This is also intended to be used in combination with .experimental.kube2IamSupport. See #297 for more information.
-#  #
-#  # ATTENTION: Consider limiting number of characters in clusterName and iam.role.name to avoid the resulting IAM
-#  # role name's length from exceeding the AWS limit: 64
-#  # See https://github.com/kubernetes-incubator/kube-aws/issues/347
-#  # if you omit this block kube-aws would create an IAM Role and a customer managed policy with a random name.
+# TODO [SB] check this
   iam:
 #    role:
-#       # This will create a named IAM Role managed by kube-aws with the name {AWS::Region}-$managedIamRoleName.
-#       # It will have attached a customer Managed Policy that you can modify afterwards if you need more permissions for your cluster.
-#       # Be careful with the Statements you modify because an update could overwrite your own.
-#       # the Statements included in the ManagedPolicy are the minimun ones required for the Controllers to run.
-#       # name: "yourManagedRole"
-#       # if you set managedPolicies here it will be attached in addition to the created managedPolicy in kube-aws for the cluster.
-#       # CAUTION: if you attach a more restrictive policy in some resources (i.e ec2:* Deny) you can make kube-aws fail.
-#       # managedPolicies:
-#       # -  arn: "arn:aws:iam::aws:policy/AdministratorAccess"
-#       # -  arn: "arn:aws:iam::YOURACCOUNTID:policy/YOURPOLICYNAME"
-
-#       # if you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the configured instanceProfile.
-#       # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
-#       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
+#      # If you specify a name for the role, kube-aws will create it without a random id suffix (AWS default).
+#      # Given a role of `yourManagedRole`, this will create an IAM role named `${clusterName}-${region}-yourManagedRole`
+#      # to follow the recommendation in AWS documentation  http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+#      # There are several cases you might need a stable name such as with .experimental.kube2IamSupport or .experimental.kiamSupport. See #297 for more information.
+#      # ATTENTION: Consider limiting number of characters in clusterName and iam.role.name to avoid the resulting IAM
+#      # role name's length from exceeding the AWS limit: 64. See https://github.com/kubernetes-incubator/kube-aws/issues/347
+#      # It will have attached a customer Managed Policy that you can modify afterwards if you need more permissions for your cluster.
+#      # Be careful with the Statements you modify because an update could overwrite your own.
+#      # the Statements included in the ManagedPolicy are the minimun ones required for the Controllers to run.
+#      name: "yourManagedRole"
+#
+#      # If strictName is enabled then the name specified above in "name" is not not altered by kube-aws.
+#      # strictName is "false" by default which means that kube-aws will prepend the ian role name with the result of "ClusterName-AWSRegion-"
+#      # strictName: true
+#
+#	     # If manageExternally is enabled (i.e set to true), kube-aws will not create a new IAM role and will instead use an existing one.
+#	     # The existing role name must be set under iam.role.name and must exist on AWS before the cluster is rolled out.
+#      # When using manageExternally, strictName is also assumed by kube-aws
+#	     # By default, manageExternally is disabled (i.e set to false)
+#	     manageExternally: true
+#
+#      # If you set managedPolicies here it will be attached in addition to the created managedPolicy in kube-aws for the cluster.
+#      # CAUTION: if you attach a more restrictive policy in some resources (i.e ec2:* Deny) you can make kube-aws fail.
+#      managedPolicies:
+#      - arn: "arn:aws:iam::aws:policy/AdministratorAccess"
+#      - arn: "arn:aws:iam::YOURACCOUNTID:policy/YOURPOLICYNAME"
+#
+#      # If you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the configured `instanceProfile`.
+#      # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
+#      # if you dont know which permissions are required is recommended to create a cluster with a managed role.
     instanceProfile:
       # todo [customize] per account & region
       arn: "{{ controller_iam_role }}"
@@ -236,6 +274,9 @@ controller:
     kube-aws.coreos.com/role: controller
 #
 #  # User defined files that will be added to the Controller cluster cloud-init configuration in the "write_files:" section.
+#  # Writing a kubernetes manifest to path /srv/kubernetes/manifests/custom/*.yaml will be automatically
+#  # installed when the controllers start up.
+
   customFiles:
   - path: /etc/systemd/journald.conf.d/10-override-config.conf
     permissions: 0644
@@ -300,10 +341,19 @@ worker:
 #  # Can be overriden per node pool by specifying `worker.nodePools[].apiEndpointName`
 #  apiEndpointName: versionedPublic
 #
+#  # Used to globally specify the strategy in which nodePools will roll out: in sequence or parallel
+#  # Default behaviour ('parallel') will roll out nodePools concurrently
+#  # If set to 'Sequential', the nodePools will roll out sequentially, in order of declaration
+#  # If set at a Worker level, it will only take effect if it is not set at a nodePool level
+#  # For finer grain control, declare it on a nodePool-by-nodePool basis
+#  nodePoolRollingStrategy: Sequential
+
   nodePools:
 {% for worker in worker_pools %}
     - # Name of this node pool. Must be unique among all the node pools in this cluster
       name: w{{ worker.id }}
+#      # Subnet(s) to which worker nodes in this node pool are deployed
+#      # References subnets defined under the top-level `subnets` key by their names
 #      # If omitted, public subnets are created by kube-aws and used for worker nodes
       subnets:
 #      - # References subnets defined under the top-level `subnets` key by their names
@@ -311,7 +361,15 @@ worker:
 {% for n in range(1, subnet_count+1) %}
        - name: ExistingPrivateSubnet{{ n }}
 {% endfor %}
-#        name: ManagedPublicSubnet1
+#       - name: ManagedPublicSubnet1
+#      # Used to specify the strategy in which the nodePool will roll out: in sequence or parallel
+#      # By default (if not set at nodePool/worker level) the nodePool will roll out in parallel
+#      # If set to 'Sequential', the nodePools will roll out one-by-one in order of declaration
+#      # NOTICE: if there are multiple nodePool groups that will use both rolling strategies ('Sequential'/'Parallel')
+#      # the nodePools rolling out in sequence should be declared before those that roll out in parallel
+#      # otherwise, the first declared nodePool to roll out in sequence will depend on the last concurrent nodePool
+#      nodePoolRollingStrategy: Parallel
+
 #
 #      # Existing "glue" security groups attached to worker nodes which are typically used to allow
 #      # access from worker nodes to services running on an existing infrastructure
@@ -338,23 +396,29 @@ worker:
 #      # If not specified, defaults to `worker.apiEndpointName`
 #      apiEndpointName: versionedPublic
 #
-#     # if you omit this block kube-aws would create an IAM Role and a customer managed policy with a random name.
       iam:
 #        role:
-#       # This will create a named IAM Role managed by kube-aws with the name {AWS::Region}-$managedIamRoleName.
-#       # It will have attached a customer Managed Policy that you can modify afterwards if you need more permissions for your cluster.
-#       # Be careful with the Statements you modify because an update could overwrite your own.
-#       # the Statements included in the ManagedPolicy are the minimun ones required for the Controllers to run.
-#       #   name: "yourManagedRole"
-#       # if you set managedPolicies here it will be attached in addition to the created managedPolicy in kube-aws for the cluster.
-#       # CAUTION: if you attach a more restrictive policy in some resources (i.e ec2:* Deny) you can make kube-aws fail.
-#       #   managedPolicies:
-#       #     - arn: "arn:aws:iam::aws:policy/AdministratorAccess"
-#       #     - arn: "arn:aws:iam::YOURACCOUNTID:policy/YOURPOLICYNAME"
+#          # If you specify a name for the role, kube-aws will create it without a random id suffix (AWS default).
+#          # Given a role of `yourManagedRole`, this will create an IAM role named `${clusterName}-${region}-yourManagedRole`
+#          # to follow the recommendation in AWS documentation  http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+#          # There are several cases you might need a stable name such as with .experimental.kube2IamSupport or .experimental.kiamSupport. See #297 for more information.
+#          # ATTENTION: Consider limiting number of characters in clusterName and iam.role.name to avoid the resulting IAM
+#          # role name's length from exceeding the AWS limit: 64. See https://github.com/kubernetes-incubator/kube-aws/issues/347
+#          # It will have attached a customer Managed Policy that you can modify afterwards if you need more permissions for your cluster.
+#          # Be careful with the Statements you modify because an update could overwrite your own.
+#          # the Statements included in the ManagedPolicy are the minimun ones required for the Workers to run.
+#          name: "yourManagedRole"
+#
+#          # If you set managedPolicies here it will be attached in addition to the created managedPolicy in kube-aws for the cluster.
+#          # CAUTION: if you attach a more restrictive policy in some resources (i.e ec2:* Deny) you can make kube-aws fail.
+#          managedPolicies:
+#          - arn: "arn:aws:iam::aws:policy/AdministratorAccess"
+#          - arn: "arn:aws:iam::YOURACCOUNTID:policy/YOURPOLICYNAME"
+#
+#          # If you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the configured `instanceProfile`.
+#          # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
+#          # if you dont know which permissions are required is recommended to create a cluster with a managed role.
 
-#       # if you set an InstanceProfile kube-aws will NOT create any IAM Role and will use the configured instanceProfile.
-#       # CAUTION: you must ensure that the IAM Role linked to the listed InstanceProfile has enough permissions to ensure kube-aws to run.
-#       # if you dont know which permissions are required is recommended to create a cluster with a managed role.
         # todo [customize] per account & region
         instanceProfile:
           arn: "{{ worker_iam_role }}"
@@ -367,16 +431,6 @@ worker:
 #        # IDs of "glue" security groups attached to worker nodes to allow the ALBs Target Groups to communicate with worker nodes
 #        securityGroupIds: [ "sg-87654321" ]
 #
-#      # If you specify managedIamRoleName the role created for worker nodes will not suffix the random id at the end
-#      # Role will be created with "Ref": {"AWS::StackName"}-{"AWS::Region"}-yourManagedRole
-#      # to follow the recommendation in AWS documentation  http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
-#      # This is also intended to be used in combination with kube2IamSupport. See #297 for more information.
-#      #
-#      # ATTENTION: Consider limiting number of characters in clusterName, nodePools[].name and managedIamRoleName to
-#      # avoid the resulting IAM role name's length from exceeding the AWS limit: 64
-#      # See https://github.com/kubernetes-incubator/kube-aws/issues/347
-#      managedIamRoleName: "yourManagedRole"
-#
 #      # Additional EBS volumes mounted on the worker
 #      # No additional EBS volumes by default. All parameter values do not default - they must be explicitly defined
 #      volumeMounts:
@@ -386,6 +440,21 @@ worker:
 #        # Follow the aws convention of '/dev/xvd*' where '*' is a single letter from 'f' to 'z'
 #        device: "/dev/xvdf"
 #        path: "/ebs"
+#
+#      # Additional Raid0 EBS backed volumes mounted on the worker
+#      # No additional Raid0 volumes by default. All parameter values do not default - they must be explicitly defined
+#      raid0Mounts:
+#      - type: "gp2"
+#        iops: 0
+#        # size of each device. As below shows 4 devices, total size is 4 * 214G or 896G.
+#        size: 214
+#        # Follow the aws convention of '/dev/xvd*' where '*' is a single letter from 'f' to 'z'
+#        devices:
+#        - "/dev/xvdg"
+#        - "/dev/xvdh"
+#        - "/dev/xvdi"
+#        - "/dev/xvdj"
+#        path: "/data"
 #
 #      # Specifies how often kubelet posts node status to master. Note: be cautious when changing the constant, it must work with nodeMonitorGracePeriod in nodecontroller.
 #      # nodeStatusUpdateFrequency: "10s"
@@ -523,8 +592,7 @@ worker:
 #      # The set includes names of launch configurations and autoscaling groups
       awsNodeLabels:
         enabled: true
-#      # Will provision worker nodes with IAM permissions to run cluster-autoscaler and add node labels so that
-#      # cluster-autoscaler pods are scheduled to nodes in this node pool
+#      # Provision worker nodes with IAM permissions and node labels to run cluster-autoscaler (assuming `addons.clusterAutoscaler.enabled` is true)
       clusterAutoscalerSupport:
         enabled: false
 #
@@ -541,8 +609,8 @@ worker:
 #      ephemeralImageStorage:
 #        enabled: true
 #
-#      # When enabled it will grant sts:assumeRole permission to the IAM roles for worker nodes.
-#      # This is intended to be used in combination with managedIamRoleName. See #297 for more information.
+#      # When enabled this will grant sts:assumeRole permission to the IAM roles for worker nodes in this pool.
+#      # This is intended to be used in combination with nodePools[].iam.role.name. See #297 for more information.
 #      kube2IamSupport:
 #        enabled: true
 #
@@ -675,9 +743,12 @@ worker:
 #            Description=Example Custom Service
 #            [Service]
 #            ExecStart=/bin/rkt run --set-env TAGS=Controller ...
-#      # Enable PodPriority (it only makes sense if you enabled priority admission control in experimental section)
+#      # Enable feature-gates such as:
+#      # PodPriority (it only makes sense if you enabled priority admission control in experimental section)
+#      # ExpandPersistentVolumes (it only makes sense if you enabled PersistentVolumeClaimResize admission control in experimental section)
 #      featureGates:
 #        PodPriority: true
+#        ExpandPersistentVolumes: true
 
 # Maximum time to wait for worker creation
 #workerCreateTimeout: PT15M
@@ -743,6 +814,16 @@ etcd:
 #    # (Recommended set to true for high-throughput control planes)
 #    # CAUTION: Currently broken. Please don't turn this on until it is fixed in https://github.com/kubernetes-incubator/kube-aws/pull/417
 #    ephemeral: false
+#
+#  # Additional EBS volumes mounted on the etcd
+#  # No additional EBS volumes by default. All parameter values do not default - they must be explicitly defined
+#  volumeMounts:
+#  - type: "gp2"
+#    iops: 0
+#    size: 30
+#    # Follow the aws convention of '/dev/xvd*' where '*' is a single letter from 'f' to 'z'
+#    device: "/dev/xvdf"
+#    path: "/ebs"
 #
 #  # Tenancy of the etcd instances. Options are "default" and "dedicated"
 #  # Documentation: http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/dedicated-instance.html
@@ -887,6 +968,12 @@ etcd:
 #        Description=Example Custom Service
 #        [Service]
 #        ExecStart=/bin/rkt run --set-env TAGS=Controller ...
+#  # extra etcd options
+#  userSuppliedArgs:
+#    # for example, setting the --quota-backend-bytes and --auto-compaction-retention options
+#    quotaBackendBytes:
+#    autoCompactionRetention:
+
 
 ## Networking config
 
@@ -1125,10 +1212,16 @@ subnets:
 #       # Only specify either id or idFromStackOutput but not both
 #       #idFromStackOutput: myinfra-PublicRouteTable1
 
+# Kubernetes Network CIDRs
+# You can change your serviceCIDR or podCIDR and kube-aws will facilitate the migration
+# see https://github.com/kubernetes-incubator/kube-aws/issues/1307
+# NOTE: requires cluster downtime.
+
 # CIDR for all service IP addresses
 # serviceCIDR: "10.3.0.0/24"
 
 # CIDR for all pod IP addresses
+# Typically set to 10.244.0.0/16 for Flannel or Canal and 192.168.0.0/16 for Calico
 # podCIDR: "10.2.0.0/16"
 
 # IP address of Kubernetes dns service (must be contained by serviceCIDR)
@@ -1161,24 +1254,6 @@ kubernetesVersion: {{ k8s_version }}
 #   tag: master
 #   rktPullDocker: false
 
-# Calico Node image repository to use.
-#calicoNodeImage:
-#  repo: quay.io/calico/node
-#  tag: v2.6.5
-#  rktPullDocker: false
-
-# Calico CNI image repository to use.
-#calicoCniImage:
-#  repo: quay.io/calico/cni
-#  tag: v1.11.2
-#  rktPullDocker: false
-
-# Calico Kube Controllers image repository to use.
-#calicoKubeControllersImage:
-#  repo: quay.io/calico/kube-controllers
-#  tag: v1.0.2
-#  rktPullDocker: false
-
 # Cluster Autoscaler image repository to use.
 #clusterAutoscalerImage:
 #  repo: k8s.gcr.io/cluster-autoscaler
@@ -1197,10 +1272,6 @@ kubernetesVersion: {{ k8s_version }}
 #  tag: 0.9.0
 #  rktPullDocker: false
 
-kiamImage:
-  repo: quay.io/uswitch/kiam
-  tag: v2.8
-
 # kube DNS image repository to use.
 #kubeDnsImage:
 #  repo: k8s.gcr.io/k8s-dns-kube-dns-amd64
@@ -1211,6 +1282,12 @@ kiamImage:
 #kubeDnsMasqImage:
 #  repo: k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64
 #  tag: 1.14.7
+#  rktPullDocker: false
+
+# Core DNS image repository to use.
+#coreDnsImage:
+#  repo: coredns/coredns
+#  tag: 1.1.3
 #  rktPullDocker: false
 
 # kube rescheduler image repository to use.
@@ -1264,13 +1341,7 @@ tillerImage:
 # Kube Dashboard image repository to use.
 #kubernetesDashboardImage:
 #  repo: k8s.gcr.io/kubernetes-dashboard-amd64
-#  tag: v1.8.3
-#  rktPullDocker: false
-
-# Calico Controller image repository to use.
-#calicoCtlImage:
-#  repo: calico/ctl
-#  tag: v1.6.3
+#  tag: v1.10.1
 #  rktPullDocker: false
 
 # Pause image repository to use.This works only if you are deploying your cluster in "cn-north-1" region.
@@ -1279,53 +1350,45 @@ tillerImage:
 #  tag: 3.1
 #  rktPullDocker: false
 
-# Flannel image repository to use.This allow pulling flannel image from a docker repo.
-#flannelImage:
-#  repo: quay.io/coreos/flannel
-#  tag: v0.9.1
-#  rktPullDocker: false
-
 # JournaldCloudWatchLogsImage image repository to use. This sends journald logs to CloudWatch.
 #journaldCloudWatchLogsImage:
 #  repo: "jollinshead/journald-cloudwatch-logs"
 #  tag: "0.1"
 #  rktPullDocker: true
 
-#kubernetes:
-#  networking:
-#    selfHosting:
+kubernetes:
+  # If enabled, instructs the controller manager to automatically issue TLS certificates to worker nodes via
+  # certificate signing requests (csr) made to the API server using the bootstrap token. It's recommended to
+  # also enable the rbac plugin in order to limit requests using the bootstrap token to only be able to make
+  # requests related to certificate provisioning.
+  # The bootstrap token is automatically generated in ./credentials/kubelet-tls-bootstrap-token.
+  encryptionAtRest:
+    enabled: false
 
-# Configure self-hosted networking within kubernetes, deployed as a k8s daemonset.  Choose either 'canal' (calico+flannel) or
-# 'flannel' (choose 'canal' if you require calico or kubernetes NetworkPolicy firewalling).
-# When enabled nodes no longer need to connect etcd and frees up node podCIDR leases faster resolving issue:
-# https://github.com/coreos/flannel/issues/954.
-#
-# Consider enabling Typha if you have 50+ nodes in your cluster. Without Typha, the load on the API server and Felix’s CPU usage
-# increases substantially as the number of nodes is increased.  The legacy top-level 'useCalico' setting has no effect with selfHosting
-# enabled - use type 'canal' for calico+flannel.
-#
-# Notes on migrating between networking types: -
-# From Legacy Calico to self-hosted Canal - GOOD
-# From Legacy Calico to self-hosted Flannel - OK - ISSUES1
-# From self-hosted Flannel to self-hosted Canal - GOOD
-# From self-hosted Canal to self-hosted Flannel - OK - ISSUES1
-# From Legacy Flannel to self-hosted Canal or Flannel - ISSUES2
-# From self-hosted Canal or Flannel to legacy Flannel - ISSUES3
-#
-# ISSUES1 - calico iptables rules remain on the nodes, recycle nodes to remove.
-# ISSUES2 - Existing pod ip addresses are not tracked and can cause clashing ips - please cordon all nodes whilst
-# performing the upgrade until all workers/nodes have been recycyled - then it will be ok.
-# ISSUES3 - Rolling back to old networking will require all nodes are cycled/rolled and the network is disrupted throughout.
-#
-#      enabled: false   # enable self-hosting
-#      type: canal      # either "canal" or "flannel"
-#      typha: false     # enable for type 'canal' for large clusters
+#  controllerManager:
+#    resources:
+#      requests:
+#        cpu: 100m
+#        memory: 100M
+#      limits:
+#        cpu: 250m
+#        memory: 512M
+
+# Kubernetes Self-hosted networking daemonsets
+# Choose either 'canal' (calico+flannel) or 'flannel'
+# (choose 'canal' if you require calico or kubernetes NetworkPolicy firewalling).
+# Enable Typha if you have 50+ nodes in your cluster. Without Typha, the load on the API server and Felix’s CPU usage
+# increases substantially as the number of nodes is increased.
+  networking:
+    selfHosting:
+      type: flannel      # either "canal" or "flannel"
+      typha: false     # enable for type 'canal' for 50+ node clusters
 #      calicoNodeImage:
 #        repo: quay.io/calico/node
-#        tag: v3.0.3
+#        tag: v3.1.3
 #      calicoCniImage:
 #        repo: quay.io/calico/cni
-#        tag: v2.0.1
+#        tag: v3.1.3
 #      flannelImage:
 #        repo: quay.io/coreos/flannel
 #        tag: v0.9.1
@@ -1334,10 +1397,7 @@ tillerImage:
 #        tag: v0.3.0
 #     typhaImage:
 #        repo: quay.io/calico/typha
-#        tag: v0.6.2
-
-# Use Calico for network policy (legacy setting - ignored if networking self-hosting is enabled)
-# useCalico: false
+#        tag: v0.7.4
 
 # Create MountTargets to subnets managed by kube-aws for a pre-existing Elastic File System (Amazon EFS),
 # and then mount to every node.
@@ -1382,6 +1442,16 @@ manageCertificates: true
 # The autosave process executes on start-up and repeats every 24 hours.
 kubeResourcesAutosave:
   enabled: true
+#
+
+# Set kube-system namespace labels:
+# In order to target a namespace for network policies the namepace needs to be labeled.
+# Feel free to remove or alter this setting to change the labels for the kube-system namespace.
+# Values need to be a dictionary of values
+# foo: bar
+# bar: foo
+kubeSystemNamespaceLabels:
+  name: kube-system
 
 # Accessing Dashboard:
 # By default, the kubernetes dashboard has admin privileges and doesn't require authentication.
@@ -1391,12 +1461,25 @@ kubeResourcesAutosave:
 # Access the dashboard  using 'kubectl proxy:
 # insecureLogin: false ==> "http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/"
 # insecureLogin: true ==>  "http://localhost:8001/api/v1/namespaces/kube-system/services/http:kubernetes-dashboard:/proxy/"
+# enabled: true
 # Expose the dashboard
 # Please check the documentation: https://kubernetes-incubator.github.io/kube-aws/advanced-topics/kubernetes-dashboard.html
 
 kubernetesDashboard:
   adminPrivileges: true
   insecureLogin: false
+  allowSkipLogin: false # Only set to true when using dashboard image version v1.10.1+
+  replicas: 1 # 1 is the default
+  enabled: false
+# # Optional resource change for Dashboard can be done via using the resources block below and changing the values.
+# # Values below are the default already if not set.
+# resources:
+#   requests:
+#     cpu: 100m
+#     memory: 100Mi
+#   limits:
+#     cpu: 100m
+#     memory: 100Mi
 
 # When enabled, all nodes will forward journald logs to AWS CloudWatch.
 # It is disabled by default.
@@ -1419,12 +1502,24 @@ kubernetesDashboard:
 #  sha1sum: a6fff8f9839d5905934e7e3df3123b54020a1f5e
 
 
+# KubeDNS
 kubeDns:
+  # Define which DNS provider to use (kube-dns or coredns), default kube-dns.
+  provider: kube-dns
+
 # When enabled, will enable a DNS-masq DaemonSet to make PODs to resolve DNS names via locally running dnsmasq
 # It is disabled by default.
 # nodeLocalResolver: false
+  # Extra DnsMasq options to use when running the nodeLocalResolver
+  # nodeLocalResolverOptions:
+  # - --neg-ttl=10
+  # - --no-ping
+
 # When enabled, will deploy kube-dns to K8s controllers instead of workers.
 # deployToControllers: false
+
+  # DNS Autoscaler
+  # Ref: https://github.com/kubernetes-incubator/cluster-proportional-autoscaler/
   autoscaler:
     coresPerReplica: 256
     nodesPerReplica: 16
@@ -1449,12 +1544,18 @@ kubeProxy:
 
 # Addon features
 addons:
-  # Will provision controller nodes with IAM permissions to run cluster-autoscaler and
-  # create a cluster-autoscaler deployment in the cluster
-  # CA runs only on controller nodes by default. Turn on `worker.nodePools[].clusterAutoscalerSupport.enabled` to
-  # add nodes from a node pool to be where CA runs
+  # Will create a cluster-autoscaler (CA) deployment in the cluster.
+  # CA runs only on controller nodes by default, to turn this off set `experimental.clusterAutoscalerSupport.enabled` to false.
+  # If you want to run CA on worker nodes, turn on `worker.nodePools[].clusterAutoscalerSupport.enabled` for the node pool.
   clusterAutoscaler:
     enabled: false
+    # Options below can be used to inject custom settings for the autoscaler.
+    # Sensible defaults are already configured in the controller-cloud-config but if you wish to override them simply
+    # add them here and they'll take precedence.
+    #options:
+    #  flag-name: value
+    #  v: 5
+    #  expander: least-waste
 
   # When enabled, Kubernetes rescheduler is deployed to the cluster controller(s)
   # This feature is experimental currently so may not be production ready
@@ -1496,6 +1597,8 @@ experimental:
       enabled: false
     OwnerReferencesPermissionEnforcement:
       enabled: false
+    # persistentVolumeClaimResize enables PersistentVolumeClaim in the API server, scheduler and kubelet. you need to manually add the
+    # featureGate ExpandPersistentVolumes:true in the worker
     persistentVolumeClaimResize:
       enabled: false
 
@@ -1508,8 +1611,12 @@ experimental:
   # Enable audit log for apiserver. Recommended when `rbac` is enabled.
   auditLog:
     enabled: true
-    maxage: 1
-    logpath: "-"
+    # In order for the audit log to be output at the STDOUT, so that it gets to journald and then to splunk,
+    # we had to remove all other audit options. We had to do it directly in the cloud-config-controller file, in the contents of the kube-apiserver.yaml
+    logpath: '-'
+#    maxBackup: 1
+#    maxSize: 100
+#    maxage: 1
 
   # See https://kubernetes.io/docs/admin/authentication/#webhook-token-authentication for more information
   authentication:
@@ -1521,6 +1628,10 @@ experimental:
   # Add predefined set of labels to the controller nodes
   # The set includes names of launch configurations and autoscaling groups
   awsNodeLabels:
+    enabled: false
+
+  # Provision controller nodes with IAM permissions and node labels to run cluster-autoscaler (assuming `addons.clusterAutoscaler.enabled` is true)
+  clusterAutoscalerSupport:
     enabled: false
 
   # If enabled, instructs the controller manager to automatically issue TLS certificates to worker nodes via
@@ -1540,12 +1651,43 @@ experimental:
   ephemeralImageStorage:
     enabled: false
 
-  # When enabled it will grant sts:assumeRole permission to the IAM role for controller nodes.
-  # This is intended to be used in combination with .controller.managedIamRoleName. See #297 for more information.
-  kube2IamSupport:
-    enabled: false
+  # When enabled this will install the kiam daemon set using the repo from `kiamImage`
+  # It will also grant sts:assumeRole permission to the IAM role for controller nodes (only controller nodes where the kiam server is hosted need this, worker nodes do not)
+  # This will use SSL certificates generated during `kube-aws render credentials`, ensure this has been run with kube-aws v0.9.9+
+  # This is intended to be used in combination with .controller.iam.role.name. See #297 for more information.
   kiamSupport:
     enabled: true
+    image:
+      repo: quay.io/uswitch/kiam
+      tag: v2.8
+      rktPullDocker: false
+    sessionDuration: 15m
+    serverAddresses:
+      serverAddress: localhost:443
+      agentAddress: kiam-server:443
+    # Optional resource change for kiam servers/agents can be done via using the resources block below and changing the values.
+    # Values below are the default if not set.
+      serverResources:
+        requests:
+          cpu: 10m
+          memory: 60Mi
+        limits:
+          cpu: 40m
+          memory: 100Mi
+      agentResources:
+        requests:
+          cpu: 5m
+          memory: 30Mi
+        limits:
+          cpu: 20m
+          memory: 60Mi
+
+
+  # When enabled this will install the kube2iam daemon set using the repo from `kube2iamImage`
+  # It will also grant sts:assumeRole permission to the IAM role for controller nodes.
+  # This is intended to be used in combination with .controller.iam.role.name. See #297 for more information.
+  kube2IamSupport:
+    enabled: false
 
   # When enabled, `kubectl drain` is run when the instance is being replaced by the auto scaling group, or when
   # the instance receives a termination notice (in case of spot instances)
@@ -1584,6 +1726,13 @@ kubelet:
   # Requires Experimental.tlsBootstrap to be enabled
   RotateCerts:
     enabled: false
+  # Currently CPU, memory and storage are supported.
+  # How resources are reserved: https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/
+  # How to size these limits: https://kubernetes.io/blog/2016/11/visualize-kubelet-performance-with-node-dashboard/
+  # kubeReserved is used to reserve capacity for kubernetes system daemons
+  #kubeReserved: "cpu=100m,memory=100Mi,ephemeral-storage=1Gi"
+  # systemReserved is used to reserve capacity for OS system daemons
+  #systemReserved: "cpu=100m,memory=100Mi,ephemeral-storage=1Gi"
 
 # AWS Tags for cloudformation stack resources
 stackTags:
@@ -1598,3 +1747,41 @@ stackTags:
 # User-provided YAML map available in control-plane's stack-template.json
 #customSettings:
 #  key1: [ 1, 2, 3 ]
+
+# HostOS - specific configurations relating to host operating system
+hostOS:
+
+# prompt - allows you to customise your shell prompt settings and colours
+# exmaple all on with defaults: -
+# server-label|cluster-name core@hostname pwd $
+# server-label|cluster-name hostname pwd #
+
+# valid colours are :-
+# default-colour, black, red, green, yellow, blue, magenta, cyan, white, dark-gray
+# light-red, light-green, light-yellow, light-blue, light-magenta, light-cyan, light-white
+
+#  bashPrompt:
+#    enabled: true                          # Turn the customised shell prompts off.
+#    include-pwd: true                      # Include the present directory in each prompt.
+#    include-hostname: true                 # Include the hostname in each prompt.
+#    include-user: true                     # Include the username in each prompt.
+#    cluster-colour: light-cyan
+#    divider: "|"                           # Divider between server type and cluster name, e.g. etcd|mycluster
+#    divider-colour: default-colour
+#    etcd-label: etcd                       # Start prompt 'etcd' on prompts for etcd servers.
+#    etcd-colour: light-green
+#    controller-label: master               # Start prompt with 'master' on controllers.
+#    controller-colour: light-red
+#    worker-label: node                     # Start prompt with 'node' on workers.
+#    worker-colour: light-blue
+#    root-user-colour: light-red            # Colour of the latter half of the prompt changes for root.
+#    non-root-user-colour: light-green      # All other users will see this colour.
+#    directory-colour: light-blue           # Colour of the directory indicator and last prompt symbol ($ or #)
+
+# motdBanner - display etcd, kubernetes and kube-aws versions in the login message-of-the-day banner.
+#  motdBanner:
+#    enabled: true
+#    etcd-colour: light-green
+#    kubernetes-colour: light-blue
+#    kube-aws-colour: light-blue
+

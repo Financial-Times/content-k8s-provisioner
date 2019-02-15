@@ -1,5 +1,5 @@
 # Using kube-aws 0.10
-FROM coco/k8s-cli-utils:1.2.2
+FROM coco/k8s-cli-utils:kube-aws-version-update
 
 ENV ANSIBLE_HOSTS=/ansible/hosts
 
@@ -8,5 +8,4 @@ RUN apk --update add python py-pip ansible bash zip jq \
 
 # Get the files for the provisioner
 COPY ansible /ansible
-COPY credentials/ /ansible/credentials/
 COPY sh/* /

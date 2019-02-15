@@ -1,8 +1,8 @@
 ---
-- name: Provision a k8s stack
+- name: Reprovision the k8s cluster only
   hosts: localhost
   connection: local
-  
+
   # Include the aws account specific cluster variables
   vars_files:
     - vars/defaults.yaml
@@ -12,11 +12,51 @@
   tasks:
     - include: tasks/setup_for_kube-aws_ops.yaml
 
+    - debug:
+        msg: "Are you sure you want to destroy cluster {{ stack_name }} ?"
+
+    - pause:
+        prompt: "Are you sure you want to destroy cluster {{ stack_name }} ? (Enter to continue or Ctrl+C to abort)"
+
+    # If credentials are being shared between environments, generate certs except ca
+    - name: Generate cluster credentials if necessary
+      command: "{{ item }}"
+      with_items:
+        - find credentials/ ! -name 'ca*' -type f -exec rm -f {} +
+        - kube-aws render credentials
+      when: (share_cluster_credentials | lower == "y" ) and (reuse_credentials | lower != "y")
+
+    # If credentials are not being shared between environments, generate certs
     - name: Generate cluster credentials if necessary
       command: "{{ item }}"
       with_items:
         - rm -rf credentials/*
         - kube-aws render credentials --generate-ca
+      when: (share_cluster_credentials | lower != "y") and (reuse_credentials | lower != "y")
+
+    - name: Zip the new credentials
+      shell: |
+        rm -rf credentials/*.zip
+        mkdir credentials.{{ stack_name }}
+        cp credentials/* credentials.{{ stack_name }}/
+        zip -r credentials/{{ stack_name }}.zip credentials.{{ stack_name }}/*
+      tags: post-up
+
+    - include: tasks/delete_cname.yaml
+      vars:
+        dns_cname: "{{ stack_name }}-api"
+
+    - name: Destroy the k8s cluster
+      command: kube-aws destroy --force
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+
+    - debug:
+        msg: "Wait until the cluster has been destroyed !!! "
+
+    - pause:
+        prompt: "Wait until the cluster has been destroyed (Enter to continue or Ctrl+C to abort)"
 
     - name: Validate the cluster config
       command: kube-aws validate
@@ -29,18 +69,6 @@
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
-      tags: k-prov
-
-    # The public subnets have to tagged for the application ELB can identify the subnets that it can attach itself to
-    - name: Tag the public subnets with the clusterid
-      command: aws ec2 create-tags --resources {{ item }} --tags Key=kubernetes.io/cluster/{{ stack_name }},Value=true --region={{ region }}
-      environment:
-        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
-      with_items:
-        - "{{ public_subnet_zone_a }}"
-        - "{{ public_subnet_zone_b }}"
-        - "{{ public_subnet_zone_c }}"
       tags: k-prov
 
     # Get the DNS name of the API Server ELB
@@ -66,40 +94,6 @@
         hostname: "{{ api_server_elb.stdout }}"
       tags: k-prov
 
-    - name: Create prometheus S3 bucket
-      cloudformation:
-        stack_name: "{{ stack_name }}-prometheus-s3"
-        state: present
-        aws_access_key: "{{ aws_access_key }}"
-        aws_secret_key: "{{ aws_secret_access_key }}"
-        region: "{{ region }}"
-        disable_rollback: true
-        template: "files/cf/prometheus-s3-store.yaml"
-        template_parameters:
-          FullEnvName: "{{ stack_name }}"
-          EnvType: "{{ environment_type }}"
-          SystemCode: "{{ platform }}"
-          IpCode: "P196"
-          TeamDL: "universal.publishing.platform@ft.com"
-      tags: post-up
-
-    - include: tasks/provision/delivery.yaml
-      when: (cluster_environment | lower == "delivery")
-
-    - include: tasks/provision/publishing.yaml
-      when: (cluster_environment | lower == "publish")
-
-    - include: tasks/provision/pac.yaml
-      when: (platform | lower == "pac")
-
-    - name: Zip the credentials
-      shell: |
-        rm -rf credentials/*.zip
-        mkdir credentials.{{ stack_name }}
-        cp credentials/* credentials.{{ stack_name }}/
-        zip -r credentials/{{ stack_name }}.zip credentials.{{ stack_name }}/*
-      tags: post-up
-
     - name: Make default account admin
       shell: |
         kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=default:default
@@ -114,13 +108,14 @@
       register: cmd_res
       tags: k-setup
 
-    - name: Output RBAC result
-      debug: var=cmd_res.stdout_lines
-      tags: k-setup
-
     - name: Annotate default namespace with an expression expressing which roles are permitted to be assumed within that namespace
       shell: |
         kubectl annotate namespace default iam.amazonaws.com/permitted='.*'
       environment:
         KUBECONFIG: "{{kubeconfig_file_path}}"
       tags: k-setup
+
+    - name: Output the new Jenkins & Backup tokens
+      debug: var=cmd_res.stdout_lines
+      tags: post-up
+

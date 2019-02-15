@@ -1,41 +1,24 @@
-{{define "Metadata"}}
+{{define "Metadata" -}}
 {
+  {{ if .AwsEnvironment.Enabled -}}
   "AWS::CloudFormation::Init" : {
     "configSets" : {
-      "etcd-client": [ "etcd-client-env" ]{{ if .AwsEnvironment.Enabled }},
-      "aws-environment": [ "aws-environment-env" ]{{end}}
-    },
-    {{ if .AwsEnvironment.Enabled }}
-    "aws-environment-env" : {
-      "commands": {
-         "write-environment": {
-          "command": {
-            "Fn::Join" : ["", [ "echo '",
-            {{range $variable, $function := .AwsEnvironment.Environment}}
-            "{{$variable}}=", {{$function}} , "\n",
-            {{end}}
-            "' > /etc/aws-environment" ] ]
+      "aws-environment-env" : {
+        "commands": {
+          "write-environment": {
+            "command": {
+              "Fn::Join" : ["", [ "echo '",
+              {{range $variable, $function := .AwsEnvironment.Environment}}
+              "{{$variable}}=", {{$function}} , "\n",
+              {{end}}
+              "' > /etc/aws-environment" ] ]
+            }
           }
-        }
-      }
-    },
-    {{end}}
-    "etcd-client-env": {
-      "files" : {
-        "/var/run/coreos/etcd-environment": {
-          "content": { "Fn::Join" : [ "", [
-            "ETCD_ENDPOINTS='",
-            {{range $index, $instance := $.EtcdNodes}}
-            {{if $index}}",", {{end}} "https://",
-            {{$instance.ImportedAdvertisedFQDNRef}},
-            ":2379",
-            {{end}}
-            "'\n"
-          ]]}
         }
       }
     }
   }
+  {{end -}}
 }
 {{end}}
 {{define "SpotFleet"}}
@@ -62,7 +45,7 @@
             {{end}}
             {{if $.IAMConfig.InstanceProfile.Arn }}
             "IamInstanceProfile": {
-              "Arn": "{{$.IAMConfig.InstanceProfile.Arn}}" 
+              "Arn": "{{$.IAMConfig.InstanceProfile.Arn}}"
             },
             {{else}}
             "IamInstanceProfile": {
@@ -91,7 +74,17 @@
                   {{end}}
                   "VolumeType": "{{$volumeMountSpec.Type}}"
                 }
-              }
+              }{{- end -}}{{range $raid0MountSpecIndex, $raid0MountSpec := $.Raid0Mounts}}{{range $DeviceIndex, $Device := $raid0MountSpec.Devices}},
+              {
+                "DeviceName": "{{$Device}}",
+                "Ebs": {
+                  "VolumeSize": "{{$raid0MountSpec.Size}}",
+                  {{if gt $raid0MountSpec.Iops 0}}
+                  "Iops": "{{$raid0MountSpec.Iops}}",
+                  {{end}}
+                  "VolumeType": "{{$raid0MountSpec.Type}}"
+                }
+              }{{end}}
               {{- end -}}
             ],
             "SecurityGroups": [
@@ -107,8 +100,9 @@
           {{end}}
         ]
       }
-    },
+    }{{ if .AwsEnvironment.Enabled }},
     "Metadata": {{template "Metadata" .}}
+    {{- end }}
   },
 {{end}}
 {{define "AutoScaling"}}
@@ -117,7 +111,7 @@
         "HealthCheckGracePeriod": 600,
         "HealthCheckType": "EC2",
         "LaunchConfigurationName": {
-          "Ref": "{{.LogicalName}}LC"
+          "Ref": "{{.LaunchConfigurationLogicalName}}"
         },
         "MaxSize": "{{.MaxCount}}",
         "MetricsCollection": [
@@ -206,8 +200,9 @@
           "PauseTime": "PT2M"
           {{end}}
         }
-      },
+      }{{ if .AwsEnvironment.Enabled }},
       "Metadata": {{template "Metadata" .}}
+      {{- end }}
     },
     {{if .NodeDrainer.Enabled }}
     "{{.LogicalName}}NodeDrainerLH" : {
@@ -222,7 +217,7 @@
       "Type" : "AWS::AutoScaling::LifecycleHook"
     },
     {{end}}
-    "{{.LogicalName}}LC": {
+    "{{.LaunchConfigurationLogicalName}}": {
       "Properties": {
         "BlockDeviceMappings": [
           {
@@ -244,7 +239,17 @@
               {{end}}
               "VolumeType": "{{$volumeMountSpec.Type}}"
             }
-          }
+          }{{- end -}}{{range $raid0MountSpecIndex, $raid0MountSpec := $.Raid0Mounts}}{{range $DeviceIndex, $Device := $raid0MountSpec.Devices}},
+            {
+              "DeviceName": "{{$Device}}",
+              "Ebs": {
+                "VolumeSize": "{{$raid0MountSpec.Size}}",
+                {{if gt $raid0MountSpec.Iops 0}}
+                "Iops": "{{$raid0MountSpec.Iops}}",
+                {{end}}
+                "VolumeType": "{{$raid0MountSpec.Type}}"
+              }
+            }{{end}}
           {{- end -}}
         ],
          {{if .IAMConfig.InstanceProfile.Arn }}
@@ -265,6 +270,9 @@
         "SpotPrice": {{.SpotPrice}},
         {{else}}
         "PlacementTenancy": "{{.Tenancy}}",
+        {{end}}
+        {{if EbsOptimized .InstanceType }}
+        "EbsOptimized": "true",
         {{end}}
         "UserData": {{ .UserDataWorker.Parts.instance.Template }}
       },
@@ -442,6 +450,29 @@
                   "Resource": "*"
                 },
                 {{end}}
+                {{if .Kubernetes.Networking.AmazonVPC.Enabled}}
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ec2:CreateNetworkInterface",
+                    "ec2:AttachNetworkInterface",
+                    "ec2:DeleteNetworkInterface",
+                    "ec2:DetachNetworkInterface",
+                    "ec2:DescribeNetworkInterfaces",
+                    "ec2:DescribeInstances",
+                    "ec2:ModifyNetworkInterfaceAttribute",
+                    "ec2:AssignPrivateIpAddresses"
+                  ],
+                  "Resource": [
+                    "*"
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "ec2:CreateTags",
+                  "Resource": "arn:aws:ec2:*:*:network-interface/*"
+                },
+                {{end}}
                 {
                   "Action": [
                     "ecr:GetAuthorizationToken",
@@ -479,9 +510,9 @@
         },
         "Path": "/",
         {{if .IAMConfig.Role.Name }}
-        "RoleName":  {"Fn::Join": ["",[{"Ref": "AWS::Region"},"-","{{.IAMConfig.Role.Name}}"]]},
+        "RoleName":  {"Fn::Join": ["-", ["{{$.ClusterName}}", {"Ref": "AWS::Region"}, "{{.IAMConfig.Role.Name}}"]]},
         {{end}}
-        "ManagedPolicyArns": [ 
+        "ManagedPolicyArns": [
           {{range $policyIndex, $policyArn := .IAMConfig.Role.ManagedPolicies }}
             "{{$policyArn.Arn}}",
           {{end}}
@@ -493,11 +524,15 @@
 {{end}}
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "kube-aws Kubernetes node pool {{.ClusterName}} {{.NodePoolName}}",
+  "Description": "kube-aws node pool stack for {{.ClusterName}} {{.NodePoolName}}",
   "Parameters" : {
-    "ControlPlaneStackName": {
+    "EtcdStackName": {
       "Type": "String",
-      "Description": "The name of a control-plane stack used to import values into this stack"
+      "Description": "The name of an etcd stack used to import values into this stack"
+    },
+    "NetworkStackName": {
+      "Type": "String",
+      "Description": "The name of a network stack used to import values into this stack"
     }
     {{if .CloudWatchLogging.Enabled}}
     ,
