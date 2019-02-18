@@ -330,23 +330,10 @@ controller:
     command: restart
 
 #   Reload systemd modules and sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
-  - name: sysctl-reload.service
-    command: start
-    runtime: true
-    content: |
-        [Unit]
-        Description=Make sure we update sysctl settings
-        After=systemd-modules-load.service
-        Before=kubelet.service docker.service
-
-        [Service]
-        Type=oneshot
-        ExecStart=/bin/sh -c "systemctl restart systemd-modules-load.service"
-        ExecStart=/bin/sh -c "sysctl --system"
-        Restart=no
-
-        [Install]
-        WantedBy=multi-user.target
+  - name: systemd-modules-load.service
+    command: restart
+  - name: systemd-sysctl.service
+    command: restart
 
   - name: authorized_keys.service
     command: start
@@ -768,23 +755,11 @@ worker:
         command: restart
 
 #       Reload systemd modules and sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
-      - name: sysctl-reload.service
-        command: start
-        runtime: true
-        content: |
-            [Unit]
-            Description=Make sure we update sysctl settings
-            After=systemd-modules-load.service
-            Before=kubelet.service docker.service
+      - name: systemd-modules-load.service
+        command: restart
+      - name: systemd-sysctl.service
+        command: restart
 
-            [Service]
-            Type=oneshot
-            ExecStart=/bin/sh -c "systemctl restart systemd-modules-load.service"
-            ExecStart=/bin/sh -c "sysctl --system"
-            Restart=no
-
-            [Install]
-            WantedBy=multi-user.target
       - name: authorized_keys.service
         command: start
         content: |
@@ -1044,23 +1019,11 @@ etcd:
   customSystemdUnits:
 
 #   Reload systemd modules and sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
-  - name: sysctl-reload.service
-    command: start
-    runtime: true
-    content: |
-        [Unit]
-        Description=Make sure we update sysctl settings
-        After=systemd-modules-load.service
-        Before=kubelet.service docker.service
-        
-        [Service]
-        Type=oneshot
-        ExecStart=/bin/sh -c "systemctl restart systemd-modules-load.service"
-        ExecStart=/bin/sh -c "sysctl --system"
-        Restart=no
+  - name: systemd-modules-load.service
+    command: restart
+  - name: systemd-sysctl.service
+    command: restart
 
-        [Install]
-        WantedBy=multi-user.target
   - name: authorized_keys.service
     command: start
     content: |
