@@ -335,7 +335,7 @@ controller:
   - name: systemd-sysctl.service
     command: restart
 
-  - name: restart-sysctl-after-nf_contract-load.service
+  - name: restart-sysctl-after-nf_conntrack-load.service
     command: start
     content: |
         [Unit]
@@ -774,7 +774,7 @@ worker:
         command: restart
       - name: systemd-sysctl.service
         command: restart
-      - name: restart-sysctl-after-nf_contract-load.service
+      - name: restart-sysctl-after-nf_conntrack-load.service
         command: start
         content: |
             [Unit]
@@ -1052,7 +1052,7 @@ etcd:
     command: restart
   - name: systemd-sysctl.service
     command: restart
-  - name: restart-sysctl-after-nf_contract-load.service
+  - name: restart-sysctl-after-nf_conntrack-load.service
     command: start
     content: |
         [Unit]
