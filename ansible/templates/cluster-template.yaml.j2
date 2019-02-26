@@ -286,6 +286,39 @@ controller:
       Compress=false
       RateLimitInterval=0
       RateLimitBurst=0
+
+# We started dropping packets because the netfilter conntrack table filled up.
+# More info - https://trello.com/c/kuI6YJSv/747-packet-drop-investigation
+# 
+# The following changes:
+# - decrease the TCP timeout for established connections
+# - increase the max number of conntrack entries
+# - manually set the size of the hash table
+
+# Ensure the nf_conntrack module is loaded before setting kernel parameters
+  - path: /etc/modules-load.d/nf_conntrack.conf
+    permissions: 0644
+    content: |
+      nf_conntrack
+
+# Manually set size of hash table
+# default = 65536
+# this is actually the same as what we're setting manually
+# recommended = nf_conntrack_max / 4
+  - path: /etc/modprobe.d/nf_conntrack.conf
+    permissions: 0644
+    content: |
+      options nf_conntrack hashsize=65536
+
+# Lower TCP established timeout, increase max connections
+# default nf_conntrack_tcp_timeout_established = 86400
+# default nf_conntrack_max = 131072
+  - path: /etc/sysctl.d/91-nf_conntrack.conf
+    permissions: 0644
+    content: |
+      net.netfilter.nf_conntrack_tcp_timeout_established=300
+      net.netfilter.nf_conntrack_max=262144
+
   - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
     permissions: 0644
     content: |
@@ -300,6 +333,28 @@ controller:
   customSystemdUnits:
   - name: systemd-journald.service
     command: restart
+
+#   Reload systemd modules and sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
+  - name: systemd-modules-load.service
+    command: restart
+  - name: systemd-sysctl.service
+    command: restart
+
+  - name: restart-sysctl-after-nf_conntrack-load.service
+    command: start
+    content: |
+        [Unit]
+        Description=Restart sysctl after nf_conntrack module is loaded
+        Requires=systemd-modules-load.service
+        [Service]
+        Type=simple
+        # make sure nf_conntrack module is loaded
+        ExecStartPre=/bin/sh -c "/usr/bin/test \"$(lsmod | grep -w nf_conntrack_ipv4 | wc -l)\" -ne \"0\""
+        # Don't really know what to wait for here, so we'll sleep for 1 min before forcing sysctl to reload the config.
+        ExecStart=/bin/sh -c "/bin/sleep 60s; /bin/systemctl restart systemd-sysctl.service"
+        RestartSec=5
+        Restart=on-failure
+
   - name: authorized_keys.service
     command: start
     content: |
@@ -676,6 +731,38 @@ worker:
         content: |
           fs.inotify.max_user_instances=256
 
+# We started dropping packets because the netfilter conntrack table filled up.
+# More info - https://trello.com/c/kuI6YJSv/747-packet-drop-investigation
+# 
+# The following changes:
+# - decrease the TCP timeout for established connections
+# - increase the max number of conntrack entries
+# - manually set the size of the hash table
+
+# Ensure the nf_conntrack module is loaded before setting kernel parameters
+      - path: /etc/modules-load.d/nf_conntrack.conf
+        permissions: 0644
+        content: |
+          nf_conntrack
+
+# Manually set size of hash table
+# default = 65536
+# this is actually the same as what we're setting manually
+# recommended = nf_conntrack_max / 4
+      - path: /etc/modprobe.d/nf_conntrack.conf
+        permissions: 0644
+        content: |
+          options nf_conntrack hashsize=65536
+
+# Lower TCP established timeout, increase max connections
+# default nf_conntrack_tcp_timeout_established = 86400
+# default nf_conntrack_max = 131072
+      - path: /etc/sysctl.d/91-nf_conntrack.conf
+        permissions: 0644
+        content: |
+          net.netfilter.nf_conntrack_tcp_timeout_established=300
+          net.netfilter.nf_conntrack_max=262144
+
       - path: /etc/systemd/system/docker.service.d/99-docker-opts-override.conf
         permissions: 0644
         content: |
@@ -692,22 +779,26 @@ worker:
       - name: systemd-journald.service
         command: restart
 
-#     Load the sysctl customizations. We need this so that the customizations in /etc/sysctl.d/90-tcp-retries.conf will be picked up.
-      - name: sysctl-reload.service
+#       Reload systemd modules and sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
+      - name: systemd-modules-load.service
+        command: restart
+      - name: systemd-sysctl.service
+        command: restart
+      - name: restart-sysctl-after-nf_conntrack-load.service
         command: start
-        runtime: true
         content: |
-          [Unit]
-          Description=Make sure we update sysctl settings
+            [Unit]
+            Description=Restart sysctl after nf_conntrack module is loaded
+            Requires=systemd-modules-load.service
+            [Service]
+            Type=simple
+            # make sure nf_conntrack module is loaded
+            ExecStartPre=/bin/sh -c "/usr/bin/test \"$(lsmod | grep -w nf_conntrack_ipv4 | wc -l)\" -ne \"0\""
+            # Don't really know what to wait for here, so we'll sleep for 1 min before forcing sysctl to reload the config.
+            ExecStart=/bin/sh -c "/bin/sleep 60s; /bin/systemctl restart systemd-sysctl.service"
+            RestartSec=5
+            Restart=on-failure
 
-          [Service]
-          Before=kubelet.service docker.service
-          Type=oneshot
-          ExecStart=/bin/sh -c "sysctl --system"
-          Restart=no
-
-          [Install]
-          WantedBy=multi-user.target
       - name: authorized_keys.service
         command: start
         content: |
@@ -935,8 +1026,62 @@ etcd:
 #      content: |
 #        { "rktKind": "dockerAuth", "rktVersion": "v1", ... }
 #
+  customFiles:
+# We started dropping packets because the netfilter conntrack table filled up.
+# More info - https://trello.com/c/kuI6YJSv/747-packet-drop-investigation
+# 
+# The following changes:
+# - decrease the TCP timeout for established connections
+# - increase the max number of conntrack entries
+# - manually set the size of the hash table
+
+# Ensure the nf_conntrack module is loaded before setting kernel parameters
+  - path: /etc/modules-load.d/nf_conntrack.conf
+    permissions: 0644
+    content: |
+      nf_conntrack
+
+# Manually set size of hash table
+# default = 65536
+# this is actually the same as what we're setting manually
+# recommended = nf_conntrack_max / 4
+  - path: /etc/modprobe.d/nf_conntrack.conf
+    permissions: 0644
+    content: |
+      options nf_conntrack hashsize=65536
+
+# Lower TCP established timeout, increase max connections
+# default nf_conntrack_tcp_timeout_established = 86400
+# default nf_conntrack_max = 131072
+  - path: /etc/sysctl.d/91-nf_conntrack.conf
+    permissions: 0644
+    content: |
+      net.netfilter.nf_conntrack_tcp_timeout_established=300
+      net.netfilter.nf_conntrack_max=262144
+
 #  # User defined systemd units that will be added to the Etcd cluster cloud-init configuration in the "units:" section.
   customSystemdUnits:
+
+#   Reload systemd modules and sysctl customizations. We need this so that the customizations in /etc/sysctl.d/ will be picked up.
+  - name: systemd-modules-load.service
+    command: restart
+  - name: systemd-sysctl.service
+    command: restart
+  - name: restart-sysctl-after-nf_conntrack-load.service
+    command: start
+    content: |
+        [Unit]
+        Description=Restart sysctl after nf_conntrack module is loaded
+        Requires=systemd-modules-load.service
+        [Service]
+        Type=simple
+        # make sure nf_conntrack module is loaded
+        ExecStartPre=/bin/sh -c "/usr/bin/test \"$(lsmod | grep -w nf_conntrack_ipv4 | wc -l)\" -ne \"0\""
+        # Don't really know what to wait for here, so we'll sleep for 1 min before forcing sysctl to reload the config.
+        ExecStart=/bin/sh -c "/bin/sleep 60s; /bin/systemctl restart systemd-sysctl.service"
+        RestartSec=5
+        Restart=on-failure
+
   - name: authorized_keys.service
     command: start
     content: |
