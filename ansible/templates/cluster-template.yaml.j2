@@ -293,7 +293,7 @@ controller:
 # The following changes:
 # - decrease the TCP timeout for established connections
 # - increase the max number of conntrack entries
-# - increase the size of the hash table
+# - manually set the size of the hash table
 
 # Ensure the nf_conntrack module is loaded before setting kernel parameters
   - path: /etc/modules-load.d/nf_conntrack.conf
@@ -301,7 +301,7 @@ controller:
     content: |
       nf_conntrack
 
-# Increase size of hash table
+# Manually set size of hash table
 # default = 65536
 # this is actually the same as what we're setting manually
 # recommended = nf_conntrack_max / 4
@@ -737,7 +737,7 @@ worker:
 # The following changes:
 # - decrease the TCP timeout for established connections
 # - increase the max number of conntrack entries
-# - increase the size of the hash table
+# - manually set the size of the hash table
 
 # Ensure the nf_conntrack module is loaded before setting kernel parameters
       - path: /etc/modules-load.d/nf_conntrack.conf
@@ -745,7 +745,7 @@ worker:
         content: |
           nf_conntrack
 
-# Increase size of hash table
+# Manually set size of hash table
 # default = 65536
 # this is actually the same as what we're setting manually
 # recommended = nf_conntrack_max / 4
@@ -1033,7 +1033,7 @@ etcd:
 # The following changes:
 # - decrease the TCP timeout for established connections
 # - increase the max number of conntrack entries
-# - increase the size of the hash table
+# - manually set the size of the hash table
 
 # Ensure the nf_conntrack module is loaded before setting kernel parameters
   - path: /etc/modules-load.d/nf_conntrack.conf
@@ -1041,7 +1041,7 @@ etcd:
     content: |
       nf_conntrack
 
-# Increase size of hash table
+# Manually set size of hash table
 # default = 65536
 # this is actually the same as what we're setting manually
 # recommended = nf_conntrack_max / 4
