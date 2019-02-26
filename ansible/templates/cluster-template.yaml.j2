@@ -302,12 +302,17 @@ controller:
       nf_conntrack
 
 # Increase size of hash table
+# default = 65536
+# this is actually the same as what we're setting manually
+# recommended = nf_conntrack_max / 4
   - path: /etc/modprobe.d/nf_conntrack.conf
     permissions: 0644
     content: |
       options nf_conntrack hashsize=65536
 
 # Lower TCP established timeout, increase max connections
+# default nf_conntrack_tcp_timeout_established = 86400
+# default nf_conntrack_max = 131072
   - path: /etc/sysctl.d/91-nf_conntrack.conf
     permissions: 0644
     content: |
@@ -741,12 +746,17 @@ worker:
           nf_conntrack
 
 # Increase size of hash table
+# default = 65536
+# this is actually the same as what we're setting manually
+# recommended = nf_conntrack_max / 4
       - path: /etc/modprobe.d/nf_conntrack.conf
         permissions: 0644
         content: |
           options nf_conntrack hashsize=65536
 
 # Lower TCP established timeout, increase max connections
+# default nf_conntrack_tcp_timeout_established = 86400
+# default nf_conntrack_max = 131072
       - path: /etc/sysctl.d/91-nf_conntrack.conf
         permissions: 0644
         content: |
@@ -1032,12 +1042,17 @@ etcd:
       nf_conntrack
 
 # Increase size of hash table
+# default = 65536
+# this is actually the same as what we're setting manually
+# recommended = nf_conntrack_max / 4
   - path: /etc/modprobe.d/nf_conntrack.conf
     permissions: 0644
     content: |
       options nf_conntrack hashsize=65536
 
 # Lower TCP established timeout, increase max connections
+# default nf_conntrack_tcp_timeout_established = 86400
+# default nf_conntrack_max = 131072
   - path: /etc/sysctl.d/91-nf_conntrack.conf
     permissions: 0644
     content: |
