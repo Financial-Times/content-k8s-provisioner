@@ -325,6 +325,16 @@
                   "Effect": "Allow",
                   "Resource": "*"
                 },
+                {
+                  "Action": "ec2:DescribeVolumesModifications",
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
+                {
+                  "Action": "ec2:ModifyVolume",
+                  "Effect": "Allow",
+                  "Resource": "*"
+                },
                 {{- if $.UserDataWorker.Parts.s3 }}
                 {
                   "Effect": "Allow",
