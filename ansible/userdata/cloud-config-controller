@@ -4349,6 +4349,8 @@ write_files:
               - env:
                 - name: TILLER_NAMESPACE
                   value: kube-system
+                - name: TILLER_HISTORY_MAX
+                  value: "5"
                 image: {{.TillerImage.RepoWithTag}}
                 imagePullPolicy: IfNotPresent
                 livenessProbe:
