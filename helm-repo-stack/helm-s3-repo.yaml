@@ -57,7 +57,7 @@ Resources:
                 # FT Sofia Office - IP range 2
                 - 94.156.217.230/32
                 # FT Sofia office - backup IP range
-                - 212.36.14.66/32
+                - 212.36.14.67/28
                 # Zetta Systems office
                 - 91.92.198.46/32
           - Sid: ""
