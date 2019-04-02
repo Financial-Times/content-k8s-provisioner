@@ -95,7 +95,7 @@ main() {
     RESTORATION_ORDER_NS=( persistentvolumeclaims configmaps endpoints ingresses jobs limitranges networkpolicies
                         podsecuritypolicies podtemplates resourcequotas secrets serviceaccounts services thirdpartyresources
                         horizontalpodautoscalers pods replicasets replicationcontrollers daemonsets deployments statefulsets
-                        poddisruptionbudgets roles rolebindings)
+                        poddisruptionbudgets roles rolebindings cronjobs)
 
     preFlightChecks "${@}"
     AWS_BUCKET="${1}"; shift

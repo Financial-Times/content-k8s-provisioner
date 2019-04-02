@@ -2133,7 +2133,7 @@ write_files:
                       RESOURCES_IN_NAMESPACE="componentstatuses configmaps daemonsets deployments endpoints events horizontalpodautoscalers
                       ingresses jobs limitranges networkpolicies  persistentvolumeclaims pods podsecuritypolicies podtemplates replicasets
                       replicationcontrollers resourcequotas secrets serviceaccounts services statefulsets customresourcedefinitions
-                      poddisruptionbudgets roles rolebindings";
+                      poddisruptionbudgets roles rolebindings cronjobs";
                       for ns in $(jq -r '.items[].metadata.name' < ${DUMP_DIR}/namespaces.json);do
                         echo "Searching in namespace: ${ns}" ;
                         mkdir -p ${DUMP_DIR}/${ns} ;
