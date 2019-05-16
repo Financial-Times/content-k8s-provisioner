@@ -60,6 +60,8 @@ Resources:
                 - 212.36.14.67/28
                 # Zetta Systems office
                 - 91.92.198.46/32
+                # Bracken House FTWLAN
+                - 213.86.66.72/29
           - Sid: ""
             Action:
               - "s3:Put*"
