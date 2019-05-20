@@ -106,6 +106,29 @@ main() {
     if [ ! -f ${TEMP_DIR}/namespaces.json ]; then
         err "Could not find a namespaces.json file - are you sure a valid back-up bucket exists?"
     fi
+    
+    cat ${TEMP_DIR}/default/jobs.json | \
+            jq '.items |= ([ .[] |
+              select(.type!="kubernetes.io/service-account-token") |
+              del(
+                .spec.clusterIP,
+                .metadata.uid,
+                .metadata.selfLink,
+                .metadata.resourceVersion,
+                .metadata.creationTimestamp,
+                .metadata.generation,
+                .metadata.annotations."pv.kubernetes.io/bind-completed",
+                .spec.manualSelector,
+                .spec.selector,
+                .spec.template.metadata.labels."controller-uid",
+                .metadata.labels."controller-uid",
+                .status
+              )])' > ${TEMP_DIR}/default/job-cleaned.json  ;
+
+    rm -rf ${TEMP_DIR}/default/jobs.json
+    mv ${TEMP_DIR}/default/job-cleaned.json ${TEMP_DIR}/default/jobs.json
+
+
 
     # Compile a list of namespaces to create/populate
     echo "Evaluating namespaces..."
