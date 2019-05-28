@@ -42,22 +42,16 @@ Resources:
                 aws:SourceIp:
                 # Elastic IP address of the NAT gateway for Jenkins machines
                 - 52.30.14.145
-                # OSB + LDNWebPerf
-                - 82.136.1.214/32
                 # Park Royal
                 - 213.216.148.1/32
-                # XP - Cluj Office
-                - 194.117.242.0/23
                  # EU VPN Client
                 - 62.25.64.1/32
                 # US VPN Client
                 - 64.210.200.1/32
                 # FT Sofia Office - IP range 1
-                - 94.156.217.228/31
+                - 94.156.217.224/29
                 # FT Sofia Office - IP range 2
-                - 94.156.217.230/32
-                # FT Sofia office - backup IP range
-                - 212.36.14.67/28
+                - 212.36.14.64/28
                 # Zetta Systems office
                 - 91.92.198.46/32
                 # Bracken House FTWLAN
