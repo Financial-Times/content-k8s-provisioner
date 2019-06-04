@@ -17,8 +17,28 @@
     - "{{ region }}b"
   register: ec2_vol_pac_prometheus
 
+- name: Provision EBS volume for Thanos
+  ec2_vol:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
+    region: "{{ region }}"
+    zone: "{{ region }}a"
+    name: "{{ stack_name }}-thanos-store"
+    volume_size: 50
+    volume_type: gp2
+    tags:
+      environment: "{{ environment_type }}"
+      teamDL: "universal.publishing.platform@ft.com"
+      systemCode: "{{ platform }}"
+  register: ec2_vol_pac_thanos
+
 # Volume IDs for Prometheus which needs to be added in the config
 - name: EBS details for Prometheus
   set_fact:
     prometheus_volume_info: "{{ prometheus_volume_info }} + [ '{{ item.volume.zone}} => {{ item.volume_id }}' ]"
   with_items: "{{ ec2_vol_pac_prometheus.results }}"
+
+- name: EBS volume details for Thanos
+  debug:
+    msg: "EBS Volume ID for Thanos: '{{ ec2_vol_pac_thanos.volume_id }}'"
+
