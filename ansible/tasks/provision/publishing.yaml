@@ -85,6 +85,10 @@
     msg: "{{ mongo_volume_info }}"
 
 # Volume IDs for Prometheus which needs to be added in the config
+- name: Setup vol names
+  set_fact:
+    prometheus_volume_info: []
+
 - name: EBS details for Prometheus
   set_fact:
     prometheus_volume_info: "{{ prometheus_volume_info }} + [ '{{ item.volume.zone}} => {{ item.volume_id }}' ]"

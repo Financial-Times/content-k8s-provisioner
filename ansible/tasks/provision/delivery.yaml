@@ -87,6 +87,7 @@
   s3_bucket:
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_access_key }}"
+    region: "{{ region }}"
     name: "{{ stack_name }}-imagepublish"
     policy: "{{ lookup('file','templates/image-publish-s3.json') }}"
 
@@ -172,6 +173,10 @@
   with_items: "{{ ec2_vol_del_mongo.results }}"
 
 # Volume IDs for Prometheus which needs to be added in the config
+- name: Setup vol names
+  set_fact:
+    prometheus_volume_info: []
+
 - name: EBS details for Prometheus
   set_fact:
     prometheus_volume_info: "{{ prometheus_volume_info }} + [ '{{ item.volume.zone}} => {{ item.volume_id }}' ]"
