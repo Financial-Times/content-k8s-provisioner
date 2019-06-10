@@ -51,6 +51,21 @@
     - "{{ region }}b"
   register: ec2_vol_del_prometheus
 
+- name: Provision EBS volume for Thanos
+  ec2_vol:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
+    region: "{{ region }}"
+    zone: "{{ region }}a"
+    name: "{{ stack_name }}-thanos-store"
+    volume_size: 50
+    volume_type: gp2
+    tags:
+      environment: "{{ environment_type }}"
+      teamDL: "universal.publishing.platform@ft.com"
+      systemCode: "{{ platform }}"
+  register: ec2_vol_del_thanos
+
 - name: Generate the S3 bucket policy for Image Publish
   template:
     src: templates/image-publish-s3.json.j2
@@ -72,6 +87,7 @@
   s3_bucket:
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_access_key }}"
+    region: "{{ region }}"
     name: "{{ stack_name }}-imagepublish"
     policy: "{{ lookup('file','templates/image-publish-s3.json') }}"
 
@@ -157,10 +173,18 @@
   with_items: "{{ ec2_vol_del_mongo.results }}"
 
 # Volume IDs for Prometheus which needs to be added in the config
+- name: Setup vol names
+  set_fact:
+    prometheus_volume_info: []
+
 - name: EBS details for Prometheus
   set_fact:
     prometheus_volume_info: "{{ prometheus_volume_info }} + [ '{{ item.volume.zone}} => {{ item.volume_id }}' ]"
   with_items: "{{ ec2_vol_del_prometheus.results }}"
+
+- name: EBS volume details for Thanos
+  debug:
+    msg: "EBS Volume ID for Thanos: '{{ ec2_vol_del_thanos.volume_id }}'"
 
 - name: EBS details for Neo4j volumes
   debug:
