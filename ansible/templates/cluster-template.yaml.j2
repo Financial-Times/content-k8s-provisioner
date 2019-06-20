@@ -289,7 +289,7 @@ controller:
 
 # We started dropping packets because the netfilter conntrack table filled up.
 # More info - https://trello.com/c/kuI6YJSv/747-packet-drop-investigation
-# 
+#
 # The following changes:
 # - decrease the TCP timeout for established connections
 # - increase the max number of conntrack entries
@@ -734,7 +734,7 @@ worker:
 
 # We started dropping packets because the netfilter conntrack table filled up.
 # More info - https://trello.com/c/kuI6YJSv/747-packet-drop-investigation
-# 
+#
 # The following changes:
 # - decrease the TCP timeout for established connections
 # - increase the max number of conntrack entries
@@ -785,7 +785,7 @@ worker:
         command: restart
       - name: systemd-sysctl.service
         command: restart
-      
+
       - name: restart-sysctl-after-nf_conntrack-load.service
         command: start
         content: |
@@ -1032,7 +1032,7 @@ etcd:
   customFiles:
 # We started dropping packets because the netfilter conntrack table filled up.
 # More info - https://trello.com/c/kuI6YJSv/747-packet-drop-investigation
-# 
+#
 # The following changes:
 # - decrease the TCP timeout for established connections
 # - increase the max number of conntrack entries
@@ -1108,6 +1108,41 @@ etcd:
         OnUnitActiveSec=1min
         [Install]
         WantedBy=timers.target
+
+    - name: cloud-health-agent-container.service
+      command: start
+      enable: true
+      content: |
+        [Unit]
+        Description=Cloud Health Agent Container Service
+        After=docker.service
+        Requires=docker.service
+
+        [Service]
+        TimeoutStartSec=0
+        Restart=always
+        ExecStartPre=-/usr/bin/docker stop cloud-health-agent-container
+        ExecStartPre=-/usr/bin/docker rm cloud-health-agent-container
+        ExecStartPre=/usr/bin/docker pull coco/cloud-health-agent:latest
+        ExecStart=/bin/sh -c '\
+          set -e; \
+          alias etcdctl_cmd="/usr/bin/etcdctl --ca-file=/etc/kubernetes/ssl/ca.pem --cert-file=/etc/kubernetes/ssl/etcd-client.pem --key-file=/etc/kubernetes/ssl/etcd-client-key.pem --endpoints=${ETCD_ENDPOINTS}"; \
+          export CLOUD_HEALTH_SECRET=$(etcdctl_cmd get /ft/config/cloud-health/secret);
+          /usr/bin/docker run \
+            -e "CLOUD_HEALTH_SECRET=$CLOUD_HEALTH_SECRET" \
+            -- name=cloud-health-agent-container \
+            --label "app=cloud-health-agent-container" \
+            --net=host \
+            --privileged \
+            --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+            --mount type=bind,source=/proc,target=/host/proc \
+            --memory-reservation=100m \
+            --memory=500m \
+            --cpus=.25 \
+            --restart=always \
+            coco/cloud-health-agent:latest
+        [Install]
+        WantedBy=multi-user.target
 
 #    - name: monitoring.service
 #      command: start
