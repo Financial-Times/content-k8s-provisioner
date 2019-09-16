@@ -12,7 +12,7 @@ etcd_count: 3
 worker_pools: 
   - {id: 1, instance_type: m5.xlarge, count: 3, role: worker, subnets: 2} # using only 2 subnets to have nodes only in AZ a and b
   - {id: 2, instance_type: m5.large, count: 3, role: mongo-worker, subnets: 3, dedicatedtaint: mongo}
-  - {id: 3, instance_type: t3a.large, count: 1, role: kafka-worker, subnets: 1, dedicatedtaint: kafka}
+  - {id: 3, instance_type: m5a.large, count: 1, role: kafka-worker, subnets: 1, dedicatedtaint: kafka}
 
 worker_security_groups:
   - sg-9e99c1e6
