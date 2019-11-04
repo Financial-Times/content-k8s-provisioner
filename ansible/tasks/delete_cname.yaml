@@ -10,7 +10,7 @@
     headers:
       X-API-Key: "{{ konstructor_api_key }}"
     body:
-      zone: ft.com
+      zone: "{{ dns_zone }}"
       name: "{{ dns_cname }}"
       emailAddress: "universal.publishing.platform@ft.com"
     body_format: json

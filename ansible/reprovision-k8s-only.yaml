@@ -95,7 +95,7 @@
       tags: k-prov
 
     - pause:
-        prompt: "Check that the API server EC2 instances have been created, and that {{ stack_name }}-api.ft.com resolves to the correct load balancer. (Enter to continue or Ctrl+C to abort)"
+        prompt: "Check that the API server EC2 instances have been created, and that {{ stack_name }}-api.{{ dns_zone }} resolves to the correct load balancer. (Enter to continue or Ctrl+C to abort)"
 
     - name: Make default account admin
       shell: |
