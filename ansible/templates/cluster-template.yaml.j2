@@ -64,7 +64,7 @@ apiEndpoints:
   # below if you'd like kube-aws to create a Route53 record sets/hosted zones
   # for you.  Otherwise the deployer is responsible for making this name routable
 
-  dnsName: {{ stack_name }}-api.ft.com
+  dnsName: {{ stack_name }}-api.{{ dns_zone }}
 
   # Configuration for the load balancer serving this endpoint
   # Omit all the settings when you want kube-aws not to provision a load balancer for you
