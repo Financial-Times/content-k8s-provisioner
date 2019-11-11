@@ -23,4 +23,4 @@ vpc_internal_ssh_sg: sg-9a7630e2
 api_private_access_sg: sg-53531d2b
 efs_access_sg: sg-c76f91bc
 
-dns_zone: ft.com
+dns_zone: upp.ft.com
