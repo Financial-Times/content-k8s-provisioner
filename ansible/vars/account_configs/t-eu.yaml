@@ -2,6 +2,7 @@ aws_account_number: 469211898354
 region: eu-west-1
 kms_key_arn: arn:aws:kms:eu-west-1:469211898354:key/84c26c96-8ed3-49e2-a7f4-46bcb6263159
 releaseChannel: stable
+amiId: ami-0b4e04c2cc22a915e
 
 vpc_id: vpc-ee57bf89
 vpc_cidr: 10.172.40.0/21
