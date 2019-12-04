@@ -23,4 +23,4 @@ worker_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-pro
 etcd_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-etcd-role
 controller_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-controller-role
 
-dns_zone: ft.com
+dns_zone: upp.ft.com
