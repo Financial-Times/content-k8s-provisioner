@@ -24,3 +24,4 @@ etcd_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profi
 worker_iam_role: arn:aws:iam::469211898354:instance-profile/k8s-iam-instance-profile-roles-worker-role
 
 dns_zone: upp.ft.com
+route53_hosted_zone_id: ZE8P6HDQA4Y9N
