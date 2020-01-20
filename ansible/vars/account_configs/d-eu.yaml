@@ -24,3 +24,4 @@ api_private_access_sg: sg-53531d2b
 efs_access_sg: sg-c76f91bc
 
 dns_zone: upp.ft.com
+route53_hosted_zone_id: ZE8P6HDQA4Y9N
