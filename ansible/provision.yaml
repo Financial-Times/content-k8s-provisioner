@@ -59,13 +59,6 @@
         msg: "API Server ELB: '{{ api_server_elb.stdout }}'"
       tags: k-prov
 
-    # Create a DNS name for the API Server
-    - include: tasks/create_cname.yaml
-      vars:
-        dns_cname: "{{ stack_name }}-api"
-        hostname: "{{ api_server_elb.stdout }}"
-      tags: k-prov
-
     - name: Create a DNS entry for the API Server in Route53
       script: /bin/bash /ansible/files/sh/manage-cname.sh
       environment:
