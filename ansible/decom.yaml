@@ -28,10 +28,6 @@
         - "{{ public_subnet_zone_b }}"
         - "{{ public_subnet_zone_c }}"
 
-    - include: tasks/delete_cname.yaml
-      vars:
-        dns_cname: "{{ stack_name }}-api"
-
     - name: Retrieve the Cluster API server ELB
       script: /bin/bash /ansible/files/sh/get_elb.sh
       environment:
